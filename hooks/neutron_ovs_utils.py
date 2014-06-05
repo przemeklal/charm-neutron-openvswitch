@@ -51,9 +51,9 @@ def resource_map():
     '''
     resource_map = deepcopy(BASE_RESOURCE_MAP)
     if is_relation_made('amqp'):
-        resource_map[NEUTRON_CONF]['contexts'].extend(context.AMQPContext())
+        resource_map[NEUTRON_CONF]['contexts'].append(context.AMQPContext())
     else:
-        resource_map[NEUTRON_CONF]['contexts'].extend(neutron_ovs_context.NovaComputeAMQPContext())
+        resource_map[NEUTRON_CONF]['contexts'].append(neutron_ovs_context.NovaComputeAMQPContext())
     return resource_map
 
 def restart_map():
