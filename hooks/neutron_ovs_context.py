@@ -84,6 +84,8 @@ class OVSPluginContext(context.NeutronContext):
 
         self._ensure_bridge()
 
+        conf = config()
         ovs_ctxt['local_ip'] = get_host_ip(unit_get('private-address'))
         ovs_ctxt['neutron_security_groups'] = self.neutron_security_groups
+        ovs_ctxt['use_syslog'] = conf['use-syslog']
         return ovs_ctxt
