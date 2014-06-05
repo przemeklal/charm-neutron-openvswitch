@@ -7,6 +7,7 @@ from charmhelpers.contrib.openstack.utils import (
         os_release,
 )
 import neutron_ovs_context
+from charmhelpers.core.hookenv import is_relation_made
 
 NOVA_CONF_DIR = "/etc/nova"
 NEUTRON_CONF_DIR = "/etc/neutron"
@@ -17,8 +18,7 @@ ML2_CONF = '%s/plugins/ml2/ml2_conf.ini' % NEUTRON_CONF_DIR
 BASE_RESOURCE_MAP = OrderedDict([
     (NEUTRON_CONF, {
         'services': [],
-        'contexts': [neutron_ovs_context.ProxyAMQPContext(),
-                     neutron_ovs_context.OVSPluginContext()],
+        'contexts': [neutron_ovs_context.OVSPluginContext()],
     }),
     (ML2_CONF, {
         'services': ['neutron-plugin-openvswitch-agent'],
@@ -50,6 +50,10 @@ def resource_map():
     hook execution.
     '''
     resource_map = deepcopy(BASE_RESOURCE_MAP)
+    if is_relation_made('amqp'):
+        resource_map[NEUTRON_CONF]['contexts'].extend(context.AMQPContext())
+    else:
+        resource_map[NEUTRON_CONF]['contexts'].extend(neutron_ovs_context.NovaComputeAMQPContext())
     return resource_map
 
 def restart_map():

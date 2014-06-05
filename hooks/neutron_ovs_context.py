@@ -44,15 +44,6 @@ class NovaComputeAMQPContext(context.OSContextGenerator):
                 })
         return ctxt
 
-class ProxyAMQPContext(context.OSContextGenerator):
-
-    def __call__(self):
-        if is_relation_made('amqp'):
-            ctxt = context.AMQPContext() 
-        else:
-            ctxt = NovaComputeAMQPContext()
-        return ctxt()
-
 def _neutron_security_groups():
     '''
     Inspects current neutron-plugin relation and determine if nova-c-c has
