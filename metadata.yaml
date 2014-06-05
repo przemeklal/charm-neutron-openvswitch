@@ -1,0 +1,19 @@
+name: neutron-openvswitch
+subordinate: true
+maintainer: Liam Young <liam.young@canonical.com>
+summary: "Openstack neutron openvswitch plugin "
+description: |
+  Openstack neutron openvswitch plugin
+categories:
+  - openstack
+provides:
+  neutron-plugin:
+    interface: neutron-plugin
+    scope: container
+requires:
+  amqp:
+    interface: rabbitmq
+  container:
+    interface: juju-info
+    scope: container
+
