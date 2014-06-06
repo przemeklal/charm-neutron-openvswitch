@@ -17,7 +17,7 @@ ML2_CONF = '%s/plugins/ml2/ml2_conf.ini' % NEUTRON_CONF_DIR
 
 BASE_RESOURCE_MAP = OrderedDict([
     (NEUTRON_CONF, {
-        'services': [],
+        'services': ['neutron-plugin-openvswitch-agent'],
         'contexts': [neutron_ovs_context.OVSPluginContext()],
     }),
     (ML2_CONF, {

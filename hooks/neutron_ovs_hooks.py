@@ -18,23 +18,11 @@ from charmhelpers.fetch import (
     apt_install, apt_update
 )
 
-from charmhelpers.contrib.openstack.utils import (
-    configure_installation_source,
-    openstack_upgrade_available,
-)
-
 from neutron_ovs_utils import (
     determine_packages,
     register_configs,
     restart_map,
     NEUTRON_CONF,
-)
-
-from charmhelpers.contrib.hahelpers.cluster import (
-    canonical_url,
-    eligible_leader,
-    get_hacluster_config,
-    is_leader,
 )
 
 hooks = Hooks()
