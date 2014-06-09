@@ -20,13 +20,18 @@ BASE_RESOURCE_MAP = OrderedDict([
     }),
 ])
 TEMPLATES = 'templates/'
-
+NEUTRON_SERVICE_PLUGINS=['neutron.services.l3_router.l3_router_plugin.L3RouterPlugin',
+                         'neutron.services.firewall.fwaas_plugin.FirewallPlugin',
+                         'neutron.services.loadbalancer.plugin.LoadBalancerPlugin',
+                         'neutron.services.vpn.plugin.VPNDriverPlugin',
+                         'neutron.services.metering.metering_plugin.MeteringPlugin']
 NEUTRON_SETTINGS = {
         "neutron": {
             NEUTRON_CONF: {
                 "sections": {
                     "DEFAULT": [
                         ('core_plugin', 'neutron.plugins.ml2.plugin.Ml2Plugin'),
+                        ('service_plugins', ','.join(NEUTRON_SERVICE_PLUGINS)),
                     ]
                 } 
             }
@@ -43,7 +48,7 @@ def determine_packages():
     return set(ovs_pkgs)
 
 def register_configs(release=None):
-    release = release or os_release('nova-common')
+    release = release or os_release('neutron-common')
     configs = templating.OSConfigRenderer(templates_dir=TEMPLATES,
                                           openstack_release=release)
     for cfg, rscs in resource_map().iteritems():

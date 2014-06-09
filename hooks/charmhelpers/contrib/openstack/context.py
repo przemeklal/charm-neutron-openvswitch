@@ -488,6 +488,10 @@ class NeutronContext(OSContextGenerator):
         return None
 
     @property
+    def save_nova_flag(self):
+        return True 
+
+    @property
     def network_manager(self):
         return None
 
@@ -578,7 +582,8 @@ class NeutronContext(OSContextGenerator):
             flags = config_flags_parser(alchemy_flags)
             ctxt['neutron_alchemy_flags'] = flags
 
-        self._save_flag_file()
+        if self.save_nova_flag:
+            self._save_flag_file()
         return ctxt
 
 

@@ -23,6 +23,7 @@ from neutron_ovs_utils import (
     register_configs,
     restart_map,
     NEUTRON_SETTINGS,
+    ML2_CONF,
 )
 
 hooks = Hooks()
@@ -41,7 +42,7 @@ def config_changed():
 
 @hooks.hook('neutron-plugin-relation-joined')
 def neutron_plugin_relation_joined():
-    relation_set(subordinate_configuration=json.dumps(NEUTRON_SETTINGS))
+    relation_set(plugin_conf_file=ML2_CONF, subordinate_configuration=json.dumps(NEUTRON_SETTINGS))
 
 @restart_on_change(restart_map())
 @hooks.hook('neutron-plugin-relation-changed')
