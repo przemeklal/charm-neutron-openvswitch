@@ -1,11 +1,11 @@
 #!/usr/bin/python
 
 import sys
+import json
 
 from charmhelpers.core.hookenv import (
     Hooks,
     UnregisteredHookError,
-    config,
     log,
     relation_set,
 )
@@ -22,7 +22,7 @@ from neutron_ovs_utils import (
     determine_packages,
     register_configs,
     restart_map,
-    NEUTRON_CONF,
+    NEUTRON_SETTINGS,
 )
 
 hooks = Hooks()
@@ -39,26 +39,15 @@ def install():
 def config_changed():
     CONFIGS.write_all()
 
+@hooks.hook('neutron-plugin-relation-joined')
+def neutron_plugin_relation_joined():
+    #relation_set(core_plugin='LYneutron.plugins.ml2.plugin.Ml2Plugin')
+    relation_set(subordinate_configuration=json.dumps(NEUTRON_SETTINGS))
+
 @restart_on_change(restart_map())
 @hooks.hook('neutron-plugin-relation-changed')
 def neutron_plugin_relation_changed():
     CONFIGS.write_all()
-
-@hooks.hook('amqp-relation-joined')
-def amqp_joined(relation_id=None):
-    relation_set(relation_id=relation_id,
-                 username=config('rabbit-user'),
-                 vhost=config('rabbit-vhost'))
-
-
-@hooks.hook('amqp-relation-changed')
-@hooks.hook('amqp-relation-departed')
-@restart_on_change(restart_map())
-def amqp_changed():
-    if 'amqp' not in CONFIGS.complete_contexts():
-        log('amqp relation incomplete. Peer not ready?')
-        return
-    CONFIGS.write(NEUTRON_CONF)
 
 def main():
     try:

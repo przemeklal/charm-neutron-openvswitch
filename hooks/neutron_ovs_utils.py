@@ -1,31 +1,37 @@
 from charmhelpers.contrib.openstack.neutron import neutron_plugin_attribute
 from copy import deepcopy
 
-from charmhelpers.contrib.openstack import context, templating
+from charmhelpers.contrib.openstack import templating
 from collections import OrderedDict
 from charmhelpers.contrib.openstack.utils import (
         os_release,
 )
 import neutron_ovs_context
-from charmhelpers.core.hookenv import is_relation_made
 
 NOVA_CONF_DIR = "/etc/nova"
 NEUTRON_CONF_DIR = "/etc/neutron"
-NEUTRON_CONF = '%s/neutron.conf' % NEUTRON_CONF_DIR
-NEUTRON_DEFAULT = '/etc/default/neutron-server'
+NEUTRON_CONF = "%s/neutron.conf" % NEUTRON_CONF_DIR
 ML2_CONF = '%s/plugins/ml2/ml2_conf.ini' % NEUTRON_CONF_DIR
 
 BASE_RESOURCE_MAP = OrderedDict([
-    (NEUTRON_CONF, {
-        'services': ['neutron-plugin-openvswitch-agent'],
-        'contexts': [neutron_ovs_context.OVSPluginContext()],
-    }),
     (ML2_CONF, {
         'services': ['neutron-plugin-openvswitch-agent'],
         'contexts': [neutron_ovs_context.OVSPluginContext()],
     }),
 ])
 TEMPLATES = 'templates/'
+
+NEUTRON_SETTINGS = {
+        "neutron": {
+            NEUTRON_CONF: {
+                "sections": {
+                    "DEFAULT": [
+                        ('core_plugin', 'LYneutron.plugins.ml2.plugin.Ml2Plugin'),
+                    ]
+                } 
+            }
+        }
+}
 
 def determine_packages():
     ovs_pkgs = []
@@ -50,10 +56,6 @@ def resource_map():
     hook execution.
     '''
     resource_map = deepcopy(BASE_RESOURCE_MAP)
-    if is_relation_made('amqp'):
-        resource_map[NEUTRON_CONF]['contexts'].append(context.AMQPContext())
-    else:
-        resource_map[NEUTRON_CONF]['contexts'].append(neutron_ovs_context.NovaComputeAMQPContext())
     return resource_map
 
 def restart_map():

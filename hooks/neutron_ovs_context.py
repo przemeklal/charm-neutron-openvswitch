@@ -16,33 +16,6 @@ OVS_BRIDGE = 'br-int'
 
 class OSContextError(Exception):
     pass
-class NovaComputeAMQPContext(context.OSContextGenerator):
-    def __call__(self):
-        conf = config()
-        try:
-            username = conf['rabbit-user']
-            vhost = conf['rabbit-vhost']
-        except KeyError as e:
-            log('Could not generate shared_db context. '
-                'Missing required charm config options: %s.' % e)
-            raise OSContextError
-        ctxt = {}
-        for rid in relation_ids('neutron-plugin'):
-            for unit in related_units(rid):
-                if relation_get('clustered', rid=rid, unit=unit):
-                    ctxt['clustered'] = True
-                    ctxt['rabbitmq_host'] = relation_get('vip', rid=rid,
-                                                         unit=unit)
-                else:
-                    ctxt['rabbitmq_host'] = relation_get('private-address',
-                                                         rid=rid, unit=unit)
-                ctxt.update({
-                    'rabbitmq_user': username,
-                    'rabbitmq_password': relation_get('rabbitmq_password', rid=rid,
-                                                      unit=unit),
-                    'rabbitmq_virtual_host': vhost,
-                })
-        return ctxt
 
 def _neutron_security_groups():
     '''
