@@ -41,7 +41,6 @@ def config_changed():
 
 @hooks.hook('neutron-plugin-relation-joined')
 def neutron_plugin_relation_joined():
-    #relation_set(core_plugin='LYneutron.plugins.ml2.plugin.Ml2Plugin')
     relation_set(subordinate_configuration=json.dumps(NEUTRON_SETTINGS))
 
 @restart_on_change(restart_map())

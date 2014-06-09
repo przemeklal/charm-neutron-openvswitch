@@ -26,7 +26,7 @@ NEUTRON_SETTINGS = {
             NEUTRON_CONF: {
                 "sections": {
                     "DEFAULT": [
-                        ('core_plugin', 'LYneutron.plugins.ml2.plugin.Ml2Plugin'),
+                        ('core_plugin', 'neutron.plugins.ml2.plugin.Ml2Plugin'),
                     ]
                 } 
             }
