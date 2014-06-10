@@ -12,6 +12,7 @@ NOVA_CONF_DIR = "/etc/nova"
 NEUTRON_CONF_DIR = "/etc/neutron"
 NEUTRON_CONF = "%s/neutron.conf" % NEUTRON_CONF_DIR
 ML2_CONF = '%s/plugins/ml2/ml2_conf.ini' % NEUTRON_CONF_DIR
+NEUTRON_DEFAULT = '/etc/default/neutron-server'
 
 BASE_RESOURCE_MAP = OrderedDict([
     (ML2_CONF, {
@@ -32,6 +33,13 @@ NEUTRON_SETTINGS = {
                     "DEFAULT": [
                         ('core_plugin', 'neutron.plugins.ml2.plugin.Ml2Plugin'),
                         ('service_plugins', ','.join(NEUTRON_SERVICE_PLUGINS)),
+                    ]
+                } 
+            },
+            NEUTRON_DEFAULT: {
+                "sections": {
+                    "DEFAULT": [
+                        ('NEUTRON_PLUGIN_CONFIG', ML2_CONF),
                     ]
                 } 
             }
