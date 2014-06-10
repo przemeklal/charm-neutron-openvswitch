@@ -1,5 +1,5 @@
 #!/usr/bin/python
-
+import uuid
 import sys
 import json
 
@@ -40,7 +40,13 @@ def config_changed():
     CONFIGS.write_all()
 
 @hooks.hook('neutron-plugin-relation-joined')
-def neutron_plugin_relation_joined():
+def neutron_plugin_relation_joined(remote_restart=True):
+    if remote_restart:
+        comment =  ('restart', 'Restart Trigger: ' + str(uuid.uuid4()))
+        for conf in NEUTRON_SETTINGS['neutron']:
+            if 'sections' in NEUTRON_SETTINGS['neutron'][conf] and \
+               'COMMENT' in NEUTRON_SETTINGS['neutron'][conf]['sections']:
+                NEUTRON_SETTINGS['neutron'][conf]['sections']['COMMENT'].append(comment)
     relation_set(subordinate_configuration=json.dumps(NEUTRON_SETTINGS))
 
 @restart_on_change(restart_map())

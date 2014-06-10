@@ -1,6 +1,5 @@
 from charmhelpers.contrib.openstack.neutron import neutron_plugin_attribute
 from copy import deepcopy
-
 from charmhelpers.contrib.openstack import templating
 from collections import OrderedDict
 from charmhelpers.contrib.openstack.utils import (
@@ -33,6 +32,9 @@ NEUTRON_SETTINGS = {
                     "DEFAULT": [
                         ('core_plugin', 'neutron.plugins.ml2.plugin.Ml2Plugin'),
                         ('service_plugins', ','.join(NEUTRON_SERVICE_PLUGINS)),
+                    ],
+                    "COMMENT": [
+                        ('comment1', 'Warning: some settings controlled by subordinate neutron-openvswitch'),
                     ]
                 } 
             },
@@ -40,6 +42,9 @@ NEUTRON_SETTINGS = {
                 "sections": {
                     "DEFAULT": [
                         ('NEUTRON_PLUGIN_CONFIG', ML2_CONF),
+                    ],
+                    "COMMENT": [
+                        ('comment1', 'Warning: some settings controlled by subordinate neutron-openvswitch'),
                     ]
                 } 
             }
