@@ -34,13 +34,13 @@ def install():
     apt_update()
     apt_install(determine_packages(), fatal=True)
 
-@restart_on_change(restart_map())
 @hooks.hook('config-changed')
+@restart_on_change(restart_map())
 def config_changed():
     CONFIGS.write_all()
 
-@restart_on_change(restart_map())
 @hooks.hook('neutron-plugin-relation-changed')
+@restart_on_change(restart_map())
 def neutron_plugin_relation_changed():
     CONFIGS.write_all()
 
