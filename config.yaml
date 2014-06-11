@@ -1,6 +1,6 @@
 options:
   rabbit-user:
-    default: nova
+    default: neutron
     type: string
     description: Username used to access rabbitmq queue
   rabbit-vhost:

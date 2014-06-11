@@ -11,6 +11,8 @@ provides:
     interface: neutron-plugin
     scope: container
 requires:
+  amqp:
+    interface: rabbitmq
   container:
     interface: juju-info
     scope: container

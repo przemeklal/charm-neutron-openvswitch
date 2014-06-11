@@ -1,14 +1,13 @@
 #!/usr/bin/python
-import uuid
+
 import sys
-import json
 
 from charmhelpers.core.hookenv import (
     Hooks,
     UnregisteredHookError,
+    config,
     log,
     relation_set,
-    relation_ids,
 )
 
 from charmhelpers.core.host import (
@@ -23,7 +22,7 @@ from neutron_ovs_utils import (
     determine_packages,
     register_configs,
     restart_map,
-    NEUTRON_SETTINGS,
+    NEUTRON_CONF,
 )
 
 hooks = Hooks()
@@ -35,33 +34,31 @@ def install():
     apt_update()
     apt_install(determine_packages(), fatal=True)
 
-@hooks.hook('config-changed')
 @restart_on_change(restart_map())
+@hooks.hook('config-changed')
 def config_changed():
     CONFIGS.write_all()
-    [neutron_plugin_relation_joined(rid) for rid in relation_ids('neutron-plugin')]
 
-@hooks.hook('neutron-plugin-relation-joined')
-def neutron_plugin_relation_joined(remote_restart=True):
-    if remote_restart:
-        comment =  ('restart', 'Restart Trigger: ' + str(uuid.uuid4()))
-        for conf in NEUTRON_SETTINGS['neutron']:
-            if 'sections' in NEUTRON_SETTINGS['neutron'][conf] and \
-               'COMMENT' in NEUTRON_SETTINGS['neutron'][conf]['sections']:
-                NEUTRON_SETTINGS['neutron'][conf]['sections']['COMMENT'].append(comment)
-    relation_set(subordinate_configuration=json.dumps(NEUTRON_SETTINGS))
-
-@hooks.hook('neutron-plugin-relation-changed')
 @restart_on_change(restart_map())
-def neutron_plugin_relation_changed(remote_restart=True):
+@hooks.hook('neutron-plugin-relation-changed')
+def neutron_plugin_relation_changed():
     CONFIGS.write_all()
-    if remote_restart:
-        comment =  ('restart', 'Restart Trigger: ' + str(uuid.uuid4()))
-        for conf in NEUTRON_SETTINGS['neutron']:
-            if 'sections' in NEUTRON_SETTINGS['neutron'][conf] and \
-               'COMMENT' in NEUTRON_SETTINGS['neutron'][conf]['sections']:
-                NEUTRON_SETTINGS['neutron'][conf]['sections']['COMMENT'].append(comment)
-    relation_set(subordinate_configuration=json.dumps(NEUTRON_SETTINGS))
+
+@hooks.hook('amqp-relation-joined')
+def amqp_joined(relation_id=None):
+    relation_set(relation_id=relation_id,
+                 username=config('rabbit-user'),
+                 vhost=config('rabbit-vhost'))
+
+
+@hooks.hook('amqp-relation-changed')
+@hooks.hook('amqp-relation-departed')
+@restart_on_change(restart_map())
+def amqp_changed():
+    if 'amqp' not in CONFIGS.complete_contexts():
+        log('amqp relation incomplete. Peer not ready?')
+        return
+    CONFIGS.write(NEUTRON_CONF)
 
 def main():
     try:

@@ -39,10 +39,6 @@ class OVSPluginContext(context.NeutronContext):
         return 'neutron'
 
     @property
-    def save_nova_flag(self):
-        return False
-
-    @property
     def neutron_security_groups(self):
         return _neutron_security_groups()
 
