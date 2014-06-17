@@ -1,7 +1,7 @@
 name: neutron-openvswitch
 subordinate: true
 maintainer: Liam Young <liam.young@canonical.com>
-summary: "Openstack neutron openvswitch plugin "
+summary: "Neutron OpenvSwitch Agent"
 description: |
   Openstack neutron openvswitch plugin
 categories:
