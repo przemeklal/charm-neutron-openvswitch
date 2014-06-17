@@ -34,14 +34,11 @@ def install():
     apt_update()
     apt_install(determine_packages(), fatal=True)
 
+@hooks.hook('upgrade-charm')
+@hooks.hook('neutron-plugin-relation-changed')
 @hooks.hook('config-changed')
 @restart_on_change(restart_map())
 def config_changed():
-    CONFIGS.write_all()
-
-@hooks.hook('neutron-plugin-relation-changed')
-@restart_on_change(restart_map())
-def neutron_plugin_relation_changed():
     CONFIGS.write_all()
 
 @hooks.hook('amqp-relation-joined')

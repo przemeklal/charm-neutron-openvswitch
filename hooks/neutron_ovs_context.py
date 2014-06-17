@@ -2,10 +2,8 @@ from charmhelpers.core.hookenv import (
             relation_ids,
             related_units,
             relation_get,
-            is_relation_made,
             config,
             unit_get,
-            log,
 )
 
 from charmhelpers.contrib.openstack import context
@@ -13,9 +11,6 @@ from charmhelpers.core.host import service_running, service_start
 from charmhelpers.contrib.network.ovs import add_bridge
 from charmhelpers.contrib.openstack.utils import get_host_ip
 OVS_BRIDGE = 'br-int'
-
-class OSContextError(Exception):
-    pass
 
 def _neutron_security_groups():
     '''
@@ -61,4 +56,6 @@ class OVSPluginContext(context.NeutronContext):
         ovs_ctxt['local_ip'] = get_host_ip(unit_get('private-address'))
         ovs_ctxt['neutron_security_groups'] = self.neutron_security_groups
         ovs_ctxt['use_syslog'] = conf['use-syslog']
+        ovs_ctxt['verbose'] = conf['verbose']
+        ovs_ctxt['debug'] = conf['debug']
         return ovs_ctxt
