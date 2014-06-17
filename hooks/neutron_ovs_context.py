@@ -17,9 +17,11 @@ def _neutron_security_groups():
     Inspects current neutron-plugin relation and determine if nova-c-c has
     instructed us to use neutron security groups.
     '''
-    for rid in relation_ids('neutron-plugin'):
+    for rid in relation_ids('neutron-plugin-api'):
         for unit in related_units(rid):
-            return relation_get('neutron_security_groups',rid=rid, unit=unit)
+            sec_group=relation_get('neutron_security_groups',rid=rid, unit=unit)
+            if sec_group is not None:
+                return sec_group
     return False
 
 class OVSPluginContext(context.NeutronContext):
