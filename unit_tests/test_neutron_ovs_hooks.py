@@ -31,6 +31,7 @@ NEUTRON_CONF_DIR = "/etc/neutron"
 
 NEUTRON_CONF = '%s/neutron.conf' % NEUTRON_CONF_DIR
 
+
 class NeutronOVSHooksTests(CharmTestCase):
 
     def setUp(self):
@@ -61,7 +62,7 @@ class NeutronOVSHooksTests(CharmTestCase):
             username='neutron',
             vhost='openstack',
             relation_id=None
-        )   
+        )
 
     def test_amqp_changed(self):
         self.CONFIGS.complete_contexts.return_value = ['amqp']
@@ -71,5 +72,3 @@ class NeutronOVSHooksTests(CharmTestCase):
     def test_amqp_departed(self):
         self._call_hook('amqp-relation-departed')
         self.assertTrue(self.CONFIGS.write.called_with(NEUTRON_CONF))
-
-

@@ -1,5 +1,5 @@
 
-from mock import MagicMock, call, patch
+from mock import MagicMock, patch
 from collections import OrderedDict
 import charmhelpers.contrib.openstack.templating as templating
 
@@ -9,7 +9,6 @@ import neutron_ovs_utils as nutils
 
 from test_utils import (
     CharmTestCase,
-    patch_open,
 )
 import charmhelpers
 import charmhelpers.core.hookenv as hookenv
@@ -21,6 +20,8 @@ TO_PATCH = [
 ]
 
 head_pkg = 'linux-headers-3.15.0-5-generic'
+
+
 def _mock_npa(plugin, attr, net_manager=None):
     plugins = {
         'ovs': {
@@ -36,8 +37,8 @@ def _mock_npa(plugin, attr, net_manager=None):
     }
     return plugins[plugin][attr]
 
-class TestNeutronOVSUtils(CharmTestCase):
 
+class TestNeutronOVSUtils(CharmTestCase):
 
     def setUp(self):
         super(TestNeutronOVSUtils, self).setUp(nutils, TO_PATCH)
@@ -47,8 +48,8 @@ class TestNeutronOVSUtils(CharmTestCase):
         # Reset cached cache
         hookenv.cache = {}
 
-    @patch.object(charmhelpers.contrib.openstack.neutron,'os_release')
-    @patch.object(charmhelpers.contrib.openstack.neutron,'headers_package')
+    @patch.object(charmhelpers.contrib.openstack.neutron, 'os_release')
+    @patch.object(charmhelpers.contrib.openstack.neutron, 'headers_package')
     def test_determine_packages(self, _head_pkgs, _os_rel):
         _os_rel.return_value = 'trusty'
         _head_pkgs.return_value = head_pkg
@@ -56,7 +57,7 @@ class TestNeutronOVSUtils(CharmTestCase):
         expect = ['neutron-plugin-openvswitch-agent', head_pkg]
         self.assertItemsEqual(pkg_list, expect)
 
-    def test_register_configs(self):                                                                                              
+    def test_register_configs(self):
         class _mock_OSConfigRenderer():
             def __init__(self, templates_dir=None, openstack_release=None):
                 self.configs = []
@@ -82,13 +83,9 @@ class TestNeutronOVSUtils(CharmTestCase):
         _restart_map = nutils.restart_map()
         ML2CONF = "/etc/neutron/plugins/ml2/ml2_conf.ini"
         expect = OrderedDict([
-            (nutils.NEUTRON_CONF,
-                ['neutron-plugin-openvswitch-agent'],
-            ), 
-            (ML2CONF,
-                ['neutron-plugin-openvswitch-agent'],
-            ), 
-        ])  
+            (nutils.NEUTRON_CONF, ['neutron-plugin-openvswitch-agent']),
+            (ML2CONF, ['neutron-plugin-openvswitch-agent']),
+        ])
         self.assertTrue(len(expect) == len(_restart_map))
         for item in _restart_map:
             self.assertTrue(item in _restart_map)

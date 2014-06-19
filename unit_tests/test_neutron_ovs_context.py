@@ -35,9 +35,12 @@ class OVSPluginContextTest(CharmTestCase):
     @patch.object(charmhelpers.contrib.openstack.context, 'https')
     @patch.object(context.OVSPluginContext, '_save_flag_file')
     @patch.object(context.OVSPluginContext, '_ensure_packages')
-    @patch.object(charmhelpers.contrib.openstack.context, 'neutron_plugin_attribute')
+    @patch.object(charmhelpers.contrib.openstack.context,
+                  'neutron_plugin_attribute')
     @patch.object(charmhelpers.contrib.openstack.context, 'unit_private_ip')
-    def test_neutroncc_context_api_rel(self, _unit_priv_ip, _npa, _ens_pkgs, _save_ff, _https, _is_clus, _unit_get, _config):
+    def test_neutroncc_context_api_rel(self, _unit_priv_ip, _npa, _ens_pkgs,
+                                       _save_ff, _https, _is_clus, _unit_get,
+                                       _config):
         def mock_npa(plugin, section, manager):
             if section == "driver":
                 return "neutron.randomdriver"
