@@ -34,12 +34,14 @@ def install():
     apt_update()
     apt_install(determine_packages(), fatal=True)
 
+
 @hooks.hook('upgrade-charm')
 @hooks.hook('neutron-plugin-relation-changed')
 @hooks.hook('config-changed')
 @restart_on_change(restart_map())
 def config_changed():
     CONFIGS.write_all()
+
 
 @hooks.hook('amqp-relation-joined')
 def amqp_joined(relation_id=None):
@@ -56,6 +58,7 @@ def amqp_changed():
         log('amqp relation incomplete. Peer not ready?')
         return
     CONFIGS.write(NEUTRON_CONF)
+
 
 def main():
     try:

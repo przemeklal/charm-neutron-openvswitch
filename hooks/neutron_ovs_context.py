@@ -1,9 +1,9 @@
 from charmhelpers.core.hookenv import (
-            relation_ids,
-            related_units,
-            relation_get,
-            config,
-            unit_get,
+    relation_ids,
+    related_units,
+    relation_get,
+    config,
+    unit_get,
 )
 
 from charmhelpers.contrib.openstack import context
@@ -12,6 +12,7 @@ from charmhelpers.contrib.network.ovs import add_bridge
 from charmhelpers.contrib.openstack.utils import get_host_ip
 OVS_BRIDGE = 'br-int'
 
+
 def _neutron_security_groups():
     '''
     Inspects current neutron-plugin relation and determine if nova-c-c has
@@ -19,10 +20,13 @@ def _neutron_security_groups():
     '''
     for rid in relation_ids('neutron-plugin-api'):
         for unit in related_units(rid):
-            sec_group=relation_get('neutron_security_groups',rid=rid, unit=unit)
+            sec_group = relation_get('neutron_security_groups',
+                                     rid=rid,
+                                     unit=unit)
             if sec_group is not None:
                 return sec_group
     return False
+
 
 class OVSPluginContext(context.NeutronContext):
     interfaces = []

@@ -4,10 +4,9 @@ from copy import deepcopy
 from charmhelpers.contrib.openstack import context, templating
 from collections import OrderedDict
 from charmhelpers.contrib.openstack.utils import (
-        os_release,
+    os_release,
 )
 import neutron_ovs_context
-from charmhelpers.core.hookenv import is_relation_made
 
 NOVA_CONF_DIR = "/etc/nova"
 NEUTRON_CONF_DIR = "/etc/neutron"
@@ -28,6 +27,7 @@ BASE_RESOURCE_MAP = OrderedDict([
 ])
 TEMPLATES = 'templates/'
 
+
 def determine_packages():
     ovs_pkgs = []
     pkgs = neutron_plugin_attribute('ovs', 'packages',
@@ -37,6 +37,7 @@ def determine_packages():
 
     return set(ovs_pkgs)
 
+
 def register_configs(release=None):
     release = release or os_release('nova-common')
     configs = templating.OSConfigRenderer(templates_dir=TEMPLATES,
@@ -45,6 +46,7 @@ def register_configs(release=None):
         configs.register(cfg, rscs['contexts'])
     return configs
 
+
 def resource_map():
     '''
     Dynamically generate a map of resources that will be managed for a single
@@ -52,6 +54,7 @@ def resource_map():
     '''
     resource_map = deepcopy(BASE_RESOURCE_MAP)
     return resource_map
+
 
 def restart_map():
     '''
