@@ -22,7 +22,6 @@ from neutron_ovs_utils import (
     determine_packages,
     register_configs,
     restart_map,
-    NEUTRON_CONF,
 )
 
 hooks = Hooks()
@@ -37,6 +36,7 @@ def install():
 
 @hooks.hook('upgrade-charm')
 @hooks.hook('neutron-plugin-relation-changed')
+@hooks.hook('neutron-plugin-api-relation-changed')
 @hooks.hook('config-changed')
 @restart_on_change(restart_map())
 def config_changed():
@@ -57,7 +57,7 @@ def amqp_changed():
     if 'amqp' not in CONFIGS.complete_contexts():
         log('amqp relation incomplete. Peer not ready?')
         return
-    CONFIGS.write(NEUTRON_CONF)
+    CONFIGS.write_all()
 
 
 def main():
