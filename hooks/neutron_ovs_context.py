@@ -20,7 +20,7 @@ def _neutron_security_groups():
     '''
     for rid in relation_ids('neutron-plugin-api'):
         for unit in related_units(rid):
-            sec_group = relation_get('neutron_security_groups',
+            sec_group = relation_get('neutron-security-groups',
                                      rid=rid,
                                      unit=unit)
             if sec_group is not None:
@@ -62,7 +62,7 @@ class OVSPluginContext(context.NeutronContext):
         ovs_ctxt['local_ip'] = get_host_ip(unit_get('private-address'))
         ovs_ctxt['neutron_security_groups'] = self.neutron_security_groups
         # TODO: We need to sort out the syslog and debug/verbose options as a
-        # general context helper 
+        # general context helper
         ovs_ctxt['use_syslog'] = conf['use-syslog']
         ovs_ctxt['verbose'] = conf['verbose']
         ovs_ctxt['debug'] = conf['debug']

@@ -53,7 +53,7 @@ class OVSPluginContextTest(CharmTestCase):
         _is_clus.return_value = False
         self.related_units.return_value = ['unit1']
         self.relation_ids.return_value = ['rid2']
-        self.test_relation.set({'neutron_security_groups': 'yes'})
+        self.test_relation.set({'neutron-security-groups': 'yes'})
         self.get_host_ip.return_value = '127.0.0.15'
         self.service_running.return_value = False
         napi_ctxt = context.OVSPluginContext()
