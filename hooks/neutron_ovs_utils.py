@@ -38,7 +38,7 @@ def determine_packages():
 
 
 def register_configs(release=None):
-    release = release or os_release('neutron-common')
+    release = release or os_release('neutron-common', base='icehouse')
     configs = templating.OSConfigRenderer(templates_dir=TEMPLATES,
                                           openstack_release=release)
     for cfg, rscs in resource_map().iteritems():
