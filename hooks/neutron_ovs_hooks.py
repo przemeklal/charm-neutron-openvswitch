@@ -34,7 +34,6 @@ def install():
     apt_install(determine_packages(), fatal=True)
 
 
-@hooks.hook('upgrade-charm')
 @hooks.hook('neutron-plugin-relation-changed')
 @hooks.hook('neutron-plugin-api-relation-changed')
 @hooks.hook('config-changed')

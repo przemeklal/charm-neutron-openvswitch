@@ -29,17 +29,11 @@ TEMPLATES = 'templates/'
 
 
 def determine_packages():
-    ovs_pkgs = []
-    pkgs = neutron_plugin_attribute('ovs', 'packages',
-                                    'neutron')
-    for pkg in pkgs:
-        ovs_pkgs.extend(pkg)
-
-    return set(ovs_pkgs)
+    return set(neutron_plugin_attribute('ovs', 'packages', 'neutron'))
 
 
 def register_configs(release=None):
-    release = release or os_release('nova-common')
+    release = release or os_release('neutron-common')
     configs = templating.OSConfigRenderer(templates_dir=TEMPLATES,
                                           openstack_release=release)
     for cfg, rscs in resource_map().iteritems():

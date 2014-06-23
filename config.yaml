@@ -6,7 +6,7 @@ options:
   rabbit-vhost:
     default: openstack
     type: string
-    decsription: Rabbitmq vhost
+    description: Rabbitmq vhost
   use-syslog:
     type: boolean
     default: False

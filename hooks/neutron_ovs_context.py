@@ -15,7 +15,7 @@ OVS_BRIDGE = 'br-int'
 
 def _neutron_security_groups():
     '''
-    Inspects current neutron-plugin relation and determine if nova-c-c has
+    Inspects current neutron-plugin relation and determine if neutron-api has
     instructed us to use neutron security groups.
     '''
     for rid in relation_ids('neutron-plugin-api'):
@@ -61,6 +61,8 @@ class OVSPluginContext(context.NeutronContext):
         conf = config()
         ovs_ctxt['local_ip'] = get_host_ip(unit_get('private-address'))
         ovs_ctxt['neutron_security_groups'] = self.neutron_security_groups
+        # TODO: We need to sort out the syslog and debug/verbose options as a
+        # general context helper 
         ovs_ctxt['use_syslog'] = conf['use-syslog']
         ovs_ctxt['verbose'] = conf['verbose']
         ovs_ctxt['debug'] = conf['debug']
