@@ -29,12 +29,7 @@ TEMPLATES = 'templates/'
 
 
 def determine_packages():
-    ovs_pkgs = []
-    pkgs = neutron_plugin_attribute('ovs', 'packages',
-                                    'neutron')
-    for pkg in pkgs:
-        ovs_pkgs.extend(pkg)
-    return set(ovs_pkgs)
+    return neutron_plugin_attribute('ovs', 'packages', 'neutron')
 
 
 def register_configs(release=None):

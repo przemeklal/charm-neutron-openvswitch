@@ -54,7 +54,7 @@ class TestNeutronOVSUtils(CharmTestCase):
         _os_rel.return_value = 'trusty'
         _head_pkgs.return_value = head_pkg
         pkg_list = nutils.determine_packages()
-        expect = ['neutron-plugin-openvswitch-agent', head_pkg]
+        expect = [['neutron-plugin-openvswitch-agent'], [head_pkg]]
         self.assertItemsEqual(pkg_list, expect)
 
     def test_register_configs(self):

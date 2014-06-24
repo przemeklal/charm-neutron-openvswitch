@@ -31,7 +31,9 @@ CONFIGS = register_configs()
 @hooks.hook()
 def install():
     apt_update()
-    apt_install(determine_packages(), fatal=True)
+    pkgs = determine_packages()
+    for pkg in pkgs:
+        apt_install(pkg, fatal=True)
 
 
 @hooks.hook('neutron-plugin-relation-changed')
