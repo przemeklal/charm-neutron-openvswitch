@@ -45,7 +45,7 @@ class NeutronOVSHooksTests(CharmTestCase):
 
     def test_install_hook(self):
         _pkgs = ['foo', 'bar']
-        self.determine_packages.return_value = _pkgs
+        self.determine_packages.return_value = [_pkgs]
         self._call_hook('install')
         self.apt_update.assert_called_with()
         self.apt_install.assert_has_calls([
