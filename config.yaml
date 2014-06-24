@@ -2,11 +2,11 @@ options:
   rabbit-user:
     default: neutron
     type: string
-    description: Username used to access rabbitmq queue
+    description: Username used to access RabbitMQ queue
   rabbit-vhost:
     default: openstack
     type: string
-    description: Rabbitmq vhost
+    description: RabbitMQ vhost
   use-syslog:
     type: boolean
     default: False
