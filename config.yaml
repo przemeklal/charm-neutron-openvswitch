@@ -21,3 +21,14 @@ options:
     default: False
     type: boolean
     description: Enable verbose logging
+  # Network configuration options
+  # by default all access is over 'private-address'
+  os-data-network:
+    type: string
+    description: |
+      The IP address and netmask of the OpenStack Data network (e.g.,
+      192.168.0.0/24)
+      .
+      This network will be used for tenant network traffic in overlay
+      networks.
+

@@ -10,6 +10,8 @@ from charmhelpers.contrib.openstack import context
 from charmhelpers.core.host import service_running, service_start
 from charmhelpers.contrib.network.ovs import add_bridge
 from charmhelpers.contrib.openstack.utils import get_host_ip
+from charmhelpers.contrib.network.ip import get_address_in_network
+
 OVS_BRIDGE = 'br-int'
 
 
@@ -59,7 +61,9 @@ class OVSPluginContext(context.NeutronContext):
         self._ensure_bridge()
 
         conf = config()
-        ovs_ctxt['local_ip'] = get_host_ip(unit_get('private-address'))
+        ovs_ctxt['local_ip'] = \
+            get_address_in_network(config('os-data-network'),
+                                   get_host_ip(unit_get('private-address')))
         ovs_ctxt['neutron_security_groups'] = self.neutron_security_groups
         # TODO: We need to sort out the syslog and debug/verbose options as a
         # general context helper

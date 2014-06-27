@@ -340,10 +340,12 @@ class CephContext(OSContextGenerator):
         use_syslog = str(config('use-syslog')).lower()
         for rid in relation_ids('ceph'):
             for unit in related_units(rid):
-                mon_hosts.append(relation_get('private-address', rid=rid,
-                                              unit=unit))
                 auth = relation_get('auth', rid=rid, unit=unit)
                 key = relation_get('key', rid=rid, unit=unit)
+                ceph_addr = \
+                    relation_get('ceph-public-address', rid=rid, unit=unit) or \
+                    relation_get('private-address', rid=rid, unit=unit)
+                mon_hosts.append(ceph_addr)
 
         ctxt = {
             'mon_hosts': ' '.join(mon_hosts),
@@ -426,12 +428,13 @@ class ApacheSSLContext(OSContextGenerator):
     """
     Generates a context for an apache vhost configuration that configures
     HTTPS reverse proxying for one or many endpoints.  Generated context
-    looks something like:
-    {
-        'namespace': 'cinder',
-        'private_address': 'iscsi.mycinderhost.com',
-        'endpoints': [(8776, 8766), (8777, 8767)]
-    }
+    looks something like::
+
+        {
+            'namespace': 'cinder',
+            'private_address': 'iscsi.mycinderhost.com',
+            'endpoints': [(8776, 8766), (8777, 8767)]
+        }
 
     The endpoints list consists of a tuples mapping external ports
     to internal ports.
@@ -641,7 +644,7 @@ class SubordinateConfigContext(OSContextGenerator):
     The subordinate interface allows subordinates to export their
     configuration requirements to the principle for multiple config
     files and multiple serivces.  Ie, a subordinate that has interfaces
-    to both glance and nova may export to following yaml blob as json:
+    to both glance and nova may export to following yaml blob as json::
 
         glance:
             /etc/glance/glance-api.conf:
@@ -660,7 +663,8 @@ class SubordinateConfigContext(OSContextGenerator):
 
     It is then up to the principle charms to subscribe this context to
     the service+config file it is interestd in.  Configuration data will
-    be available in the template context, in glance's case, as:
+    be available in the template context, in glance's case, as::
+
         ctxt = {
             ... other context ...
             'subordinate_config': {
