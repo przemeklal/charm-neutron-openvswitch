@@ -24,6 +24,7 @@ from charmhelpers.core.hookenv import (
     unit_get,
     unit_private_ip,
     ERROR,
+    INFO
 )
 
 from charmhelpers.contrib.hahelpers.cluster import (
@@ -426,12 +427,13 @@ class ApacheSSLContext(OSContextGenerator):
     """
     Generates a context for an apache vhost configuration that configures
     HTTPS reverse proxying for one or many endpoints.  Generated context
-    looks something like:
-    {
-        'namespace': 'cinder',
-        'private_address': 'iscsi.mycinderhost.com',
-        'endpoints': [(8776, 8766), (8777, 8767)]
-    }
+    looks something like::
+
+        {
+            'namespace': 'cinder',
+            'private_address': 'iscsi.mycinderhost.com',
+            'endpoints': [(8776, 8766), (8777, 8767)]
+        }
 
     The endpoints list consists of a tuples mapping external ports
     to internal ports.
@@ -641,7 +643,7 @@ class SubordinateConfigContext(OSContextGenerator):
     The subordinate interface allows subordinates to export their
     configuration requirements to the principle for multiple config
     files and multiple serivces.  Ie, a subordinate that has interfaces
-    to both glance and nova may export to following yaml blob as json:
+    to both glance and nova may export to following yaml blob as json::
 
         glance:
             /etc/glance/glance-api.conf:
@@ -660,7 +662,8 @@ class SubordinateConfigContext(OSContextGenerator):
 
     It is then up to the principle charms to subscribe this context to
     the service+config file it is interestd in.  Configuration data will
-    be available in the template context, in glance's case, as:
+    be available in the template context, in glance's case, as::
+
         ctxt = {
             ... other context ...
             'subordinate_config': {
@@ -687,7 +690,7 @@ class SubordinateConfigContext(OSContextGenerator):
         self.interface = interface
 
     def __call__(self):
-        ctxt = {}
+        ctxt = {'sections': {}}
         for rid in relation_ids(self.interface):
             for unit in related_units(rid):
                 sub_config = relation_get('subordinate_configuration',
@@ -713,10 +716,14 @@ class SubordinateConfigContext(OSContextGenerator):
 
                     sub_config = sub_config[self.config_file]
                     for k, v in sub_config.iteritems():
-                        ctxt[k] = v
+                        if k == 'sections':
+                            for section, config_dict in v.iteritems():
+                                log("adding section '%s'" % (section))
+                                ctxt[k][section] = config_dict
+                        else:
+                            ctxt[k] = v
 
-        if not ctxt:
-            ctxt['sections'] = {}
+        log("%d section(s) found" % (len(ctxt['sections'])), level=INFO)
 
         return ctxt
 
