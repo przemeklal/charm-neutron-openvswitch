@@ -5,14 +5,17 @@ from charmhelpers.core.hookenv import (
     config,
     unit_get,
 )
-
+from charmhelpers.core.host import list_nics, get_nic_hwaddr
 from charmhelpers.contrib.openstack import context
 from charmhelpers.core.host import service_running, service_start
-from charmhelpers.contrib.network.ovs import add_bridge
+from charmhelpers.contrib.network.ovs import add_bridge, add_bridge_port
 from charmhelpers.contrib.openstack.utils import get_host_ip
 from charmhelpers.contrib.network.ip import get_address_in_network
 
+import re
+
 OVS_BRIDGE = 'br-int'
+DATA_BRIDGE = 'br-data'
 
 
 def _neutron_security_groups():
@@ -45,10 +48,31 @@ class OVSPluginContext(context.NeutronContext):
     def neutron_security_groups(self):
         return _neutron_security_groups()
 
+    def get_data_port(self):
+        data_ports = config('data-port')
+        if not data_ports:
+            return None
+        hwaddrs = {}
+        for nic in list_nics(['eth', 'bond']):
+            hwaddrs[get_nic_hwaddr(nic).lower()] = nic
+        mac_regex = re.compile(r'([0-9A-F]{2}[:-]){5}([0-9A-F]{2})', re.I)
+        for entry in data_ports.split():
+            entry = entry.strip().lower()
+            if re.match(mac_regex, entry):
+                if entry in hwaddrs:
+                    return hwaddrs[entry]
+            else:
+                return entry
+        return None
+
     def _ensure_bridge(self):
         if not service_running('openvswitch-switch'):
             service_start('openvswitch-switch')
         add_bridge(OVS_BRIDGE)
+        add_bridge(DATA_BRIDGE)
+        data_port = self.get_data_port()
+        if data_port:
+            add_bridge_port(DATA_BRIDGE, data_port, promisc=True)
 
     def ovs_ctxt(self):
         # In addition to generating config context, ensure the OVS service

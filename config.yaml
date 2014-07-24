@@ -21,6 +21,11 @@ options:
     default: False
     type: boolean
     description: Enable verbose logging
+  data-port:
+    type: string
+    description: |
+      The data port will be added to br-data and will allow usage of flat or VLAN
+      network types
   # Network configuration options
   # by default all access is over 'private-address'
   os-data-network:
@@ -31,4 +36,3 @@ options:
       .
       This network will be used for tenant network traffic in overlay
       networks.
-
