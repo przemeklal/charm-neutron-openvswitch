@@ -10,9 +10,12 @@ TO_PATCH = [
     'config',
     'unit_get',
     'add_bridge',
+    'add_bridge_port',
     'service_running',
     'service_start',
     'get_host_ip',
+    'get_nic_hwaddr',
+    'list_nics',
 ]
 
 
@@ -28,6 +31,38 @@ class OVSPluginContextTest(CharmTestCase):
 
     def tearDown(self):
         super(OVSPluginContextTest, self).tearDown()
+
+    def test_data_port_name(self):
+        self.test_config.set('data-port', 'em1')
+        self.assertEquals(context.OVSPluginContext().get_data_port(), 'em1')
+
+    def test_data_port_mac(self):
+        machine_machs = {
+            'em1': 'aa:aa:aa:aa:aa:aa',
+            'eth0': 'bb:bb:bb:bb:bb:bb',
+        }
+        absent_mac = "cc:cc:cc:cc:cc:cc"
+        config_macs = "%s %s" % (absent_mac, machine_machs['em1'])
+        self.test_config.set('data-port', config_macs)
+
+        def get_hwaddr(eth):
+            return machine_machs[eth]
+        self.get_nic_hwaddr.side_effect = get_hwaddr
+        self.list_nics.return_value = machine_machs.keys()
+        self.assertEquals(context.OVSPluginContext().get_data_port(), 'em1')
+
+    @patch.object(context.OVSPluginContext, 'get_data_port')
+    def test_ensure_bridge_data_port_present(self, get_data_port):
+        def add_port(bridge, port, promisc):
+            if bridge == 'br-data' and port == 'em1' and promisc is True:
+                self.bridge_added = True
+                return
+            self.bridge_added = False
+
+        get_data_port.return_value = 'em1'
+        self.add_bridge_port.side_effect = add_port
+        context.OVSPluginContext()._ensure_bridge()
+        self.assertEquals(self.bridge_added, True)
 
     @patch.object(charmhelpers.contrib.openstack.context, 'config')
     @patch.object(charmhelpers.contrib.openstack.context, 'unit_get')
