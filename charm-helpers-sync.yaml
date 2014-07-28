@@ -8,3 +8,4 @@ include:
     - contrib.network.ovs
     - contrib.storage.linux
     - payload.execd
+    - contrib.network.ip
