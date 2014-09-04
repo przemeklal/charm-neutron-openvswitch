@@ -23,7 +23,7 @@ def _neutron_api_settings():
     Inspects current neutron-plugin relation
     '''
     neutron_settings = {
-        'sec_group': True,
+        'neutron_security_groups': False,
         'l2_population': True,
 
     }
@@ -33,8 +33,8 @@ def _neutron_api_settings():
             if 'l2-population' not in rdata:
                 continue
             neutron_settings = {
-                'sec_group': rdata['neutron-security-groups'],
                 'l2_population': rdata['l2-population'],
+                'neutron_security_groups': rdata['neutron-security-groups']
             }
             return neutron_settings
     return neutron_settings
@@ -54,7 +54,7 @@ class OVSPluginContext(context.NeutronContext):
     @property
     def neutron_security_groups(self):
         neutron_api_settings = _neutron_api_settings()
-        return neutron_api_settings['sec_group']
+        return neutron_api_settings['neutron_security_groups']
 
     def get_data_port(self):
         data_ports = config('data-port')
@@ -97,7 +97,7 @@ class OVSPluginContext(context.NeutronContext):
             get_address_in_network(config('os-data-network'),
                                    get_host_ip(unit_get('private-address')))
         neutron_api_settings = _neutron_api_settings()
-        ovs_ctxt['neutron_security_groups'] = neutron_api_settings['sec_group']
+        ovs_ctxt['neutron_security_groups'] = self.neutron_security_groups
         ovs_ctxt['l2_population'] = neutron_api_settings['l2_population']
         # TODO: We need to sort out the syslog and debug/verbose options as a
         # general context helper
