@@ -18,19 +18,26 @@ OVS_BRIDGE = 'br-int'
 DATA_BRIDGE = 'br-data'
 
 
-def _neutron_security_groups():
+def _neutron_api_settings():
     '''
-    Inspects current neutron-plugin relation and determine if neutron-api has
-    instructed us to use neutron security groups.
+    Inspects current neutron-plugin relation
     '''
+    neutron_settings = {
+        'sec_group': True,
+        'l2_population': True,
+
+    }
     for rid in relation_ids('neutron-plugin-api'):
         for unit in related_units(rid):
-            sec_group = relation_get('neutron-security-groups',
-                                     rid=rid,
-                                     unit=unit)
-            if sec_group is not None:
-                return sec_group
-    return False
+            rdata = relation_get(rid=rid, unit=unit)
+            if 'l2_population' not in rdata:
+                continue
+            neutron_settings = {
+                'sec_group': rdata['neutron-security-groups'],
+                'l2_population': rdata['l2-population'],
+            }
+            return neutron_settings
+    return neutron_settings
 
 
 class OVSPluginContext(context.NeutronContext):
@@ -46,7 +53,8 @@ class OVSPluginContext(context.NeutronContext):
 
     @property
     def neutron_security_groups(self):
-        return _neutron_security_groups()
+        neutron_api_settings = _neutron_api_settings()
+        return neutron_api_settings['sec_group']
 
     def get_data_port(self):
         data_ports = config('data-port')
@@ -88,7 +96,9 @@ class OVSPluginContext(context.NeutronContext):
         ovs_ctxt['local_ip'] = \
             get_address_in_network(config('os-data-network'),
                                    get_host_ip(unit_get('private-address')))
-        ovs_ctxt['neutron_security_groups'] = self.neutron_security_groups
+        neutron_api_settings = _neutron_api_settings()
+        ovs_ctxt['neutron_security_groups'] = neutron_api_settings['sec_group']
+        ovs_ctxt['l2_population'] = neutron_api_settings['l2_population']
         # TODO: We need to sort out the syslog and debug/verbose options as a
         # general context helper
         ovs_ctxt['use_syslog'] = conf['use-syslog']
