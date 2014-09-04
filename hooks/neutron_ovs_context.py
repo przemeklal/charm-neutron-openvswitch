@@ -30,7 +30,7 @@ def _neutron_api_settings():
     for rid in relation_ids('neutron-plugin-api'):
         for unit in related_units(rid):
             rdata = relation_get(rid=rid, unit=unit)
-            if 'l2_population' not in rdata:
+            if 'l2-population' not in rdata:
                 continue
             neutron_settings = {
                 'sec_group': rdata['neutron-security-groups'],
