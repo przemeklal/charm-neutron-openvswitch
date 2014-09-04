@@ -88,7 +88,9 @@ class OVSPluginContextTest(CharmTestCase):
         _is_clus.return_value = False
         self.related_units.return_value = ['unit1']
         self.relation_ids.return_value = ['rid2']
-        self.test_relation.set({'neutron-security-groups': 'yes'})
+        self.test_relation.set({'neutron-security-groups': 'yes',
+                                'l2-population': True,
+                                })
         self.get_host_ip.return_value = '127.0.0.15'
         self.service_running.return_value = False
         napi_ctxt = context.OVSPluginContext()
@@ -103,7 +105,8 @@ class OVSPluginContextTest(CharmTestCase):
             'debug': True,
             'core_plugin': 'neutron.randomdriver',
             'neutron_plugin': 'ovs',
-            'neutron_url': 'https://127.0.0.13:9696'
+            'neutron_url': 'https://127.0.0.13:9696',
+            'l2_population': True,
         }
         self.assertEquals(expect, napi_ctxt())
         self.service_start.assertCalled()
