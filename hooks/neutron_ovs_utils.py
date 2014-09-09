@@ -18,7 +18,8 @@ BASE_RESOURCE_MAP = OrderedDict([
     (NEUTRON_CONF, {
         'services': ['neutron-plugin-openvswitch-agent'],
         'contexts': [neutron_ovs_context.OVSPluginContext(),
-                     context.AMQPContext()],
+                     context.AMQPContext(),
+                     context.ZeroMQContext()],
     }),
     (ML2_CONF, {
         'services': ['neutron-plugin-openvswitch-agent'],
@@ -56,3 +57,8 @@ def restart_map():
     state.
     '''
     return {k: v['services'] for k, v in resource_map().iteritems()}
+
+
+def get_topics():
+    return ['q-plugin']
+

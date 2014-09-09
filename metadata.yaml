@@ -28,3 +28,7 @@ requires:
     scope: container
   neutron-plugin-api:
     interface: neutron-plugin-api
+  zeromq-configuration:
+    interface: zeromq-configuration
+    scope: container
+
