@@ -60,5 +60,11 @@ def restart_map():
 
 
 def get_topics():
-    return ['q-plugin']
+    topics = []
+    topics.append('q-agent-notifier-port-update')
+    topics.append('q-agent-notifier-network-delete')
+    topics.append('q-agent-notifier-tunnel-update')
+    topics.append('q-agent-notifier-security_group-update')
+    topics.append('q-agent-notifier-dvr-update')
+    return topics
 
