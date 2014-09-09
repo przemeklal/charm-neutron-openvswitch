@@ -8,6 +8,7 @@ from charmhelpers.core.hookenv import (
     config,
     log,
     relation_set,
+    relation_ids,
 )
 
 from charmhelpers.core.host import (
@@ -20,6 +21,7 @@ from charmhelpers.fetch import (
 
 from neutron_ovs_utils import (
     determine_packages,
+    get_topics,
     register_configs,
     restart_map,
 )
@@ -42,6 +44,8 @@ def install():
 @restart_on_change(restart_map())
 def config_changed():
     CONFIGS.write_all()
+    for rid in relation_ids('zeromq-configuration'):
+        zeromq_configuration_relation_joined(rid)
 
 
 @hooks.hook('amqp-relation-joined')
@@ -58,6 +62,19 @@ def amqp_changed():
     if 'amqp' not in CONFIGS.complete_contexts():
         log('amqp relation incomplete. Peer not ready?')
         return
+    CONFIGS.write_all()
+
+
+@hooks.hook('zeromq-configuration-relation-joined')
+def zeromq_configuration_relation_joined(relid=None):
+    relation_set(relation_id=relid,
+                 topics=" ".join(get_topics()),
+                 users="nova")
+
+
+@hooks.hook('zeromq-configuration-relation-changed')
+@restart_on_change(restart_map(), stopstart=True)
+def zeromq_configuration_relation_changed():
     CONFIGS.write_all()
 
 
