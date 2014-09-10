@@ -69,7 +69,7 @@ def amqp_changed():
 def zeromq_configuration_relation_joined(relid=None):
     relation_set(relation_id=relid,
                  topics=" ".join(get_topics()),
-                 users="nova")
+                 users="neutron")
 
 
 @hooks.hook('zeromq-configuration-relation-changed')
