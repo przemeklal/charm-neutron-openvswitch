@@ -90,6 +90,7 @@ class OVSPluginContextTest(CharmTestCase):
         self.relation_ids.return_value = ['rid2']
         self.test_relation.set({'neutron-security-groups': 'yes',
                                 'l2-population': True,
+                                'overlay-network-type': 'gre',
                                 })
         self.get_host_ip.return_value = '127.0.0.15'
         self.service_running.return_value = False
@@ -107,6 +108,7 @@ class OVSPluginContextTest(CharmTestCase):
             'neutron_plugin': 'ovs',
             'neutron_url': 'https://127.0.0.13:9696',
             'l2_population': True,
+            'overlay_network_type': 'gre',
         }
         self.assertEquals(expect, napi_ctxt())
         self.service_start.assertCalled()

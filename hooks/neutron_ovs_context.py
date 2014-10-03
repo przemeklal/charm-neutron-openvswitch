@@ -25,7 +25,7 @@ def _neutron_api_settings():
     neutron_settings = {
         'neutron_security_groups': False,
         'l2_population': True,
-
+        'overlay_network_type': 'gre',
     }
     for rid in relation_ids('neutron-plugin-api'):
         for unit in related_units(rid):
@@ -34,7 +34,8 @@ def _neutron_api_settings():
                 continue
             neutron_settings = {
                 'l2_population': rdata['l2-population'],
-                'neutron_security_groups': rdata['neutron-security-groups']
+                'neutron_security_groups': rdata['neutron-security-groups'],
+                'overlay_network_type': rdata['overlay-network-type'],
             }
             return neutron_settings
     return neutron_settings
@@ -99,6 +100,8 @@ class OVSPluginContext(context.NeutronContext):
         neutron_api_settings = _neutron_api_settings()
         ovs_ctxt['neutron_security_groups'] = self.neutron_security_groups
         ovs_ctxt['l2_population'] = neutron_api_settings['l2_population']
+        ovs_ctxt['overlay_network_type'] = \
+            neutron_api_settings['overlay_network_type']
         # TODO: We need to sort out the syslog and debug/verbose options as a
         # general context helper
         ovs_ctxt['use_syslog'] = conf['use-syslog']
