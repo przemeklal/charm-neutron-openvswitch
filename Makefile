@@ -6,7 +6,7 @@ lint:
 	@flake8 --exclude hooks/charmhelpers unit_tests
 	@charm proof
 
-test:
+unit_test:
 	@echo Starting tests...
 	@$(PYTHON) /usr/bin/nosetests --nologcapture unit_tests
 
@@ -18,6 +18,6 @@ bin/charm_helpers_sync.py:
 sync: bin/charm_helpers_sync.py
 	@$(PYTHON) bin/charm_helpers_sync.py -c charm-helpers-sync.yaml
 
-publish: lint test
+publish: lint unit_test
 	bzr push lp:charms/neutron-openvswitch
 	bzr push lp:charms/trusty/neutron-openvswitch
