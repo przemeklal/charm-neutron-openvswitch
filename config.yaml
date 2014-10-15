@@ -23,6 +23,7 @@ options:
     description: Enable verbose logging
   data-port:
     type: string
+    default:
     description: |
       The data port will be added to br-data and will allow usage of flat or VLAN
       network types
@@ -30,6 +31,7 @@ options:
   # by default all access is over 'private-address'
   os-data-network:
     type: string
+    default:
     description: |
       The IP address and netmask of the OpenStack Data network (e.g.,
       192.168.0.0/24)
