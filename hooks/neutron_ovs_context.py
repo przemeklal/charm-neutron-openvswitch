@@ -18,7 +18,7 @@ OVS_BRIDGE = 'br-int'
 DATA_BRIDGE = 'br-data'
 
 
-def _neutron_api_settings():
+def neutron_api_settings():
     '''
     Inspects current neutron-plugin relation
     '''
@@ -53,9 +53,9 @@ class OVSPluginContext(context.NeutronContext):
         return 'neutron'
 
     @property
-    def neutron_security_groups(self):
-        neutron_api_settings = _neutron_api_settings()
-        return neutron_api_settings['neutron_security_groups']
+    def nutron_security_groups(self):
+        napi_settings = neutron_api_settings()
+        return napi_settings['neutron_security_groups']
 
     def get_data_port(self):
         data_ports = config('data-port')
@@ -97,11 +97,11 @@ class OVSPluginContext(context.NeutronContext):
         ovs_ctxt['local_ip'] = \
             get_address_in_network(config('os-data-network'),
                                    get_host_ip(unit_get('private-address')))
-        neutron_api_settings = _neutron_api_settings()
+        napi_settings = neutron_api_settings()
         ovs_ctxt['neutron_security_groups'] = self.neutron_security_groups
-        ovs_ctxt['l2_population'] = neutron_api_settings['l2_population']
+        ovs_ctxt['l2_population'] = napi_settings['l2_population']
         ovs_ctxt['overlay_network_type'] = \
-            neutron_api_settings['overlay_network_type']
+            napi_settings['overlay_network_type']
         # TODO: We need to sort out the syslog and debug/verbose options as a
         # general context helper
         ovs_ctxt['use_syslog'] = conf['use-syslog']
