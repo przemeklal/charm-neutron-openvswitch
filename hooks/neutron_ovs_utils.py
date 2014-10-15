@@ -68,6 +68,6 @@ def get_topics():
     topics.append('q-agent-notifier-security_group-update')
     topics.append('q-agent-notifier-dvr-update')
     if neutron_ovs_context.neutron_api_settings()['l2_population']:
-        topics.append('q-agent-notifier-l2pop')
+        topics.append('q-agent-notifier-l2population-update')
     return topics
 
