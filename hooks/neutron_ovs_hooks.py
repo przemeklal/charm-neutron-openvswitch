@@ -19,6 +19,10 @@ from charmhelpers.fetch import (
     apt_install, apt_update
 )
 
+from charmhelpers.contrib.openstack.utils import (
+    os_requires_version,
+)
+
 from neutron_ovs_utils import (
     determine_packages,
     get_topics,
@@ -66,6 +70,7 @@ def amqp_changed():
 
 
 @hooks.hook('zeromq-configuration-relation-joined')
+@os_requires_version('juno', 'neutron-common')
 def zeromq_configuration_relation_joined(relid=None):
     relation_set(relation_id=relid,
                  topics=" ".join(get_topics()),
