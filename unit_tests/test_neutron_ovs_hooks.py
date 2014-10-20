@@ -25,6 +25,7 @@ TO_PATCH = [
     'CONFIGS',
     'determine_packages',
     'log',
+    'relation_ids',
     'relation_set',
 ]
 NEUTRON_CONF_DIR = "/etc/neutron"
@@ -38,6 +39,7 @@ class NeutronOVSHooksTests(CharmTestCase):
         super(NeutronOVSHooksTests, self).setUp(hooks, TO_PATCH)
 
         self.config.side_effect = self.test_config.get
+        hooks.hooks._config_save = False
 
     def _call_hook(self, hookname):
         hooks.hooks.execute([
@@ -53,8 +55,11 @@ class NeutronOVSHooksTests(CharmTestCase):
         ])
 
     def test_config_changed(self):
+        self.relation_ids.return_value = ['relid']
+        _zmq_joined = self.patch('zeromq_configuration_relation_joined')
         self._call_hook('config-changed')
         self.assertTrue(self.CONFIGS.write_all.called)
+        self.assertTrue(_zmq_joined.called_with('relid'))
 
     def test_amqp_joined(self):
         self._call_hook('amqp-relation-joined')
