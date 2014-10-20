@@ -70,4 +70,3 @@ def get_topics():
     if neutron_ovs_context.neutron_api_settings()['l2_population']:
         topics.append('q-agent-notifier-l2population-update')
     return topics
-

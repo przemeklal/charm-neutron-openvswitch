@@ -53,7 +53,7 @@ class OVSPluginContext(context.NeutronContext):
         return 'neutron'
 
     @property
-    def nutron_security_groups(self):
+    def neutron_security_groups(self):
         napi_settings = neutron_api_settings()
         return napi_settings['neutron_security_groups']
 
