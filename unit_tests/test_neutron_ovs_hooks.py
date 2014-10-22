@@ -38,6 +38,7 @@ class NeutronOVSHooksTests(CharmTestCase):
         super(NeutronOVSHooksTests, self).setUp(hooks, TO_PATCH)
 
         self.config.side_effect = self.test_config.get
+        hooks.hooks._config_save = False
 
     def _call_hook(self, hookname):
         hooks.hooks.execute([
