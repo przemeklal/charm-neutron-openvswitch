@@ -4,6 +4,7 @@
 from collections import OrderedDict
 
 import subprocess
+import json
 import os
 import socket
 import sys
@@ -13,7 +14,9 @@ from charmhelpers.core.hookenv import (
     log as juju_log,
     charm_dir,
     ERROR,
-    INFO
+    INFO,
+    relation_ids,
+    relation_set
 )
 
 from charmhelpers.contrib.storage.linux.lvm import (
@@ -22,8 +25,12 @@ from charmhelpers.contrib.storage.linux.lvm import (
     remove_lvm_physical_volume,
 )
 
+from charmhelpers.contrib.network.ip import (
+    get_ipv6_addr
+)
+
 from charmhelpers.core.host import lsb_release, mounts, umount
-from charmhelpers.fetch import apt_install
+from charmhelpers.fetch import apt_install, apt_cache
 from charmhelpers.contrib.storage.linux.utils import is_block_device, zap_disk
 from charmhelpers.contrib.storage.linux.loopback import ensure_loopback_device
 
@@ -70,6 +77,9 @@ SWIFT_CODENAMES = OrderedDict([
     ('1.13.0', 'icehouse'),
     ('1.12.0', 'icehouse'),
     ('1.11.0', 'icehouse'),
+    ('2.0.0', 'juno'),
+    ('2.1.0', 'juno'),
+    ('2.2.0', 'juno'),
 ])
 
 DEFAULT_LOOPBACK_SIZE = '5G'
@@ -134,13 +144,8 @@ def get_os_version_codename(codename):
 def get_os_codename_package(package, fatal=True):
     '''Derive OpenStack release codename from an installed package.'''
     import apt_pkg as apt
-    apt.init()
 
-    # Tell apt to build an in-memory cache to prevent race conditions (if
-    # another process is already building the cache).
-    apt.config.set("Dir::Cache::pkgcache", "")
-
-    cache = apt.Cache()
+    cache = apt_cache()
 
     try:
         pkg = cache[package]
@@ -461,3 +466,21 @@ def get_hostname(address, fqdn=True):
             return result
     else:
         return result.split('.')[0]
+
+
+def sync_db_with_multi_ipv6_addresses(database, database_user,
+                                      relation_prefix=None):
+    hosts = get_ipv6_addr(dynamic_only=False)
+
+    kwargs = {'database': database,
+              'username': database_user,
+              'hostname': json.dumps(hosts)}
+
+    if relation_prefix:
+        keys = kwargs.keys()
+        for key in keys:
+            kwargs["%s_%s" % (relation_prefix, key)] = kwargs[key]
+            del kwargs[key]
+
+    for rid in relation_ids('shared-db'):
+        relation_set(relation_id=rid, **kwargs)
