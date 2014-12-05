@@ -26,6 +26,7 @@ def _neutron_api_settings():
         'neutron_security_groups': False,
         'l2_population': True,
         'overlay_network_type': 'gre',
+        'network_device_mtu': 1500,
     }
     for rid in relation_ids('neutron-plugin-api'):
         for unit in related_units(rid):
