@@ -38,7 +38,7 @@ def _neutron_api_settings():
                 'neutron_security_groups': rdata['neutron-security-groups'],
                 'overlay_network_type': rdata['overlay-network-type'],
                 'network_device_mtu': rdata['network-device-mtu']
-                    if 'network-device-mtu' in rdata else 1500,
+                if 'network-device-mtu' in rdata else 1500,
             }
             # Override with configuration if set to true
             if config('disable-security-groups'):
