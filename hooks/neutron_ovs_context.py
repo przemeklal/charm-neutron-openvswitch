@@ -106,7 +106,8 @@ class OVSPluginContext(context.NeutronContext):
         neutron_api_settings = _neutron_api_settings()
         ovs_ctxt['neutron_security_groups'] = self.neutron_security_groups
         ovs_ctxt['l2_population'] = neutron_api_settings['l2_population']
-        ovs_ctxt['network_device_mtu'] = neutron_api_settings['network_device_mtu']
+        ovs_ctxt['network_device_mtu'] = \
+            neutron_api_settings['network_device_mtu']
         ovs_ctxt['overlay_network_type'] = \
             neutron_api_settings['overlay_network_type']
         # TODO: We need to sort out the syslog and debug/verbose options as a
