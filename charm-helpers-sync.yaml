@@ -9,3 +9,4 @@ include:
     - contrib.storage.linux
     - payload.execd
     - contrib.network.ip
+    - contrib.python.packages
