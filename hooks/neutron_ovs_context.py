@@ -37,6 +37,9 @@ def neutron_api_settings():
                 'neutron_security_groups': rdata['neutron-security-groups'],
                 'overlay_network_type': rdata['overlay-network-type'],
             }
+            # Override with configuration if set to true
+            if config('disable-security-groups'):
+                neutron_settings['neutron_security_groups'] = False
             return neutron_settings
     return neutron_settings
 
