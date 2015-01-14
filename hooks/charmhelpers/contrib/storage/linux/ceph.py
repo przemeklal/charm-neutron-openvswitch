@@ -157,6 +157,17 @@ def create_keyring(service, key):
     log('Created new ceph keyring at %s.' % keyring, level=DEBUG)
 
 
+def delete_keyring(service):
+    """Delete an existing Ceph keyring."""
+    keyring = _keyring_path(service)
+    if not os.path.exists(keyring):
+        log('Keyring does not exist at %s' % keyring, level=WARNING)
+        return
+
+    os.remove(keyring)
+    log('Deleted ring at %s.' % keyring, level=INFO)
+
+
 def create_key_file(service, key):
     """Create a file containing key."""
     keyfile = _keyfile_path(service)
@@ -372,3 +383,46 @@ def ceph_version():
             return None
     else:
         return None
+
+
+class CephBrokerRq(object):
+    """Ceph broker request.
+
+    Multiple operations can be added to a request and sent to the Ceph broker
+    to be executed.
+
+    Request is json-encoded for sending over the wire.
+
+    The API is versioned and defaults to version 1.
+    """
+    def __init__(self, api_version=1):
+        self.api_version = api_version
+        self.ops = []
+
+    def add_op_create_pool(self, name, replica_count=3):
+        self.ops.append({'op': 'create-pool', 'name': name,
+                         'replicas': replica_count})
+
+    @property
+    def request(self):
+        return json.dumps({'api-version': self.api_version, 'ops': self.ops})
+
+
+class CephBrokerRsp(object):
+    """Ceph broker response.
+
+    Response is json-decoded and contents provided as methods/properties.
+
+    The API is versioned and defaults to version 1.
+    """
+    def __init__(self, encoded_rsp):
+        self.api_version = None
+        self.rsp = json.loads(encoded_rsp)
+
+    @property
+    def exit_code(self):
+        return self.rsp.get('exit-code')
+
+    @property
+    def exit_msg(self):
+        return self.rsp.get('stderr')
