@@ -19,6 +19,7 @@ from charmhelpers.fetch import (
 )
 
 from neutron_ovs_utils import (
+    configure_ovs,
     determine_packages,
     determine_dvr_packages,
     register_configs,
@@ -44,6 +45,7 @@ def install():
 def config_changed():
     if determine_dvr_packages():
         apt_install(determine_dvr_packages(), fatal=True)
+    configure_ovs()
     CONFIGS.write_all()
 
 
