@@ -7,6 +7,10 @@ from charmhelpers.contrib.openstack.utils import (
     os_release,
 )
 import neutron_ovs_context
+from charmhelpers.contrib.network.ovs import (
+    add_bridge,
+    add_bridge_port,
+)
 
 NOVA_CONF_DIR = "/etc/nova"
 NEUTRON_CONF_DIR = "/etc/neutron"
@@ -15,6 +19,7 @@ NEUTRON_DEFAULT = '/etc/default/neutron-server'
 NEUTRON_L3_AGENT_CONF = "/etc/neutron/l3_agent.ini"
 NEUTRON_FWAAS_CONF = "/etc/neutron/fwaas_driver.ini"
 ML2_CONF = '%s/plugins/ml2/ml2_conf.ini' % NEUTRON_CONF_DIR
+EXT_PORT_CONF = '/etc/init/ext-port.conf'
 
 BASE_RESOURCE_MAP = OrderedDict([
     (NEUTRON_CONF, {
@@ -34,8 +39,15 @@ BASE_RESOURCE_MAP = OrderedDict([
         'services': ['neutron-vpn-agent'],
         'contexts': [neutron_ovs_context.L3AgentContext()],
     }),
+    (EXT_PORT_CONF, {
+        'services': [],
+        'contexts': [neutron_ovs_context.ExternalPortContext()],
+    }),
 ])
 TEMPLATES = 'templates/'
+INT_BRIDGE = "br-int"
+EXT_BRIDGE = "br-ex"
+DATA_BRIDGE = 'br-data'
 
 
 def determine_dvr_packages():
@@ -77,3 +89,13 @@ def restart_map():
     state.
     '''
     return {k: v['services'] for k, v in resource_map().iteritems()}
+
+
+def configure_ovs():
+    add_bridge(INT_BRIDGE)
+    add_bridge(EXT_BRIDGE)
+    ext_port_ctx = neutron_ovs_context.ExternalPortContext()()
+    if ext_port_ctx and ext_port_ctx['ext_port']:
+        add_bridge_port(EXT_BRIDGE, ext_port_ctx['ext_port'])
+
+    add_bridge(DATA_BRIDGE)
