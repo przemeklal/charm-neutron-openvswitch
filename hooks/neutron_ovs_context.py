@@ -20,15 +20,21 @@ OVS_BRIDGE = 'br-int'
 DATA_BRIDGE = 'br-data'
 
 
+def to_boolean(option):
+    if option is None:
+        return False
+    return ast.literal_eval(option)
+
+
 def _neutron_api_settings():
     '''
     Inspects current neutron-plugin relation
     '''
     neutron_settings = {
-        'neutron_security_groups': False,
-        'l2_population': True,
+        'neutron_security_groups': 'False',
+        'l2_population': 'True',
         'overlay_network_type': 'gre',
-        'enable_dvr': False,
+        'enable_dvr': 'False',
     }
     for rid in relation_ids('neutron-plugin-api'):
         for unit in related_units(rid):
@@ -50,7 +56,7 @@ def _neutron_api_settings():
 
 def use_dvr():
     api_settings = _neutron_api_settings()
-    return ast.literal_eval(api_settings['enable_dvr'])
+    return to_boolean(api_settings['enable_dvr'])
 
 
 class OVSPluginContext(context.NeutronContext):
