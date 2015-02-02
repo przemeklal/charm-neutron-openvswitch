@@ -1,3 +1,4 @@
+import ast
 from charmhelpers.core.hookenv import (
     relation_ids,
     related_units,
@@ -11,6 +12,7 @@ from charmhelpers.core.host import service_running, service_start
 from charmhelpers.contrib.network.ovs import add_bridge, add_bridge_port
 from charmhelpers.contrib.openstack.utils import get_host_ip
 from charmhelpers.contrib.network.ip import get_address_in_network
+from charmhelpers.contrib.openstack.context import OSContextGenerator
 
 import re
 
@@ -26,22 +28,29 @@ def _neutron_api_settings():
         'neutron_security_groups': False,
         'l2_population': True,
         'overlay_network_type': 'gre',
+        'enable_dvr': False,
     }
     for rid in relation_ids('neutron-plugin-api'):
         for unit in related_units(rid):
             rdata = relation_get(rid=rid, unit=unit)
             if 'l2-population' not in rdata:
                 continue
-            neutron_settings = {
-                'l2_population': rdata['l2-population'],
-                'neutron_security_groups': rdata['neutron-security-groups'],
-                'overlay_network_type': rdata['overlay-network-type'],
-            }
+            neutron_settings['l2_population'] = rdata['l2-population']
+            if 'overlay-network-type' in rdata:
+                neutron_settings['overlay_network_type'] = \
+                    rdata['overlay-network-type']
+            if 'enable-dvr' in rdata:
+                neutron_settings['enable_dvr'] = rdata['enable-dvr']
             # Override with configuration if set to true
             if config('disable-security-groups'):
                 neutron_settings['neutron_security_groups'] = False
             return neutron_settings
     return neutron_settings
+
+
+def use_dvr():
+    api_settings = _neutron_api_settings()
+    return ast.literal_eval(api_settings['enable_dvr'])
 
 
 class OVSPluginContext(context.NeutronContext):
@@ -103,6 +112,7 @@ class OVSPluginContext(context.NeutronContext):
         neutron_api_settings = _neutron_api_settings()
         ovs_ctxt['neutron_security_groups'] = self.neutron_security_groups
         ovs_ctxt['l2_population'] = neutron_api_settings['l2_population']
+        ovs_ctxt['distributed_routing'] = use_dvr()
         ovs_ctxt['overlay_network_type'] = \
             neutron_api_settings['overlay_network_type']
         # TODO: We need to sort out the syslog and debug/verbose options as a
@@ -111,3 +121,15 @@ class OVSPluginContext(context.NeutronContext):
         ovs_ctxt['verbose'] = conf['verbose']
         ovs_ctxt['debug'] = conf['debug']
         return ovs_ctxt
+
+
+class L3AgentContext(OSContextGenerator):
+
+    def __call__(self):
+        neutron_api_settings = _neutron_api_settings()
+        ctxt = {}
+        if neutron_api_settings['enable_dvr'] == 'True':
+            ctxt['agent_mode'] = 'dvr'
+        else:
+            ctxt['agent_mode'] = 'legacy'
+        return ctxt

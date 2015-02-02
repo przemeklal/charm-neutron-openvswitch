@@ -12,6 +12,8 @@ NOVA_CONF_DIR = "/etc/nova"
 NEUTRON_CONF_DIR = "/etc/neutron"
 NEUTRON_CONF = '%s/neutron.conf' % NEUTRON_CONF_DIR
 NEUTRON_DEFAULT = '/etc/default/neutron-server'
+NEUTRON_L3_AGENT_CONF = "/etc/neutron/l3_agent.ini"
+NEUTRON_FWAAS_CONF = "/etc/neutron/fwaas_driver.ini"
 ML2_CONF = '%s/plugins/ml2/ml2_conf.ini' % NEUTRON_CONF_DIR
 
 BASE_RESOURCE_MAP = OrderedDict([
@@ -24,12 +26,29 @@ BASE_RESOURCE_MAP = OrderedDict([
         'services': ['neutron-plugin-openvswitch-agent'],
         'contexts': [neutron_ovs_context.OVSPluginContext()],
     }),
+    (NEUTRON_L3_AGENT_CONF, {
+        'services': ['neutron-vpn-agent'],
+        'contexts': [neutron_ovs_context.L3AgentContext()],
+    }),
+    (NEUTRON_FWAAS_CONF, {
+        'services': ['neutron-vpn-agent'],
+        'contexts': [neutron_ovs_context.L3AgentContext()],
+    }),
 ])
 TEMPLATES = 'templates/'
 
 
+def determine_dvr_packages():
+    pkgs = []
+    if neutron_ovs_context.use_dvr():
+        pkgs = 'neutron-vpn-agent'
+    return pkgs
+
+
 def determine_packages():
-    return neutron_plugin_attribute('ovs', 'packages', 'neutron')
+    pkgs = neutron_plugin_attribute('ovs', 'packages', 'neutron')
+    pkgs.extend(determine_dvr_packages())
+    return pkgs
 
 
 def register_configs(release=None):
@@ -47,6 +66,8 @@ def resource_map():
     hook execution.
     '''
     resource_map = deepcopy(BASE_RESOURCE_MAP)
+    if not neutron_ovs_context.use_dvr():
+        resource_map.pop(NEUTRON_L3_AGENT_CONF)
     return resource_map
 
 
