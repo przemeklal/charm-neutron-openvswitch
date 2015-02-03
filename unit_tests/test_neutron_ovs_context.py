@@ -90,6 +90,7 @@ class OVSPluginContextTest(CharmTestCase):
         self.relation_ids.return_value = ['rid2']
         self.test_relation.set({'neutron-security-groups': True,
                                 'l2-population': True,
+                                'network-device-mtu': 1500,
                                 'overlay-network-type': 'gre',
                                 })
         self.get_host_ip.return_value = '127.0.0.15'
@@ -100,6 +101,7 @@ class OVSPluginContextTest(CharmTestCase):
             'neutron_security_groups': True,
             'verbose': True,
             'local_ip': '127.0.0.15',
+            'network_device_mtu': 1500,
             'config': 'neutron.randomconfig',
             'use_syslog': True,
             'network_manager': 'neutron',
@@ -143,6 +145,7 @@ class OVSPluginContextTest(CharmTestCase):
         self.relation_ids.return_value = ['rid2']
         self.test_relation.set({'neutron-security-groups': True,
                                 'l2-population': True,
+                                'network-device-mtu': 1500,
                                 'overlay-network-type': 'gre',
                                 })
         self.get_host_ip.return_value = '127.0.0.15'
@@ -153,6 +156,7 @@ class OVSPluginContextTest(CharmTestCase):
             'neutron_security_groups': False,
             'verbose': True,
             'local_ip': '127.0.0.15',
+            'network_device_mtu': 1500,
             'config': 'neutron.randomconfig',
             'use_syslog': True,
             'network_manager': 'neutron',
