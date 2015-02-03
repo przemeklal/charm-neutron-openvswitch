@@ -45,7 +45,7 @@ def install():
 def config_changed():
     if determine_dvr_packages():
         apt_install(determine_dvr_packages(), fatal=True)
-    configure_ovs()
+    #configure_ovs()
     CONFIGS.write_all()
 
 
