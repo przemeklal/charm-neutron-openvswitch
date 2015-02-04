@@ -22,6 +22,7 @@ from neutron_ovs_utils import (
     configure_ovs,
     determine_packages,
     determine_dvr_packages,
+    get_shared_secret,
     register_configs,
     restart_map,
 )
@@ -38,6 +39,7 @@ def install():
         apt_install(pkg, fatal=True)
 
 
+@hooks.hook('neutron-network-service-relation-changed')
 @hooks.hook('neutron-plugin-relation-changed')
 @hooks.hook('neutron-plugin-api-relation-changed')
 @hooks.hook('config-changed')
@@ -47,6 +49,14 @@ def config_changed():
         apt_install(determine_dvr_packages(), fatal=True)
     configure_ovs()
     CONFIGS.write_all()
+
+
+@hooks.hook('neutron-plugin-relation-joined')
+def neutron_plugin_joined(relation_id=None):
+    rel_data = {
+        'metadata-shared-secret': get_shared_secret()
+    }
+    relation_set(relation_id=relation_id, **rel_data)
 
 
 @hooks.hook('amqp-relation-joined')

@@ -20,15 +20,17 @@ NEUTRON_L3_AGENT_CONF = "/etc/neutron/l3_agent.ini"
 NEUTRON_FWAAS_CONF = "/etc/neutron/fwaas_driver.ini"
 ML2_CONF = '%s/plugins/ml2/ml2_conf.ini' % NEUTRON_CONF_DIR
 EXT_PORT_CONF = '/etc/init/ext-port.conf'
+NEUTRON_METADATA_AGENT_CONF = "/etc/neutron/metadata_agent.ini"
+
 
 BASE_RESOURCE_MAP = OrderedDict([
     (NEUTRON_CONF, {
-        'services': ['neutron-plugin-openvswitch-agent'],
+        'services': ['neutron-plugin-openvswitch-agent', 'neutron-metadata-agent', 'neutron-openvswitch-agent', 'neutron-vpn-agent'],
         'contexts': [neutron_ovs_context.OVSPluginContext(),
                      context.AMQPContext(ssl_dir=NEUTRON_CONF_DIR)],
     }),
     (ML2_CONF, {
-        'services': ['neutron-plugin-openvswitch-agent'],
+        'services': ['neutron-plugin-openvswitch-agent', 'neutron-openvswitch-agent'],
         'contexts': [neutron_ovs_context.OVSPluginContext()],
     }),
     (NEUTRON_L3_AGENT_CONF, {
@@ -43,6 +45,11 @@ BASE_RESOURCE_MAP = OrderedDict([
         'services': [],
         'contexts': [neutron_ovs_context.ExternalPortContext()],
     }),
+    (NEUTRON_METADATA_AGENT_CONF, {
+        'services': ['neutron-metadata-agent'],
+        'contexts': [neutron_ovs_context.DVRSharedSecretContext(),
+                     neutron_ovs_context.NetworkServiceContext()],
+    }),
 ])
 TEMPLATES = 'templates/'
 INT_BRIDGE = "br-int"
@@ -53,7 +60,7 @@ DATA_BRIDGE = 'br-data'
 def determine_dvr_packages():
     pkgs = []
     if neutron_ovs_context.use_dvr():
-        pkgs = 'neutron-vpn-agent'
+        pkgs = ['neutron-vpn-agent']
     return pkgs
 
 
@@ -99,3 +106,9 @@ def configure_ovs():
         add_bridge_port(EXT_BRIDGE, ext_port_ctx['ext_port'])
 
     add_bridge(DATA_BRIDGE)
+
+
+def get_shared_secret():
+    ctxt = neutron_ovs_context.DVRSharedSecretContext()()
+    if 'shared_secret' in ctxt:
+        return ctxt['shared_secret']
