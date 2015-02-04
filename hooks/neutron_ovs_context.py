@@ -1,4 +1,6 @@
 import ast
+import os
+import uuid
 from charmhelpers.core.hookenv import (
     relation_ids,
     related_units,
@@ -12,12 +14,16 @@ from charmhelpers.contrib.network.ip import (
     get_ipv6_addr,
     is_bridge_member,
 )
+from charmhelpers.contrib.openstack.ip import resolve_address
 from charmhelpers.core.host import list_nics, get_nic_hwaddr
 from charmhelpers.contrib.openstack import context
 from charmhelpers.core.host import service_running, service_start
 from charmhelpers.contrib.network.ovs import add_bridge, add_bridge_port
 from charmhelpers.contrib.openstack.utils import get_host_ip
-from charmhelpers.contrib.openstack.context import OSContextGenerator
+from charmhelpers.contrib.openstack.context import (
+    OSContextGenerator,
+    context_complete,
+)
 
 import re
 
@@ -186,3 +192,49 @@ class ExternalPortContext(NeutronPortContext):
             return {"ext_port": port}
         else:
             return None
+
+
+class NetworkServiceContext(OSContextGenerator):
+    interfaces = ['neutron-network-service']
+
+    def __call__(self):
+        for rid in relation_ids('neutron-network-service'):
+            for unit in related_units(rid):
+                rdata = relation_get(rid=rid, unit=unit)
+                ctxt = {
+                    'service_protocol':
+                    rdata.get('service_protocol') or 'http',
+                    'keystone_host': rdata.get('keystone_host'),
+                    'service_port': rdata.get('service_port'),
+                    'region': rdata.get('region'),
+                    'service_tenant': rdata.get('service_tenant'),
+                    'service_username': rdata.get('service_username'),
+                    'service_password': rdata.get('service_password'),
+                }
+                if context_complete(ctxt):
+                    return ctxt
+
+
+class DVRSharedSecretContext(OSContextGenerator):
+
+    def get_shared_secret(self):
+        secret = None
+        if not os.path.exists(self.SHARED_SECRET):
+            secret = str(uuid.uuid4())
+            with open(self.SHARED_SECRET, 'w') as secret_file:
+                secret_file.write(secret)
+        else:
+            with open(self.SHARED_SECRET, 'r') as secret_file:
+                secret = secret_file.read().strip()
+        return secret
+
+    def __call__(self):
+        self.SHARED_SECRET = "/etc/neutron/secret.txt"
+        if use_dvr():
+            ctxt = {
+                'shared_secret': self.get_shared_secret(),
+                'local_ip': resolve_address(),
+            }
+        else:
+            ctxt = {}
+        return ctxt
