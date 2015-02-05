@@ -25,12 +25,12 @@ NEUTRON_METADATA_AGENT_CONF = "/etc/neutron/metadata_agent.ini"
 
 BASE_RESOURCE_MAP = OrderedDict([
     (NEUTRON_CONF, {
-        'services': ['neutron-plugin-openvswitch-agent', 'neutron-metadata-agent', 'neutron-openvswitch-agent', 'neutron-vpn-agent'],
+        'services': ['neutron-plugin-openvswitch-agent', 'neutron-metadata-agent', 'neutron-vpn-agent'],
         'contexts': [neutron_ovs_context.OVSPluginContext(),
                      context.AMQPContext(ssl_dir=NEUTRON_CONF_DIR)],
     }),
     (ML2_CONF, {
-        'services': ['neutron-plugin-openvswitch-agent', 'neutron-openvswitch-agent'],
+        'services': ['neutron-plugin-openvswitch-agent'],
         'contexts': [neutron_ovs_context.OVSPluginContext()],
     }),
     (NEUTRON_L3_AGENT_CONF, {
@@ -42,7 +42,7 @@ BASE_RESOURCE_MAP = OrderedDict([
         'contexts': [neutron_ovs_context.L3AgentContext()],
     }),
     (EXT_PORT_CONF, {
-        'services': [],
+        'services': ['neutron-vpn-agent'],
         'contexts': [neutron_ovs_context.ExternalPortContext()],
     }),
     (NEUTRON_METADATA_AGENT_CONF, {
