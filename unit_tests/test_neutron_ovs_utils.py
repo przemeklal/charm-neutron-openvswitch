@@ -71,7 +71,8 @@ class TestNeutronOVSUtils(CharmTestCase):
         templating.OSConfigRenderer.side_effect = _mock_OSConfigRenderer
         _regconfs = nutils.register_configs()
         confs = ['/etc/neutron/neutron.conf',
-                 '/etc/neutron/plugins/ml2/ml2_conf.ini']
+                 '/etc/neutron/plugins/ml2/ml2_conf.ini',
+                 '/etc/init/ext-port.conf']
         self.assertItemsEqual(_regconfs.configs, confs)
 
     def test_resource_map(self):
@@ -85,8 +86,9 @@ class TestNeutronOVSUtils(CharmTestCase):
         expect = OrderedDict([
             (nutils.NEUTRON_CONF, ['neutron-plugin-openvswitch-agent']),
             (ML2CONF, ['neutron-plugin-openvswitch-agent']),
+            (nutils.EXT_PORT_CONF, ['ext-port'])
         ])
-        self.assertTrue(len(expect) == len(_restart_map))
+        self.assertEqual(expect, _restart_map)
         for item in _restart_map:
             self.assertTrue(item in _restart_map)
             self.assertTrue(expect[item] == _restart_map[item])
