@@ -47,6 +47,11 @@ options:
       .
       This network will be used for tenant network traffic in overlay
       networks.
+  phy-nics:
+    type: string
+    default:
+    description: |
+      A space-separated list of NICs that we want phy-nic-mtu applied to.
   phy-nic-mtu:
     type: int
     default: 0
@@ -54,14 +59,6 @@ options:
       To improve network performance of VM, sometimes we should keep VM MTU as
       1500 and use charm to modify MTU of tunnel nic more than 1500 (e.g. 1546
       for GRE). A value of zero means no mtu will be set/modified.
-  ext-port:
-    type: string
-    default:
-    description: |
-      A space-separated list of external ports to use for routing of instance
-      traffic to the external public network. Valid values are either MAC
-      addresses (in which case only MAC addresses for interfaces without an IP
-      address already assigned will be used), or interfaces (eth0)
   network-device-mtu:
     type: int
     default: 0
