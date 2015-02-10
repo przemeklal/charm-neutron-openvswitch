@@ -38,9 +38,9 @@ def _neutron_api_settings():
                 'neutron_security_groups': rdata['neutron-security-groups'],
                 'overlay_network_type': rdata['overlay-network-type'],
             }
-            mtu = rdata.get('network-device-mtu')
-            if mtu:
-                neutron_settings['network_device_mtu'] = mtu
+            net_dev_mtu = rdata.get('network-device-mtu')
+            if net_dev_mtu:
+                neutron_settings['network_device_mtu'] = net_dev_mtu
 
             # Override with configuration if set to true
             if config('disable-security-groups'):
@@ -108,8 +108,11 @@ class OVSPluginContext(context.NeutronContext):
         neutron_api_settings = _neutron_api_settings()
         ovs_ctxt['neutron_security_groups'] = self.neutron_security_groups
         ovs_ctxt['l2_population'] = neutron_api_settings['l2_population']
-        ovs_ctxt['network_device_mtu'] = \
-            neutron_api_settings['network_device_mtu']
+
+        net_dev_mtu = neutron_api_settings.get('network_device_mtu')
+        if net_dev_mtu:
+            ovs_ctxt['network_device_mtu'] = net_dev_mtu
+
         ovs_ctxt['overlay_network_type'] = \
             neutron_api_settings['overlay_network_type']
         # TODO: We need to sort out the syslog and debug/verbose options as a
