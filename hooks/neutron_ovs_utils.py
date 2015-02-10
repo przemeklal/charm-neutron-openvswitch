@@ -13,7 +13,7 @@ NEUTRON_CONF_DIR = "/etc/neutron"
 NEUTRON_CONF = '%s/neutron.conf' % NEUTRON_CONF_DIR
 NEUTRON_DEFAULT = '/etc/default/neutron-server'
 ML2_CONF = '%s/plugins/ml2/ml2_conf.ini' % NEUTRON_CONF_DIR
-EXT_PORT_CONF = '/etc/init/ext-port.conf'
+PHY_NIC_MTU_CONF = '/etc/init/os-charm-phy-nic-mtu.conf'
 TEMPLATES = 'templates/'
 
 BASE_RESOURCE_MAP = OrderedDict([
@@ -26,9 +26,9 @@ BASE_RESOURCE_MAP = OrderedDict([
         'services': ['neutron-plugin-openvswitch-agent'],
         'contexts': [neutron_ovs_context.OVSPluginContext()],
     }),
-    (EXT_PORT_CONF, {
-        'services': ['ext-port'],
-        'contexts': [neutron_ovs_context.ExternalPortContext()],
+    (PHY_NIC_MTU_CONF, {
+        'services': ['os-charm-phy-nic-mtu'],
+        'contexts': [neutron_ovs_context.PhyNICMTUContext()],
     }),
 ])
 
