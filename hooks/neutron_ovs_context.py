@@ -46,6 +46,12 @@ def _neutron_api_settings():
             if config('disable-security-groups'):
                 neutron_settings['neutron_security_groups'] = False
             return neutron_settings
+
+    # Override if locally provided
+    cfg_net_dev_mtu = config('network-device-mtu')
+    if cfg_net_dev_mtu:
+        neutron_settings['network_device_mtu'] = config('network-device-mtu')
+
     return neutron_settings
 
 

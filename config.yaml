@@ -62,3 +62,9 @@ options:
       traffic to the external public network. Valid values are either MAC
       addresses (in which case only MAC addresses for interfaces without an IP
       address already assigned will be used), or interfaces (eth0)
+  network-device-mtu:
+    type: int
+    default: 0
+    description: |
+      The MTU size for the interfaces managed by neutron. If set to 0, no value
+      will be applied.
