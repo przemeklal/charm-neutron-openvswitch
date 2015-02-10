@@ -121,3 +121,17 @@ class OVSPluginContext(context.NeutronContext):
         ovs_ctxt['verbose'] = conf['verbose']
         ovs_ctxt['debug'] = conf['debug']
         return ovs_ctxt
+
+
+class ExternalPortContext(context.NeutronPortContext):
+
+    def __call__(self):
+        ctxt = {}
+        port = self.resolve_port('ext-port')
+        if port:
+            ctxt = {"ext_port": port}
+            mtu = config('phy-nic-mtu')
+            if mtu:
+                ctxt['ext_port_mtu'] = mtu
+
+        return ctxt
