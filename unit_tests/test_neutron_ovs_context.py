@@ -135,6 +135,7 @@ class OVSPluginContextTest(CharmTestCase):
                 return "neutron.randomdriver"
             if section == "config":
                 return "neutron.randomconfig"
+
         _npa.side_effect = mock_npa
         _config.return_value = 'ovs'
         _unit_get.return_value = '127.0.0.13'
