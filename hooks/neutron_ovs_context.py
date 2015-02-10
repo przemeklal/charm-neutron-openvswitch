@@ -125,6 +125,11 @@ class OVSPluginContext(context.NeutronContext):
         ovs_ctxt['use_syslog'] = conf['use-syslog']
         ovs_ctxt['verbose'] = conf['verbose']
         ovs_ctxt['debug'] = conf['debug']
+
+        net_dev_mtu = config('network-device-mtu')
+        if net_dev_mtu:
+            ovs_ctxt['veth_mtu'] = net_dev_mtu
+
         return ovs_ctxt
 
 
