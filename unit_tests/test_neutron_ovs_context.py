@@ -112,6 +112,7 @@ class OVSPluginContextTest(CharmTestCase):
             'neutron_url': 'https://127.0.0.13:9696',
             'l2_population': True,
             'overlay_network_type': 'gre',
+            'bridge_mappings': 'physnet1:br-data'
         }
         self.assertEquals(expect, napi_ctxt())
         self.service_start.assertCalled()
@@ -169,6 +170,7 @@ class OVSPluginContextTest(CharmTestCase):
             'neutron_url': 'https://127.0.0.13:9696',
             'l2_population': True,
             'overlay_network_type': 'gre',
+            'bridge_mappings': 'physnet1:br-data'
         }
         self.assertEquals(expect, napi_ctxt())
         self.service_start.assertCalled()

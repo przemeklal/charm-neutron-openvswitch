@@ -130,6 +130,10 @@ class OVSPluginContext(context.NeutronContext):
             # ml2 conf
             ovs_ctxt['veth_mtu'] = net_dev_mtu
 
+        mappings = config('bridge-mappings')
+        if mappings:
+            ovs_ctxt['bridge_mappings'] = mappings
+
         return ovs_ctxt
 
 
