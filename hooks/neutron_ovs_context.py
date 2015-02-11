@@ -31,7 +31,7 @@ def _neutron_api_settings():
     # Override if provided in local config
     cfg_net_dev_mtu = config('network-device-mtu')
     if cfg_net_dev_mtu:
-        neutron_settings['network_device_mtu'] = config('network-device-mtu')
+        neutron_settings['network_device_mtu'] = cfg_net_dev_mtu
 
     for rid in relation_ids('neutron-plugin-api'):
         for unit in related_units(rid):
@@ -125,6 +125,9 @@ class OVSPluginContext(context.NeutronContext):
 
         net_dev_mtu = neutron_api_settings.get('network_device_mtu')
         if net_dev_mtu:
+            # neutron.conf
+            ovs_ctxt['network_device_mtu'] = net_dev_mtu
+            # ml2 conf
             ovs_ctxt['veth_mtu'] = net_dev_mtu
 
         return ovs_ctxt
