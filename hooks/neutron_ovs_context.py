@@ -7,7 +7,11 @@ from charmhelpers.core.hookenv import (
 )
 from charmhelpers.core.host import list_nics, get_nic_hwaddr
 from charmhelpers.contrib.openstack import context
-from charmhelpers.core.host import service_running, service_start
+from charmhelpers.core.host import (
+    service_running,
+    service_start,
+    service_restart,
+)
 from charmhelpers.contrib.network.ovs import add_bridge, add_bridge_port
 from charmhelpers.contrib.openstack.utils import get_host_ip
 from charmhelpers.contrib.network.ip import get_address_in_network
@@ -15,7 +19,6 @@ from charmhelpers.contrib.network.ip import get_address_in_network
 import re
 
 OVS_BRIDGE = 'br-int'
-DATA_BRIDGE = 'br-data'
 
 
 def _neutron_api_settings():
@@ -56,6 +59,23 @@ def _neutron_api_settings():
     return neutron_settings
 
 
+def get_bridges_from_mapping():
+    """If a bridge mapping is provided, extract the bridge names.
+
+    Returns list of bridges from mapping.
+    """
+    bridges = []
+    mappings = config('bridge-mappings')
+    if mappings:
+        mappings = mappings.split(' ')
+        for m in mappings:
+            p = m.partition(':')
+            if p[1] == ':':
+                bridges.append(p[2])
+
+    return bridges
+
+
 class OVSPluginContext(context.NeutronContext):
     interfaces = []
 
@@ -92,11 +112,15 @@ class OVSPluginContext(context.NeutronContext):
     def _ensure_bridge(self):
         if not service_running('openvswitch-switch'):
             service_start('openvswitch-switch')
+
         add_bridge(OVS_BRIDGE)
-        add_bridge(DATA_BRIDGE)
-        data_port = self.get_data_port()
-        if data_port:
-            add_bridge_port(DATA_BRIDGE, data_port, promisc=True)
+        for br in get_bridges_from_mapping():
+            add_bridge(br)
+            data_port = self.get_data_port()
+            if data_port:
+                add_bridge_port(br, data_port, promisc=True)
+
+        service_restart('os-charm-phy-nic-mtu')
 
     def ovs_ctxt(self):
         # In addition to generating config context, ensure the OVS service
