@@ -27,6 +27,12 @@ def _neutron_api_settings():
         'l2_population': True,
         'overlay_network_type': 'gre',
     }
+
+    # Override if provided in local config
+    cfg_net_dev_mtu = config('network-device-mtu')
+    if cfg_net_dev_mtu:
+        neutron_settings['network_device_mtu'] = config('network-device-mtu')
+
     for rid in relation_ids('neutron-plugin-api'):
         for unit in related_units(rid):
             rdata = relation_get(rid=rid, unit=unit)
@@ -37,20 +43,16 @@ def _neutron_api_settings():
                 'neutron_security_groups': rdata['neutron-security-groups'],
                 'overlay_network_type': rdata['overlay-network-type'],
             }
+
+            # Don't override locally provided value if there is one.
             net_dev_mtu = rdata.get('network-device-mtu')
-            if net_dev_mtu:
+            if net_dev_mtu and 'network_device_mtu' not in neutron_settings:
                 neutron_settings['network_device_mtu'] = net_dev_mtu
 
             # Override with configuration if set to true
             if config('disable-security-groups'):
                 neutron_settings['neutron_security_groups'] = False
             return neutron_settings
-
-    # Override if locally provided
-    cfg_net_dev_mtu = config('network-device-mtu')
-    if cfg_net_dev_mtu:
-        neutron_settings['network_device_mtu'] = config('network-device-mtu')
-
     return neutron_settings
 
 
@@ -113,11 +115,6 @@ class OVSPluginContext(context.NeutronContext):
         neutron_api_settings = _neutron_api_settings()
         ovs_ctxt['neutron_security_groups'] = self.neutron_security_groups
         ovs_ctxt['l2_population'] = neutron_api_settings['l2_population']
-
-        net_dev_mtu = neutron_api_settings.get('network_device_mtu')
-        if net_dev_mtu:
-            ovs_ctxt['network_device_mtu'] = net_dev_mtu
-
         ovs_ctxt['overlay_network_type'] = \
             neutron_api_settings['overlay_network_type']
         # TODO: We need to sort out the syslog and debug/verbose options as a
@@ -126,7 +123,7 @@ class OVSPluginContext(context.NeutronContext):
         ovs_ctxt['verbose'] = conf['verbose']
         ovs_ctxt['debug'] = conf['debug']
 
-        net_dev_mtu = config('network-device-mtu')
+        net_dev_mtu = neutron_api_settings.get('network_device_mtu')
         if net_dev_mtu:
             ovs_ctxt['veth_mtu'] = net_dev_mtu
 
