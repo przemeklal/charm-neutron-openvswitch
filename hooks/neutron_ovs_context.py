@@ -11,12 +11,17 @@ from charmhelpers.core.host import service_running, service_start
 from charmhelpers.contrib.network.ovs import add_bridge, add_bridge_port
 from charmhelpers.contrib.openstack.utils import get_host_ip
 from charmhelpers.contrib.network.ip import get_address_in_network
-
+import ast
 import re
 
 OVS_BRIDGE = 'br-int'
 DATA_BRIDGE = 'br-data'
 
+
+def to_boolean(option):
+    if option is None:
+        return False
+    return ast.literal_eval(option)
 
 def _neutron_api_settings():
     '''
@@ -33,9 +38,9 @@ def _neutron_api_settings():
             if 'l2-population' not in rdata:
                 continue
             neutron_settings = {
-                'l2_population': rdata['l2-population'],
-                'neutron_security_groups': rdata['neutron-security-groups'],
+                'l2_population': to_boolean(rdata['l2-population']),
                 'overlay_network_type': rdata['overlay-network-type'],
+                'neutron_security_groups': to_boolean(rdata['neutron-security-groups']),
             }
             # Override with configuration if set to true
             if config('disable-security-groups'):
