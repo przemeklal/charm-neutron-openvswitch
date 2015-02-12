@@ -23,6 +23,7 @@ def to_boolean(option):
         return False
     return ast.literal_eval(option)
 
+
 def _neutron_api_settings():
     '''
     Inspects current neutron-plugin relation
@@ -40,7 +41,8 @@ def _neutron_api_settings():
             neutron_settings = {
                 'l2_population': to_boolean(rdata['l2-population']),
                 'overlay_network_type': rdata['overlay-network-type'],
-                'neutron_security_groups': to_boolean(rdata['neutron-security-groups']),
+                'neutron_security_groups':
+                    to_boolean(rdata['neutron-security-groups']),
             }
             # Override with configuration if set to true
             if config('disable-security-groups'):
