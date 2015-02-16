@@ -193,7 +193,7 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
         self.d.configure('neutron-openvswitch', {'use-syslog': 'True'})
         if not u.service_restarted(self.compute_sentry,
                                    'neutron-openvswitch-agent', conf,
-                                   pgrep_full=True, sleep_time=20):
+                                   pgrep_full=True, sleep_time=60):
             self.d.configure('neutron-openvswitch', {'use-syslog': 'False'})
             msg = ('service neutron-openvswitch-agent did not restart after '
                    'config change')
