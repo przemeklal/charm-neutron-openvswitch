@@ -161,14 +161,6 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
                                            ['vxlan', 'gre'],
                                            'agent')
 
-#    def test_secgroup_propagation(self):
-#        """Verify that neutron-api secgroup propagates to neutron-ovs"""
-#        self.check_ml2_setting_propagation('neutron-api',
-#                                           'neutron-security-groups',
-#                                           'enable_security_group',
-#                                           ['False', 'True'],
-#                                           'securitygroup')
-
     def test_secgroup_propagation_local_override(self):
         """Verify disable-security-groups overrides what neutron-api says"""
         unit = self.compute_sentry
