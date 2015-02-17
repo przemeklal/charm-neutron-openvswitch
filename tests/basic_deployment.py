@@ -9,7 +9,7 @@ from charmhelpers.contrib.openstack.amulet.deployment import (
 
 from charmhelpers.contrib.openstack.amulet.utils import (
     OpenStackAmuletUtils,
-    DEBUG,
+    DEBUG, # flake8: noqa
     ERROR
 )
 
