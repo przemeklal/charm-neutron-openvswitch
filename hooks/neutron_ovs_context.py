@@ -1,4 +1,3 @@
-import ast
 import os
 import uuid
 from charmhelpers.core.hookenv import (
@@ -16,6 +15,7 @@ from charmhelpers.contrib.network.ip import (
 )
 from charmhelpers.contrib.openstack.ip import resolve_address
 from charmhelpers.core.host import list_nics, get_nic_hwaddr
+from charmhelpers.core.strutils import bool_from_string
 from charmhelpers.contrib.openstack import context
 from charmhelpers.core.host import service_running, service_start
 from charmhelpers.contrib.network.ovs import add_bridge, add_bridge_port
@@ -31,33 +31,32 @@ OVS_BRIDGE = 'br-int'
 DATA_BRIDGE = 'br-data'
 
 
-def to_boolean(option):
-    if option is None:
-        return False
-    return ast.literal_eval(option)
-
-
 def _neutron_api_settings():
     '''
     Inspects current neutron-plugin relation
     '''
     neutron_settings = {
-        'neutron_security_groups': 'False',
-        'l2_population': 'True',
+        'neutron_security_groups': False,
+        'l2_population': True,
         'overlay_network_type': 'gre',
-        'enable_dvr': 'False',
+        'enable_dvr': False,
     }
     for rid in relation_ids('neutron-plugin-api'):
         for unit in related_units(rid):
             rdata = relation_get(rid=rid, unit=unit)
             if 'l2-population' not in rdata:
                 continue
-            neutron_settings['l2_population'] = rdata['l2-population']
-            if 'overlay-network-type' in rdata:
-                neutron_settings['overlay_network_type'] = \
-                    rdata['overlay-network-type']
+            neutron_settings = {
+                'l2_population': bool_from_string(rdata['l2-population']),
+                'overlay_network_type': rdata['overlay-network-type'],
+                'neutron_security_groups': bool_from_string(
+                    rdata['neutron-security-groups']
+                ),
+            }
             if 'enable-dvr' in rdata:
-                neutron_settings['enable_dvr'] = rdata['enable-dvr']
+                neutron_settings['enable_dvr'] = bool_from_string(
+                    rdata['enable-dvr']
+                )
             # Override with configuration if set to true
             if config('disable-security-groups'):
                 neutron_settings['neutron_security_groups'] = False
@@ -67,7 +66,10 @@ def _neutron_api_settings():
 
 def use_dvr():
     api_settings = _neutron_api_settings()
-    return to_boolean(api_settings['enable_dvr'])
+    if 'enable_dvr' in api_settings:
+        return api_settings['enable_dvr']
+    else:
+        return False
 
 
 class OVSPluginContext(context.NeutronContext):

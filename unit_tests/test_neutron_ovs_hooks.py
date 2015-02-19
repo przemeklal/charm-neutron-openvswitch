@@ -1,7 +1,7 @@
 
 from mock import MagicMock, patch, call
 from test_utils import CharmTestCase
-
+import neutron_ovs_context
 
 with patch('charmhelpers.core.hookenv.config') as config:
     config.return_value = 'neutron'
@@ -26,6 +26,7 @@ TO_PATCH = [
     'determine_packages',
     'log',
     'relation_set',
+    'configure_ovs',
 ]
 NEUTRON_CONF_DIR = "/etc/neutron"
 
@@ -53,9 +54,12 @@ class NeutronOVSHooksTests(CharmTestCase):
             call(_pkgs, fatal=True),
         ])
 
-    def test_config_changed(self):
+    @patch.object(neutron_ovs_context, 'use_dvr')
+    def test_config_changed(self, _use_dvr):
+        _use_dvr.return_value = False
         self._call_hook('config-changed')
         self.assertTrue(self.CONFIGS.write_all.called)
+        self.configure_ovs.assert_called_with()
 
     def test_amqp_joined(self):
         self._call_hook('amqp-relation-joined')

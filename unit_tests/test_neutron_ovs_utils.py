@@ -6,6 +6,7 @@ import charmhelpers.contrib.openstack.templating as templating
 templating.OSConfigRenderer = MagicMock()
 
 import neutron_ovs_utils as nutils
+import neutron_ovs_context
 
 from test_utils import (
     CharmTestCase,
@@ -50,14 +51,17 @@ class TestNeutronOVSUtils(CharmTestCase):
 
     @patch.object(charmhelpers.contrib.openstack.neutron, 'os_release')
     @patch.object(charmhelpers.contrib.openstack.neutron, 'headers_package')
-    def test_determine_packages(self, _head_pkgs, _os_rel):
+    @patch.object(neutron_ovs_context, 'use_dvr')
+    def test_determine_packages(self, _use_dvr, _head_pkgs, _os_rel):
+        _use_dvr.return_value = False
         _os_rel.return_value = 'trusty'
         _head_pkgs.return_value = head_pkg
         pkg_list = nutils.determine_packages()
         expect = [['neutron-plugin-openvswitch-agent'], [head_pkg]]
         self.assertItemsEqual(pkg_list, expect)
 
-    def test_register_configs(self):
+    @patch.object(neutron_ovs_context, 'use_dvr')
+    def test_register_configs(self, _use_dvr):
         class _mock_OSConfigRenderer():
             def __init__(self, templates_dir=None, openstack_release=None):
                 self.configs = []
@@ -67,6 +71,7 @@ class TestNeutronOVSUtils(CharmTestCase):
                 self.configs.append(config)
                 self.ctxts.append(ctxt)
 
+        _use_dvr.return_value = False
         self.os_release.return_value = 'trusty'
         templating.OSConfigRenderer.side_effect = _mock_OSConfigRenderer
         _regconfs = nutils.register_configs()
@@ -74,12 +79,16 @@ class TestNeutronOVSUtils(CharmTestCase):
                  '/etc/neutron/plugins/ml2/ml2_conf.ini']
         self.assertItemsEqual(_regconfs.configs, confs)
 
-    def test_resource_map(self):
+    @patch.object(neutron_ovs_context, 'use_dvr')
+    def test_resource_map(self, _use_dvr):
+        _use_dvr.return_value = False
         _map = nutils.resource_map()
         confs = [nutils.NEUTRON_CONF]
         [self.assertIn(q_conf, _map.keys()) for q_conf in confs]
 
-    def test_restart_map(self):
+    @patch.object(neutron_ovs_context, 'use_dvr')
+    def test_restart_map(self, _use_dvr):
+        _use_dvr.return_value = False
         _restart_map = nutils.restart_map()
         ML2CONF = "/etc/neutron/plugins/ml2/ml2_conf.ini"
         expect = OrderedDict([
