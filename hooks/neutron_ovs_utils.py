@@ -25,7 +25,7 @@ NEUTRON_METADATA_AGENT_CONF = "/etc/neutron/metadata_agent.ini"
 
 BASE_RESOURCE_MAP = OrderedDict([
     (NEUTRON_CONF, {
-        'services': ['neutron-plugin-openvswitch-agent', 'neutron-metadata-agent', 'neutron-vpn-agent'],
+        'services': ['neutron-plugin-openvswitch-agent'],
         'contexts': [neutron_ovs_context.OVSPluginContext(),
                      context.AMQPContext(ssl_dir=NEUTRON_CONF_DIR)],
     }),
@@ -33,6 +33,8 @@ BASE_RESOURCE_MAP = OrderedDict([
         'services': ['neutron-plugin-openvswitch-agent'],
         'contexts': [neutron_ovs_context.OVSPluginContext()],
     }),
+])
+DVR_RESOURCE_MAP = OrderedDict([
     (NEUTRON_L3_AGENT_CONF, {
         'services': ['neutron-vpn-agent'],
         'contexts': [neutron_ovs_context.L3AgentContext()],
@@ -85,8 +87,10 @@ def resource_map():
     hook execution.
     '''
     resource_map = deepcopy(BASE_RESOURCE_MAP)
-    if not neutron_ovs_context.use_dvr():
-        resource_map.pop(NEUTRON_L3_AGENT_CONF)
+    if neutron_ovs_context.use_dvr():
+        resource_map.update(DVR_RESOURCE_MAP)
+        dvr_services = ['neutron-metadata-agent', 'neutron-vpn-agent']
+        resource_map[NEUTRON_CONF]['services'] += dvr_services
     return resource_map
 
 
