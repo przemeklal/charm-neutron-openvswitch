@@ -147,7 +147,7 @@ class L3AgentContext(OSContextGenerator):
     def __call__(self):
         neutron_api_settings = _neutron_api_settings()
         ctxt = {}
-        if neutron_api_settings['enable_dvr'] == 'True':
+        if neutron_api_settings['enable_dvr']:
             ctxt['agent_mode'] = 'dvr'
         else:
             ctxt['agent_mode'] = 'legacy'
