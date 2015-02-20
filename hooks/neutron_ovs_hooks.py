@@ -8,6 +8,7 @@ from charmhelpers.core.hookenv import (
     config,
     log,
     relation_set,
+    relation_ids,
 )
 
 from charmhelpers.core.host import (
@@ -41,7 +42,6 @@ def install():
 
 @hooks.hook('neutron-network-service-relation-changed')
 @hooks.hook('neutron-plugin-relation-changed')
-@hooks.hook('neutron-plugin-api-relation-changed')
 @hooks.hook('config-changed')
 @restart_on_change(restart_map())
 def config_changed():
@@ -51,6 +51,17 @@ def config_changed():
     configure_ovs()
     CONFIGS.write_all()
 
+@hooks.hook('neutron-plugin-api-relation-changed')
+@restart_on_change(restart_map())
+def neutron_plugin_api_changed():
+    if determine_dvr_packages():
+        apt_update()
+        apt_install(determine_dvr_packages(), fatal=True)
+    configure_ovs()
+    CONFIGS.write_all()
+    # If dvr setting has changed, need to pass that on
+    for rid in relation_ids('neutron-plugin'):
+        neutron_plugin_joined(relation_id=rid)
 
 @hooks.hook('neutron-plugin-relation-joined')
 def neutron_plugin_joined(relation_id=None):
