@@ -6,12 +6,12 @@ from charmhelpers.core.hookenv import (
     unit_get,
 )
 from charmhelpers.core.host import list_nics, get_nic_hwaddr
+from charmhelpers.core.strutils import bool_from_string
 from charmhelpers.contrib.openstack import context
 from charmhelpers.core.host import service_running, service_start
 from charmhelpers.contrib.network.ovs import add_bridge, add_bridge_port
 from charmhelpers.contrib.openstack.utils import get_host_ip
 from charmhelpers.contrib.network.ip import get_address_in_network
-
 import re
 
 OVS_BRIDGE = 'br-int'
@@ -33,9 +33,11 @@ def neutron_api_settings():
             if 'l2-population' not in rdata:
                 continue
             neutron_settings = {
-                'l2_population': rdata['l2-population'],
-                'neutron_security_groups': rdata['neutron-security-groups'],
+                'l2_population': bool_from_string(rdata['l2-population']),
                 'overlay_network_type': rdata['overlay-network-type'],
+                'neutron_security_groups': bool_from_string(
+                    rdata['neutron-security-groups']
+                ),
             }
             # Override with configuration if set to true
             if config('disable-security-groups'):
