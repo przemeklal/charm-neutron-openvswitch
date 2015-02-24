@@ -90,6 +90,7 @@ class OVSPluginContextTest(CharmTestCase):
         self.relation_ids.return_value = ['rid2']
         self.test_relation.set({'neutron-security-groups': 'True',
                                 'l2-population': 'True',
+                                'enable-dvr': 'True',
                                 'overlay-network-type': 'gre',
                                 })
         self.get_host_ip.return_value = '127.0.0.15'
@@ -98,7 +99,7 @@ class OVSPluginContextTest(CharmTestCase):
         expect = {
             'neutron_alchemy_flags': {},
             'neutron_security_groups': True,
-            'distributed_routing': False,
+            'distributed_routing': True,
             'verbose': True,
             'local_ip': '127.0.0.15',
             'config': 'neutron.randomconfig',
@@ -167,3 +168,31 @@ class OVSPluginContextTest(CharmTestCase):
         }
         self.assertEquals(expect, napi_ctxt())
         self.service_start.assertCalled()
+
+class L3AgentContextTest(CharmTestCase):
+
+    def setUp(self):
+        super(L3AgentContextTest, self).setUp(context, TO_PATCH)
+        self.relation_get.side_effect = self.test_relation.get
+        self.config.side_effect = self.test_config.get
+
+    def tearDown(self):
+        super(L3AgentContextTest, self).tearDown()
+
+    def test_dvr_enabled(self):
+        self.related_units.return_value = ['unit1']
+        self.relation_ids.return_value = ['rid2']
+        self.test_relation.set({'neutron-security-groups': 'True',
+                                'enable-dvr': 'True',
+                                'l2-population': 'True',
+                                'overlay-network-type': 'vxlan'})
+        self.assertEquals(context.L3AgentContext()(), {'agent_mode': 'dvr'})
+
+    def test_dvr_disabled(self):
+        self.related_units.return_value = ['unit1']
+        self.relation_ids.return_value = ['rid2']
+        self.test_relation.set({'neutron-security-groups': 'True',
+                                'enable-dvr': 'False',
+                                'l2-population': 'True',
+                                'overlay-network-type': 'vxlan'})
+        self.assertEquals(context.L3AgentContext()(), {'agent_mode': 'legacy'})
