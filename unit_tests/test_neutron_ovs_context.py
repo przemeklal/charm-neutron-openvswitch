@@ -88,8 +88,8 @@ class OVSPluginContextTest(CharmTestCase):
         _is_clus.return_value = False
         self.related_units.return_value = ['unit1']
         self.relation_ids.return_value = ['rid2']
-        self.test_relation.set({'neutron-security-groups': True,
-                                'l2-population': True,
+        self.test_relation.set({'neutron-security-groups': 'True',
+                                'l2-population': 'True',
                                 'network-device-mtu': 1500,
                                 'overlay-network-type': 'gre',
                                 })
@@ -146,8 +146,8 @@ class OVSPluginContextTest(CharmTestCase):
         self.test_config.set('disable-security-groups', True)
         self.related_units.return_value = ['unit1']
         self.relation_ids.return_value = ['rid2']
-        self.test_relation.set({'neutron-security-groups': True,
-                                'l2-population': True,
+        self.test_relation.set({'neutron-security-groups': 'True',
+                                'l2-population': 'True',
                                 'network-device-mtu': 1500,
                                 'overlay-network-type': 'gre',
                                 })
