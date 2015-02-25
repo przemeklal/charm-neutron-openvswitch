@@ -9,9 +9,6 @@ from charmhelpers.core.hookenv import (
 )
 from charmhelpers.contrib.network.ip import (
     get_address_in_network,
-    get_ipv4_addr,
-    get_ipv6_addr,
-    is_bridge_member,
 )
 from charmhelpers.contrib.openstack.ip import resolve_address
 from charmhelpers.core.host import list_nics, get_nic_hwaddr
@@ -175,24 +172,27 @@ class NetworkServiceContext(OSContextGenerator):
                     return ctxt
 
 
+SHARED_SECRET = "/etc/neutron/secret.txt"
+
+
+def get_shared_secret():
+    secret = None
+    if not os.path.exists(SHARED_SECRET):
+        secret = str(uuid.uuid4())
+        with open(SHARED_SECRET, 'w') as secret_file:
+            secret_file.write(secret)
+    else:
+        with open(SHARED_SECRET, 'r') as secret_file:
+            secret = secret_file.read().strip()
+    return secret
+
+
 class DVRSharedSecretContext(OSContextGenerator):
 
-    def get_shared_secret(self):
-        secret = None
-        if not os.path.exists(self.SHARED_SECRET):
-            secret = str(uuid.uuid4())
-            with open(self.SHARED_SECRET, 'w') as secret_file:
-                secret_file.write(secret)
-        else:
-            with open(self.SHARED_SECRET, 'r') as secret_file:
-                secret = secret_file.read().strip()
-        return secret
-
     def __call__(self):
-        self.SHARED_SECRET = "/etc/neutron/secret.txt"
         if use_dvr():
             ctxt = {
-                'shared_secret': self.get_shared_secret(),
+                'shared_secret': get_shared_secret(),
                 'local_ip': resolve_address(),
             }
         else:

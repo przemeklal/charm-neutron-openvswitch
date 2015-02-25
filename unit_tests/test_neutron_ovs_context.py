@@ -1,5 +1,6 @@
 
 from test_utils import CharmTestCase
+from test_utils import patch_open
 from mock import patch
 import neutron_ovs_context as context
 import charmhelpers
@@ -7,6 +8,7 @@ TO_PATCH = [
     'relation_get',
     'relation_ids',
     'related_units',
+    'resolve_address',
     'config',
     'unit_get',
     'add_bridge',
@@ -169,6 +171,7 @@ class OVSPluginContextTest(CharmTestCase):
         self.assertEquals(expect, napi_ctxt())
         self.service_start.assertCalled()
 
+
 class L3AgentContextTest(CharmTestCase):
 
     def setUp(self):
@@ -196,3 +199,81 @@ class L3AgentContextTest(CharmTestCase):
                                 'l2-population': 'True',
                                 'overlay-network-type': 'vxlan'})
         self.assertEquals(context.L3AgentContext()(), {'agent_mode': 'legacy'})
+
+
+class NetworkServiceContext(CharmTestCase):
+
+    def setUp(self):
+        super(NetworkServiceContext, self).setUp(context, TO_PATCH)
+        self.relation_get.side_effect = self.test_relation.get
+        self.config.side_effect = self.test_config.get
+
+    def tearDown(self):
+        super(NetworkServiceContext, self).tearDown()
+
+    def test_network_svc_ctxt(self):
+        self.related_units.return_value = ['unit1']
+        self.relation_ids.return_value = ['rid2']
+        self.test_relation.set({'service_protocol': 'http',
+                                'keystone_host': '10.0.0.10',
+                                'service_port': '8080',
+                                'region': 'region1',
+                                'service_tenant': 'tenant',
+                                'service_username': 'bob',
+                                'service_password': 'reallyhardpass'})
+        self.assertEquals(context.NetworkServiceContext()(),
+                          {'service_protocol': 'http',
+                           'keystone_host': '10.0.0.10',
+                           'service_port': '8080',
+                           'region': 'region1',
+                           'service_tenant': 'tenant',
+                           'service_username': 'bob',
+                           'service_password': 'reallyhardpass'})
+
+
+class DVRSharedSecretContext(CharmTestCase):
+
+    def setUp(self):
+        super(DVRSharedSecretContext, self).setUp(context,
+                                                  TO_PATCH)
+        self.config.side_effect = self.test_config.get
+
+    @patch('os.path')
+    @patch('uuid.uuid4')
+    def test_secret_created_stored(self, _uuid4, _path):
+        _path.exists.return_value = False
+        _uuid4.return_value = 'secret_thing'
+        with patch_open() as (_open, _file):
+            self.assertEquals(context.get_shared_secret(),
+                              'secret_thing')
+            _open.assert_called_with(
+                context.SHARED_SECRET.format('quantum'), 'w')
+            _file.write.assert_called_with('secret_thing')
+
+    @patch('os.path')
+    def test_secret_retrieved(self, _path):
+        _path.exists.return_value = True
+        with patch_open() as (_open, _file):
+            _file.read.return_value = 'secret_thing\n'
+            self.assertEquals(context.get_shared_secret(),
+                              'secret_thing')
+            _open.assert_called_with(
+                context.SHARED_SECRET.format('quantum'), 'r')
+
+    @patch.object(context, 'use_dvr')
+    @patch.object(context, 'get_shared_secret')
+    def test_shared_secretcontext_dvr(self, _shared_secret, _use_dvr):
+        _shared_secret.return_value = 'secret_thing'
+        _use_dvr.return_value = True
+        self.resolve_address.return_value = '10.0.0.10'
+        self.assertEquals(context.DVRSharedSecretContext()(),
+                          {'shared_secret': 'secret_thing',
+                           'local_ip': '10.0.0.10'})
+
+    @patch.object(context, 'use_dvr')
+    @patch.object(context, 'get_shared_secret')
+    def test_shared_secretcontext_nodvr(self, _shared_secret, _use_dvr):
+        _shared_secret.return_value = 'secret_thing'
+        _use_dvr.return_value = False
+        self.resolve_address.return_value = '10.0.0.10'
+        self.assertEquals(context.DVRSharedSecretContext()(), {})
