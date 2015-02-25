@@ -105,7 +105,7 @@ def restart_map():
 def configure_ovs():
     add_bridge(INT_BRIDGE)
     add_bridge(EXT_BRIDGE)
-    ext_port_ctx = neutron_ovs_context.ExternalPortContext()()
+    ext_port_ctx = context.ExternalPortContext()()
     if ext_port_ctx and ext_port_ctx['ext_port']:
         add_bridge_port(EXT_BRIDGE, ext_port_ctx['ext_port'])
 
