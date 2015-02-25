@@ -24,7 +24,10 @@ TO_PATCH = [
     'config',
     'CONFIGS',
     'determine_packages',
+    'determine_dvr_packages',
+    'get_shared_secret',
     'log',
+    'relation_ids',
     'relation_set',
     'configure_ovs',
 ]
@@ -60,6 +63,39 @@ class NeutronOVSHooksTests(CharmTestCase):
         self._call_hook('config-changed')
         self.assertTrue(self.CONFIGS.write_all.called)
         self.configure_ovs.assert_called_with()
+
+    @patch.object(neutron_ovs_context, 'use_dvr')
+    def test_config_changed_dvr(self, _use_dvr):
+        _use_dvr.return_value = True
+        self.determine_dvr_packages.return_value = ['dvr']
+        self._call_hook('config-changed')
+        self.apt_update.assert_called_with()
+        self.assertTrue(self.CONFIGS.write_all.called)
+        self.apt_install.assert_has_calls([
+            call(['dvr'], fatal=True),
+        ])
+        self.configure_ovs.assert_called_with()
+
+    @patch.object(hooks, 'neutron_plugin_joined')
+    @patch.object(neutron_ovs_context, 'use_dvr')
+    def test_neutron_plugin_api(self, _use_dvr, _plugin_joined):
+        _use_dvr.return_value = False
+        self.relation_ids.return_value = ['rid']
+        self._call_hook('neutron-plugin-api-relation-changed')
+        self.configure_ovs.assert_called_with()
+        self.assertTrue(self.CONFIGS.write_all.called)
+        _plugin_joined.assert_called_with(relation_id='rid')
+
+    def test_neutron_plugin_joined(self):
+        self.get_shared_secret.return_value = 'secret'
+        self._call_hook('neutron-plugin-relation-joined')
+        rel_data = {
+            'metadata-shared-secret': 'secret',
+        }
+        self.relation_set.assert_called_with(
+            relation_id=None,
+            **rel_data
+        )
 
     def test_amqp_joined(self):
         self._call_hook('amqp-relation-joined')

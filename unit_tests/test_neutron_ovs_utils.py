@@ -1,7 +1,8 @@
 
-from mock import MagicMock, patch
+from mock import MagicMock, patch, call
 from collections import OrderedDict
 import charmhelpers.contrib.openstack.templating as templating
+from charmhelpers.contrib.openstack import context
 
 templating.OSConfigRenderer = MagicMock()
 
@@ -16,6 +17,8 @@ import charmhelpers.core.hookenv as hookenv
 
 
 TO_PATCH = [
+    'add_bridge',
+    'add_bridge_port',
     'os_release',
     'neutron_plugin_attribute',
 ]
@@ -37,6 +40,15 @@ def _mock_npa(plugin, attr, net_manager=None):
         },
     }
     return plugins[plugin][attr]
+
+
+class DummyContext():
+
+    def __init__(self, return_value):
+        self.return_value = return_value
+
+    def __call__(self):
+        return self.return_value
 
 
 class TestNeutronOVSUtils(CharmTestCase):
@@ -83,8 +95,20 @@ class TestNeutronOVSUtils(CharmTestCase):
     def test_resource_map(self, _use_dvr):
         _use_dvr.return_value = False
         _map = nutils.resource_map()
+        svcs = ['neutron-plugin-openvswitch-agent']
         confs = [nutils.NEUTRON_CONF]
         [self.assertIn(q_conf, _map.keys()) for q_conf in confs]
+        self.assertEqual(_map[nutils.NEUTRON_CONF]['services'], svcs)
+
+    @patch.object(neutron_ovs_context, 'use_dvr')
+    def test_resource_map_dvr(self, _use_dvr):
+        _use_dvr.return_value = True
+        _map = nutils.resource_map()
+        svcs = ['neutron-plugin-openvswitch-agent', 'neutron-metadata-agent',
+                'neutron-vpn-agent']
+        confs = [nutils.NEUTRON_CONF]
+        [self.assertIn(q_conf, _map.keys()) for q_conf in confs]
+        self.assertEqual(_map[nutils.NEUTRON_CONF]['services'], svcs)
 
     @patch.object(neutron_ovs_context, 'use_dvr')
     def test_restart_map(self, _use_dvr):
@@ -99,3 +123,21 @@ class TestNeutronOVSUtils(CharmTestCase):
         for item in _restart_map:
             self.assertTrue(item in _restart_map)
             self.assertTrue(expect[item] == _restart_map[item])
+
+    @patch.object(context, 'ExternalPortContext')
+    def test_configure_ovs_ovs_ext_port(self, _ext_port_ctxt):
+        _ext_port_ctxt.return_value = \
+            DummyContext(return_value={'ext_port': 'eth0'})
+        nutils.configure_ovs()
+        self.add_bridge.assert_has_calls([
+            call('br-int'),
+            call('br-ex'),
+            call('br-data')
+        ])
+        self.add_bridge_port.assert_called_with('br-ex', 'eth0')
+
+    @patch.object(neutron_ovs_context, 'DVRSharedSecretContext')
+    def test_get_shared_secret(self, _dvr_secret_ctxt):
+        _dvr_secret_ctxt.return_value = \
+            DummyContext(return_value={'shared_secret': 'supersecret'})
+        self.assertEqual(nutils.get_shared_secret(), 'supersecret')

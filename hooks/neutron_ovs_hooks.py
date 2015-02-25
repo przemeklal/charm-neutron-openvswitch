@@ -51,6 +51,7 @@ def config_changed():
     configure_ovs()
     CONFIGS.write_all()
 
+
 @hooks.hook('neutron-plugin-api-relation-changed')
 @restart_on_change(restart_map())
 def neutron_plugin_api_changed():
@@ -62,6 +63,7 @@ def neutron_plugin_api_changed():
     # If dvr setting has changed, need to pass that on
     for rid in relation_ids('neutron-plugin'):
         neutron_plugin_joined(relation_id=rid)
+
 
 @hooks.hook('neutron-plugin-relation-joined')
 def neutron_plugin_joined(relation_id=None):
