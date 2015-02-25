@@ -45,7 +45,7 @@ DVR_RESOURCE_MAP = OrderedDict([
     }),
     (EXT_PORT_CONF, {
         'services': ['neutron-vpn-agent'],
-        'contexts': [neutron_ovs_context.ExternalPortContext()],
+        'contexts': [context.ExternalPortContext()],
     }),
     (NEUTRON_METADATA_AGENT_CONF, {
         'services': ['neutron-metadata-agent'],
