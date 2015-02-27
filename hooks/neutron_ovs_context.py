@@ -106,7 +106,6 @@ class OVSPluginContext(context.NeutronContext):
             add_bridge(br)
 
             if not portmaps or provider not in portmaps:
-                #raise Exception(portmaps)
                 continue
 
             add_bridge_port(br, portmaps[provider], promisc=True)
