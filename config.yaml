@@ -65,9 +65,3 @@ options:
       To improve network performance of VM, sometimes we should keep VM MTU as
       1500 and use charm to modify MTU of tunnel nic more than 1500 (e.g. 1546
       for GRE). A value of zero means no mtu will be set/modified.
-  network-device-mtu:
-    type: int
-    default: 0
-    description: |
-      The MTU size for the interfaces managed by neutron. If set to 0, no value
-      will be applied.
