@@ -5,7 +5,6 @@ from charmhelpers.core.hookenv import (
     config,
     unit_get,
 )
-from charmhelpers.core.host import list_nics, get_nic_hwaddr
 from charmhelpers.core.strutils import bool_from_string
 from charmhelpers.contrib.openstack import context
 from charmhelpers.core.host import (
@@ -16,8 +15,16 @@ from charmhelpers.core.host import (
 from charmhelpers.contrib.network.ovs import add_bridge, add_bridge_port
 from charmhelpers.contrib.openstack.utils import get_host_ip
 from charmhelpers.contrib.network.ip import get_address_in_network
-import re
-
+from charmhelpers.contrib.openstack.neutron import (
+    parse_bridge_mappings,
+    parse_data_port_mappings,
+)
+from charmhelpers.contrib.openstack.context import (
+    NeutronPortContext,
+)
+from charmhelpers.core.host import (
+    get_nic_hwaddr,
+)
 OVS_BRIDGE = 'br-int'
 
 
@@ -30,11 +37,6 @@ def _neutron_api_settings():
         'l2_population': True,
         'overlay_network_type': 'gre',
     }
-
-    # Override if provided in local config
-    cfg_net_dev_mtu = config('network-device-mtu')
-    if cfg_net_dev_mtu:
-        neutron_settings['network_device_mtu'] = cfg_net_dev_mtu
 
     for rid in relation_ids('neutron-plugin-api'):
         for unit in related_units(rid):
@@ -49,33 +51,31 @@ def _neutron_api_settings():
                 ),
             }
 
-            # Don't override locally provided value if there is one.
             net_dev_mtu = rdata.get('network-device-mtu')
-            if net_dev_mtu and 'network_device_mtu' not in neutron_settings:
+            if net_dev_mtu:
                 neutron_settings['network_device_mtu'] = net_dev_mtu
 
-            # Override with configuration if set to true
-            if config('disable-security-groups'):
-                neutron_settings['neutron_security_groups'] = False
             return neutron_settings
     return neutron_settings
 
 
-def get_bridges_from_mapping():
-    """If a bridge mapping is provided, extract the bridge names.
+class DataPortContext(NeutronPortContext):
 
-    Returns list of bridges from mapping.
-    """
-    bridges = []
-    mappings = config('bridge-mappings')
-    if mappings:
-        mappings = mappings.split(' ')
-        for m in mappings:
-            p = m.partition(':')
-            if p[1] == ':':
-                bridges.append(p[2])
+    def __call__(self):
+        ports = config('data-port')
+        if ports:
+            portmap = parse_data_port_mappings(ports)
+            ports = portmap.values()
+            resolved = self.resolve_ports(ports)
+            normalized = {get_nic_hwaddr(port): port for port in resolved
+                          if port not in ports}
+            normalized.update({port: port for port in resolved
+                               if port in ports})
+            if resolved:
+                return {provider: normalized[port] for provider, port in
+                        portmap.iteritems() if port in normalized.keys()}
 
-    return bridges
+        return None
 
 
 class OVSPluginContext(context.NeutronContext):
@@ -94,33 +94,22 @@ class OVSPluginContext(context.NeutronContext):
         neutron_api_settings = _neutron_api_settings()
         return neutron_api_settings['neutron_security_groups']
 
-    def get_data_port(self):
-        data_ports = config('data-port')
-        if not data_ports:
-            return None
-        hwaddrs = {}
-        for nic in list_nics(['eth', 'bond']):
-            hwaddrs[get_nic_hwaddr(nic).lower()] = nic
-        mac_regex = re.compile(r'([0-9A-F]{2}[:-]){5}([0-9A-F]{2})', re.I)
-        for entry in data_ports.split():
-            entry = entry.strip().lower()
-            if re.match(mac_regex, entry):
-                if entry in hwaddrs:
-                    return hwaddrs[entry]
-            else:
-                return entry
-        return None
-
     def _ensure_bridge(self):
         if not service_running('openvswitch-switch'):
             service_start('openvswitch-switch')
 
         add_bridge(OVS_BRIDGE)
-        for br in get_bridges_from_mapping():
+
+        portmaps = DataPortContext()()
+        bridgemaps = parse_bridge_mappings(config('bridge-mappings'))
+        for provider, br in bridgemaps.iteritems():
             add_bridge(br)
-            data_port = self.get_data_port()
-            if data_port:
-                add_bridge_port(br, data_port, promisc=True)
+
+            if not portmaps or provider not in portmaps:
+                #raise Exception(portmaps)
+                continue
+
+            add_bridge_port(br, portmaps[provider], promisc=True)
 
         service_restart('os-charm-phy-nic-mtu')
 
