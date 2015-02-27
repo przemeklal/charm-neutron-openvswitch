@@ -61,6 +61,7 @@ class OVSPluginContextTest(CharmTestCase):
     def test_ensure_bridge_data_port_present(self, mock_resolve_ports):
         self.test_config.set('data-port', 'phybr1:em1')
         self.test_config.set('bridge-mappings', 'phybr1:br-data')
+
         def add_port(bridge, port, promisc):
             if bridge == 'br-data' and port == 'em1' and promisc is True:
                 self.bridge_added = True
