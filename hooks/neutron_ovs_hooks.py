@@ -16,16 +16,18 @@ from charmhelpers.core.host import (
 )
 
 from charmhelpers.fetch import (
-    apt_install, apt_update
+    apt_install, apt_update, apt_purge
 )
 
 from neutron_ovs_utils import (
+    DVR_PACKAGES,
     configure_ovs,
     determine_packages,
     determine_dvr_packages,
     get_shared_secret,
     register_configs,
     restart_map,
+    use_dvr,
 )
 
 hooks = Hooks()
@@ -55,9 +57,11 @@ def config_changed():
 @hooks.hook('neutron-plugin-api-relation-changed')
 @restart_on_change(restart_map())
 def neutron_plugin_api_changed():
-    if determine_dvr_packages():
+    if use_dvr():
         apt_update()
-        apt_install(determine_dvr_packages(), fatal=True)
+        apt_install(DVR_PACKAGES, fatal=True)
+    else:
+        apt_purge(DVR_PACKAGES, fatal=True)
     configure_ovs()
     CONFIGS.write_all()
     # If dvr setting has changed, need to pass that on
@@ -67,8 +71,9 @@ def neutron_plugin_api_changed():
 
 @hooks.hook('neutron-plugin-relation-joined')
 def neutron_plugin_joined(relation_id=None):
+    secret = get_shared_secret() if use_dvr() else None
     rel_data = {
-        'metadata-shared-secret': get_shared_secret()
+        'metadata-shared-secret': secret,
     }
     relation_set(relation_id=relation_id, **rel_data)
 

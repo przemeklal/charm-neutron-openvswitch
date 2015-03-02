@@ -21,7 +21,7 @@ NEUTRON_FWAAS_CONF = "/etc/neutron/fwaas_driver.ini"
 ML2_CONF = '%s/plugins/ml2/ml2_conf.ini' % NEUTRON_CONF_DIR
 EXT_PORT_CONF = '/etc/init/ext-port.conf'
 NEUTRON_METADATA_AGENT_CONF = "/etc/neutron/metadata_agent.ini"
-
+DVR_PACKAGES = ['neutron-vpn-agent']
 
 BASE_RESOURCE_MAP = OrderedDict([
     (NEUTRON_CONF, {
@@ -60,10 +60,9 @@ DATA_BRIDGE = 'br-data'
 
 
 def determine_dvr_packages():
-    pkgs = []
-    if neutron_ovs_context.use_dvr():
-        pkgs = ['neutron-vpn-agent']
-    return pkgs
+    if use_dvr():
+        return DVR_PACKAGES
+    return []
 
 
 def determine_packages():
@@ -87,7 +86,7 @@ def resource_map():
     hook execution.
     '''
     resource_map = deepcopy(BASE_RESOURCE_MAP)
-    if neutron_ovs_context.use_dvr():
+    if use_dvr():
         resource_map.update(DVR_RESOURCE_MAP)
         dvr_services = ['neutron-metadata-agent', 'neutron-vpn-agent']
         resource_map[NEUTRON_CONF]['services'] += dvr_services
@@ -116,3 +115,6 @@ def get_shared_secret():
     ctxt = neutron_ovs_context.DVRSharedSecretContext()()
     if 'shared_secret' in ctxt:
         return ctxt['shared_secret']
+
+def use_dvr():
+    return neutron_ovs_context.use_dvr()
