@@ -21,6 +21,7 @@ utils.restart_map = _map
 TO_PATCH = [
     'apt_update',
     'apt_install',
+    'apt_purge',
     'config',
     'CONFIGS',
     'determine_packages',
@@ -30,6 +31,7 @@ TO_PATCH = [
     'relation_ids',
     'relation_set',
     'configure_ovs',
+    'use_dvr',
 ]
 NEUTRON_CONF_DIR = "/etc/neutron"
 
