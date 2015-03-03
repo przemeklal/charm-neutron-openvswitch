@@ -33,10 +33,10 @@ class OVSPluginContextTest(CharmTestCase):
     @patch('charmhelpers.contrib.openstack.context.NeutronPortContext.'
            'resolve_ports')
     def test_data_port_name(self, mock_resolve_ports):
-        self.test_config.set('data-port', 'phybr1:em1')
+        self.test_config.set('data-port', 'br-data:em1')
         mock_resolve_ports.side_effect = lambda ports: ports
         self.assertEquals(context.DataPortContext()(),
-                          {'phybr1': 'em1'})
+                          {'br-data': 'em1'})
 
     @patch.object(context, 'get_nic_hwaddr')
     @patch('charmhelpers.contrib.openstack.context.get_nic_hwaddr')
@@ -48,18 +48,18 @@ class OVSPluginContextTest(CharmTestCase):
         }
         get_nic_hwaddr2.side_effect = lambda nic: machine_machs[nic]
         absent_mac = "cc:cc:cc:cc:cc:cc"
-        config_macs = ("phybr2:%s phybr1:%s" %
+        config_macs = ("br-d1:%s br-d2:%s" %
                        (absent_mac, machine_machs['em1']))
         self.test_config.set('data-port', config_macs)
         list_nics.return_value = machine_machs.keys()
         get_nic_hwaddr.side_effect = lambda nic: machine_machs[nic]
         self.assertEquals(context.DataPortContext()(),
-                          {'phybr1': 'em1'})
+                          {'br-d2': 'em1'})
 
     @patch('charmhelpers.contrib.openstack.context.NeutronPortContext.'
            'resolve_ports')
     def test_ensure_bridge_data_port_present(self, mock_resolve_ports):
-        self.test_config.set('data-port', 'phybr1:em1')
+        self.test_config.set('data-port', 'br-data:em1')
         self.test_config.set('bridge-mappings', 'phybr1:br-data')
 
         def add_port(bridge, port, promisc):
