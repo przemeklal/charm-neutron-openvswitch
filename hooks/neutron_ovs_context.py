@@ -18,6 +18,7 @@ from charmhelpers.contrib.network.ip import get_address_in_network
 from charmhelpers.contrib.openstack.neutron import (
     parse_bridge_mappings,
     parse_data_port_mappings,
+    parse_vlan_range_mappings,
 )
 from charmhelpers.contrib.openstack.context import (
     NeutronPortContext,
@@ -147,6 +148,13 @@ class OVSPluginContext(context.NeutronContext):
         mappings = config('bridge-mappings')
         if mappings:
             ovs_ctxt['bridge_mappings'] = mappings
+
+        vlan_ranges = config('vlan-ranges')
+        vlan_range_mappings = parse_vlan_range_mappings(config('vlan-ranges'))
+        if vlan_ranges:
+            providers = vlan_range_mappings.keys()
+            ovs_ctxt['network_providers'] = ' '.join(providers)
+            ovs_ctxt['vlan_ranges'] = vlan_ranges
 
         return ovs_ctxt
 
