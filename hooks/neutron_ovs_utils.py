@@ -116,5 +116,6 @@ def get_shared_secret():
     if 'shared_secret' in ctxt:
         return ctxt['shared_secret']
 
+
 def use_dvr():
     return neutron_ovs_context.use_dvr()
