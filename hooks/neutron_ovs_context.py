@@ -72,7 +72,7 @@ class DataPortContext(NeutronPortContext):
             normalized.update({port: port for port in resolved
                                if port in ports})
             if resolved:
-                return {provider: normalized[port] for provider, port in
+                return {bridge: normalized[port] for bridge, port in
                         portmap.iteritems() if port in normalized.keys()}
 
         return None
@@ -105,10 +105,10 @@ class OVSPluginContext(context.NeutronContext):
         for provider, br in bridgemaps.iteritems():
             add_bridge(br)
 
-            if not portmaps or provider not in portmaps:
+            if not portmaps or br not in portmaps:
                 continue
 
-            add_bridge_port(br, portmaps[provider], promisc=True)
+            add_bridge_port(br, portmaps[br], promisc=True)
 
         service_restart('os-charm-phy-nic-mtu')
 
