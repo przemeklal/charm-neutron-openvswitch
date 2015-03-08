@@ -61,7 +61,11 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
 
     def _configure_services(self):
         """Configure all of the services."""
-        configs = {}
+        neutron_ovs_config = {'openstack-origin-git':
+                              "{'neutron':"
+                              "   {'repository': 'git://git.openstack.org/openstack/neutron.git',"
+                              "    'branch': 'stable/icehouse'}}"}
+        configs = {'neutron-openvswitch': neutron_ovs_config}
         super(NeutronOVSBasicDeployment, self)._configure_services(configs)
 
     def _initialize_tests(self):
