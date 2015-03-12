@@ -20,9 +20,6 @@ from charmhelpers.contrib.openstack.neutron import (
     parse_data_port_mappings,
     parse_vlan_range_mappings,
 )
-from charmhelpers.contrib.openstack.context import (
-    NeutronPortContext,
-)
 from charmhelpers.core.host import (
     get_nic_hwaddr,
 )
@@ -60,7 +57,7 @@ def _neutron_api_settings():
     return neutron_settings
 
 
-class DataPortContext(NeutronPortContext):
+class DataPortContext(context.NeutronPortContext):
 
     def __call__(self):
         ports = config('data-port')
@@ -159,15 +156,17 @@ class OVSPluginContext(context.NeutronContext):
         return ovs_ctxt
 
 
-class PhyNICMTUContext(context.NeutronPortContext):
+class PhyNICMTUContext(DataPortContext):
 
     def __call__(self):
         ctxt = {}
-        port = config('phy-nics')
-        if port:
-            ctxt = {"devs": port.replace(' ', '\\n')}
-            mtu = config('phy-nic-mtu')
+        mappings = super(PhyNICMTUContext, self).__call__()
+        if mappings and mappings.values():
+            ports = mappings.values()
+            neutron_api_settings = _neutron_api_settings()
+            mtu = neutron_api_settings.get('network_device_mtu')
             if mtu:
+                ctxt['devs'] = '\\n'.join(ports)
                 ctxt['mtu'] = mtu
 
         return ctxt
