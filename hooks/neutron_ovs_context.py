@@ -39,21 +39,18 @@ def _neutron_api_settings():
     for rid in relation_ids('neutron-plugin-api'):
         for unit in related_units(rid):
             rdata = relation_get(rid=rid, unit=unit)
-            if 'l2-population' not in rdata:
-                continue
-            neutron_settings = {
-                'l2_population': bool_from_string(rdata['l2-population']),
-                'overlay_network_type': rdata['overlay-network-type'],
-                'neutron_security_groups': bool_from_string(
-                    rdata['neutron-security-groups']
-                ),
-            }
+            if 'l2-population' in rdata:
+                neutron_settings.update({
+                    'l2_population': bool_from_string(rdata['l2-population']),
+                    'overlay_network_type': rdata['overlay-network-type'],
+                    'neutron_security_groups':
+                        bool_from_string(rdata['neutron-security-groups'])
+                })
 
             net_dev_mtu = rdata.get('network-device-mtu')
             if net_dev_mtu:
                 neutron_settings['network_device_mtu'] = net_dev_mtu
 
-            return neutron_settings
     return neutron_settings
 
 
@@ -157,6 +154,7 @@ class OVSPluginContext(context.NeutronContext):
 
 
 class PhyNICMTUContext(DataPortContext):
+    """Context used to apply settings to neutron data-port devices"""
 
     def __call__(self):
         ctxt = {}

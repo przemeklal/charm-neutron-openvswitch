@@ -44,6 +44,11 @@ options:
     description: |
       Space-delimited list of ML2 data bridge mappings with format
       <provider>:<bridge>.
+  vlan-ranges:
+    type: string
+    default: "physnet1:1000:2000"
+    description: |
+      Space-delimited list of network provider vlan id ranges.
   # Network configuration options
   # by default all access is over 'private-address'
   os-data-network:
