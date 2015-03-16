@@ -70,7 +70,7 @@ def amqp_changed():
 
 
 @hooks.hook('zeromq-configuration-relation-joined')
-@os_requires_version('juno', 'neutron-common')
+@os_requires_version('kilo', 'neutron-common')
 def zeromq_configuration_relation_joined(relid=None):
     relation_set(relation_id=relid,
                  topics=" ".join(get_topics()),
