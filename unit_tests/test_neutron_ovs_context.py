@@ -167,7 +167,7 @@ class OVSPluginContextTest(CharmTestCase):
         napi_ctxt = context.OVSPluginContext()
         expect = {
             'neutron_alchemy_flags': {},
-            'neutron_security_groups': True,
+            'neutron_security_groups': False,
             'verbose': True,
             'local_ip': '127.0.0.15',
             'veth_mtu': 1500,
