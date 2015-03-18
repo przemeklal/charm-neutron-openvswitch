@@ -47,6 +47,10 @@ def _neutron_api_settings():
                         bool_from_string(rdata['neutron-security-groups'])
                 })
 
+            # Override with configuration if set to true
+            if config('disable-security-groups'):
+                neutron_settings['neutron_security_groups'] = False
+
             net_dev_mtu = rdata.get('network-device-mtu')
             if net_dev_mtu:
                 neutron_settings['network_device_mtu'] = net_dev_mtu
