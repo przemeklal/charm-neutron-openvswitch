@@ -13,6 +13,8 @@ NEUTRON_CONF_DIR = "/etc/neutron"
 NEUTRON_CONF = '%s/neutron.conf' % NEUTRON_CONF_DIR
 NEUTRON_DEFAULT = '/etc/default/neutron-server'
 ML2_CONF = '%s/plugins/ml2/ml2_conf.ini' % NEUTRON_CONF_DIR
+PHY_NIC_MTU_CONF = '/etc/init/os-charm-phy-nic-mtu.conf'
+TEMPLATES = 'templates/'
 
 BASE_RESOURCE_MAP = OrderedDict([
     (NEUTRON_CONF, {
@@ -24,8 +26,11 @@ BASE_RESOURCE_MAP = OrderedDict([
         'services': ['neutron-plugin-openvswitch-agent'],
         'contexts': [neutron_ovs_context.OVSPluginContext()],
     }),
+    (PHY_NIC_MTU_CONF, {
+        'services': ['os-charm-phy-nic-mtu'],
+        'contexts': [neutron_ovs_context.PhyNICMTUContext()],
+    }),
 ])
-TEMPLATES = 'templates/'
 
 
 def determine_packages():
