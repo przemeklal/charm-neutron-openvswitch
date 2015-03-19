@@ -14,8 +14,6 @@ TO_PATCH = [
     'service_running',
     'service_start',
     'get_host_ip',
-    'get_nic_hwaddr',
-    'list_nics',
 ]
 
 
@@ -32,34 +30,45 @@ class OVSPluginContextTest(CharmTestCase):
     def tearDown(self):
         super(OVSPluginContextTest, self).tearDown()
 
-    def test_data_port_name(self):
-        self.test_config.set('data-port', 'em1')
-        self.assertEquals(context.OVSPluginContext().get_data_port(), 'em1')
+    @patch('charmhelpers.contrib.openstack.context.NeutronPortContext.'
+           'resolve_ports')
+    def test_data_port_name(self, mock_resolve_ports):
+        self.test_config.set('data-port', 'br-data:em1')
+        mock_resolve_ports.side_effect = lambda ports: ports
+        self.assertEquals(context.DataPortContext()(),
+                          {'br-data': 'em1'})
 
-    def test_data_port_mac(self):
+    @patch.object(context, 'get_nic_hwaddr')
+    @patch('charmhelpers.contrib.openstack.context.get_nic_hwaddr')
+    @patch('charmhelpers.contrib.openstack.context.list_nics')
+    def test_data_port_mac(self, list_nics, get_nic_hwaddr, get_nic_hwaddr2):
         machine_machs = {
             'em1': 'aa:aa:aa:aa:aa:aa',
             'eth0': 'bb:bb:bb:bb:bb:bb',
         }
+        get_nic_hwaddr2.side_effect = lambda nic: machine_machs[nic]
         absent_mac = "cc:cc:cc:cc:cc:cc"
-        config_macs = "%s %s" % (absent_mac, machine_machs['em1'])
+        config_macs = ("br-d1:%s br-d2:%s" %
+                       (absent_mac, machine_machs['em1']))
         self.test_config.set('data-port', config_macs)
+        list_nics.return_value = machine_machs.keys()
+        get_nic_hwaddr.side_effect = lambda nic: machine_machs[nic]
+        self.assertEquals(context.DataPortContext()(),
+                          {'br-d2': 'em1'})
 
-        def get_hwaddr(eth):
-            return machine_machs[eth]
-        self.get_nic_hwaddr.side_effect = get_hwaddr
-        self.list_nics.return_value = machine_machs.keys()
-        self.assertEquals(context.OVSPluginContext().get_data_port(), 'em1')
+    @patch('charmhelpers.contrib.openstack.context.NeutronPortContext.'
+           'resolve_ports')
+    def test_ensure_bridge_data_port_present(self, mock_resolve_ports):
+        self.test_config.set('data-port', 'br-data:em1')
+        self.test_config.set('bridge-mappings', 'phybr1:br-data')
 
-    @patch.object(context.OVSPluginContext, 'get_data_port')
-    def test_ensure_bridge_data_port_present(self, get_data_port):
         def add_port(bridge, port, promisc):
             if bridge == 'br-data' and port == 'em1' and promisc is True:
                 self.bridge_added = True
                 return
             self.bridge_added = False
 
-        get_data_port.return_value = 'em1'
+        mock_resolve_ports.side_effect = lambda ports: ports
         self.add_bridge_port.side_effect = add_port
         context.OVSPluginContext()._ensure_bridge()
         self.assertEquals(self.bridge_added, True)
@@ -90,6 +99,7 @@ class OVSPluginContextTest(CharmTestCase):
         self.relation_ids.return_value = ['rid2']
         self.test_relation.set({'neutron-security-groups': 'True',
                                 'l2-population': 'True',
+                                'network-device-mtu': 1500,
                                 'overlay-network-type': 'gre',
                                 })
         self.get_host_ip.return_value = '127.0.0.15'
@@ -100,6 +110,8 @@ class OVSPluginContextTest(CharmTestCase):
             'neutron_security_groups': True,
             'verbose': True,
             'local_ip': '127.0.0.15',
+            'network_device_mtu': 1500,
+            'veth_mtu': 1500,
             'config': 'neutron.randomconfig',
             'use_syslog': True,
             'network_manager': 'neutron',
@@ -109,6 +121,9 @@ class OVSPluginContextTest(CharmTestCase):
             'neutron_url': 'https://127.0.0.13:9696',
             'l2_population': True,
             'overlay_network_type': 'gre',
+            'network_providers': 'physnet1',
+            'bridge_mappings': 'physnet1:br-data',
+            'vlan_ranges': 'physnet1:1000:2000',
         }
         self.assertEquals(expect, napi_ctxt())
         self.service_start.assertCalled()
@@ -133,6 +148,7 @@ class OVSPluginContextTest(CharmTestCase):
                 return "neutron.randomdriver"
             if section == "config":
                 return "neutron.randomconfig"
+
         _npa.side_effect = mock_npa
         _config.return_value = 'ovs'
         _unit_get.return_value = '127.0.0.13'
@@ -143,6 +159,7 @@ class OVSPluginContextTest(CharmTestCase):
         self.relation_ids.return_value = ['rid2']
         self.test_relation.set({'neutron-security-groups': 'True',
                                 'l2-population': 'True',
+                                'network-device-mtu': 1500,
                                 'overlay-network-type': 'gre',
                                 })
         self.get_host_ip.return_value = '127.0.0.15'
@@ -153,6 +170,8 @@ class OVSPluginContextTest(CharmTestCase):
             'neutron_security_groups': False,
             'verbose': True,
             'local_ip': '127.0.0.15',
+            'veth_mtu': 1500,
+            'network_device_mtu': 1500,
             'config': 'neutron.randomconfig',
             'use_syslog': True,
             'network_manager': 'neutron',
@@ -162,6 +181,9 @@ class OVSPluginContextTest(CharmTestCase):
             'neutron_url': 'https://127.0.0.13:9696',
             'l2_population': True,
             'overlay_network_type': 'gre',
+            'network_providers': 'physnet1',
+            'bridge_mappings': 'physnet1:br-data',
+            'vlan_ranges': 'physnet1:1000:2000',
         }
         self.assertEquals(expect, napi_ctxt())
         self.service_start.assertCalled()
