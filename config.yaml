@@ -3,20 +3,16 @@ options:
     default: None
     type: string
     description: |
-      Specifies a YAML-formatted two-dimensional array listing the git
-      repositories and branches from which to install OpenStack and its
-      dependencies.
+      Specifies a YAML-formatted dictionary listing the git
+      repositories and branches from which to install OpenStack and
+      its dependencies.
 
       When openstack-origin-git is specified, openstack-specific
       packages will be installed from source rather than from the
       the nova-compute charm's openstack-origin repository.
 
       Note that the installed config files will be determined based on
-      the OpenStack release of the nova-compute charm's openstack-origin
-      option.
-
-      Note also that this option is processed for the initial install
-      only. Setting this option after deployment is not supported.
+      the OpenStack release of the openstack-origin option.
 
       For more details see README.md.
   rabbit-user:

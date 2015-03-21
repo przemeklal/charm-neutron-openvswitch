@@ -6,6 +6,11 @@ from charmhelpers.contrib.openstack.neutron import neutron_plugin_attribute
 from copy import deepcopy
 
 from charmhelpers.contrib.openstack import context, templating
+from charmhelpers.contrib.openstack.utils import (
+    git_install_requested,
+    git_clone_and_install,
+    git_src_dir,
+)
 from collections import OrderedDict
 from charmhelpers.contrib.openstack.utils import (
     os_release,
@@ -87,12 +92,12 @@ def restart_map():
     return {k: v['services'] for k, v in resource_map().iteritems()}
 
 
-def git_install(projects):
+def git_install(projects_yaml):
     """Perform setup, and install git repos specified in yaml parameter."""
     if git_install_requested():
         git_pre_install()
-        git_clone_and_install(yaml.load(projects), core_project='neutron')
-        git_post_install()
+        git_clone_and_install(projects_yaml, core_project='neutron')
+        git_post_install(projects_yaml)
 
 
 def git_pre_install():
@@ -121,9 +126,9 @@ def git_pre_install():
         write_file(l, '', owner='neutron', group='neutron', perms=0600)
 
 
-def git_post_install():
+def git_post_install(projects_yaml):
     """Perform post-install setup."""
-    src_etc = os.path.join(charm_dir(), '/mnt/openstack-git/neutron-api.git/etc')
+    src_etc = os.path.join(git_src_dir(projects_yaml, 'neutron'), 'etc')
     configs = {
         'debug-filters': {
             'src': os.path.join(src_etc, 'neutron/rootwrap.d/debug.filters'),
@@ -175,10 +180,10 @@ def git_post_install():
         'log_file': '/var/log/neutron/ovs-cleanup.log',
     }
 
+    # NOTE(coreycb): Needs systemd support
     render('upstart/neutron-plugin-openvswitch-agent.upstart',
            '/etc/init/neutron-plugin-openvswitch-agent.conf',
            neutron_ovs_agent_context, perms=0o644)
-
     render('upstart/neutron-ovs-cleanup.upstart',
            '/etc/init/neutron-ovs-cleanup.conf',
            neutron_ovs_cleanup_context, perms=0o644)

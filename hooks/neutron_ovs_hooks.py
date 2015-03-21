@@ -2,6 +2,11 @@
 
 import sys
 
+from charmhelpers.contrib.openstack.utils import (
+    config_value_changed,
+    git_install_requested,
+)
+
 from charmhelpers.core.hookenv import (
     Hooks,
     UnregisteredHookError,
@@ -50,6 +55,10 @@ def install():
 @restart_on_change(restart_map())
 def config_changed():
     CONFIGS.write_all()
+
+    if git_install_requested() and
+           config_value_changed('openstack-origin-git'):
+       git_install(config('openstack-origin-git'))
 
 
 @hooks.hook('amqp-relation-joined')
