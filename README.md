@@ -44,95 +44,87 @@ These compute nodes could then be accessed by cloud users via use of host aggreg
 
 # Deploying from source
 
-The minimal openstack-origin-git config required to deploy from source is:
+The minimum openstack-origin-git config required to deploy from source is:
 
   openstack-origin-git:
-      "{'neutron':
-           {'repository': 'git://git.openstack.org/openstack/neutron.git',
-            'branch': 'stable/icehouse'}}"
+      "repositories:
+         - {name: requirements,
+            repository: 'git://git.openstack.org/openstack/requirements',
+            branch: stable/juno}
+         - {name: neutron,
+            repository: 'git://git.openstack.org/openstack/neutron',
+            branch: stable/juno}"
 
-If you specify a 'requirements' repository, it will be used to update the
-requirements.txt files of all other git repos that it applies to, before
-they are installed:
+Note that there are only two 'name' values the charm knows about: 'requirements'
+and 'neutron'. These repositories must correspond to these 'name' values.
+Additionally, the requirements repository must be specified first and the
+neutron repository must be specified last. All other repostories are installed
+in the order in which they are specified.
 
-  openstack-origin-git:
-      "{'requirements':
-           {'repository': 'git://git.openstack.org/openstack/requirements.git',
-            'branch': 'master'},
-        'neutron':
-           {'repository': 'git://git.openstack.org/openstack/neutron.git',
-            'branch': 'master'}}"
-
-Note that there are only two key values the charm knows about for the outermost
-dictionary: 'neutron' and 'requirements'. These repositories must correspond to
-these keys. If the requirements repository is specified, it will be installed
-first. The neutron repository is always installed last.  All other repostories
-will be installed in between.
-
-NOTE(coreycb): The following is temporary to keep track of the full list of
-current tip repos (may not be up-to-date).
+The following is a full list of current tip repos (may not be up-to-date):
 
   openstack-origin-git:
-      "{'requirements':
-           {'repository': 'git://git.openstack.org/openstack/requirements.git',
-            'branch': 'master'},
-        'neutron-fwaas':
-           {'repository': 'git://git.openstack.org/openstack/neutron-fwaas.git',
-            'branch': 'master'},
-        'neutron-lbaas':
-           {'repository: 'git://git.openstack.org/openstack/neutron-lbaas.git',
-            'branch': 'master'},
-        'neutron-vpnaas':
-           {'repository: 'git://git.openstack.org/openstack/neutron-vpnaas.git',
-            'branch': 'master'},
-        'keystonemiddleware:
-           {'repository': 'git://git.openstack.org/openstack/keystonemiddleware.git',
-            'branch: 'master'},
-        'oslo-concurrency':
-           {'repository': 'git://git.openstack.org/openstack/oslo.concurrency.git',
-            'branch: 'master'},
-        'oslo-config':
-           {'repository': 'git://git.openstack.org/openstack/oslo.config.git',
-            'branch: 'master'},
-        'oslo-context':
-           {'repository': 'git://git.openstack.org/openstack/oslo.context.git',
-            'branch: 'master'},
-        'oslo-db':
-           {'repository': 'git://git.openstack.org/openstack/oslo.db.git',
-            'branch: 'master'},
-        'oslo-i18n':
-           {'repository': 'git://git.openstack.org/openstack/oslo.i18n.git',
-            'branch: 'master'},
-        'oslo-messaging':
-           {'repository': 'git://git.openstack.org/openstack/oslo.messaging.git',
-            'branch: 'master'},
-        'oslo-middleware:
-           {'repository': 'git://git.openstack.org/openstack/oslo.middleware.git',
-            'branch': 'master'},
-        'oslo-rootwrap':
-           {'repository': 'git://git.openstack.org/openstack/oslo.rootwrap.git',
-            'branch: 'master'},
-        'oslo-serialization':
-           {'repository': 'git://git.openstack.org/openstack/oslo.serialization.git',
-            'branch: 'master'},
-        'oslo-utils':
-           {'repository': 'git://git.openstack.org/openstack/oslo.utils.git',
-            'branch: 'master'},
-        'pbr':
-           {'repository': 'git://git.openstack.org/openstack-dev/pbr.git',
-            'branch: 'master'},
-        'python-keystoneclient':
-           {'repository': 'git://git.openstack.org/openstack/python-keystoneclient.git',
-            'branch: 'master'},
-        'python-neutronclient':
-           {'repository': 'git://git.openstack.org/openstack/python-neutronclient.git',
-            'branch: 'master'},
-        'python-novaclient':
-           {'repository': 'git://git.openstack.org/openstack/python-novaclient.git',
-            'branch: 'master'},
-        'stevedore':
-           {'repository': 'git://git.openstack.org/openstack/stevedore.git',
-            'branch: 'master'},
-        'neutron':
-           {'repository': 'git://git.openstack.org/openstack/neutron.git',
-            'branch': 'master'}}"
+      "repositories:
+         - {name: requirements,
+            repository: 'git://git.openstack.org/openstack/requirements',
+            branch: master}
+         - {name: oslo-concurrency,
+            repository: 'git://git.openstack.org/openstack/oslo.concurrency',
+            branch: master}
+         - {name: oslo-config,
+            repository: 'git://git.openstack.org/openstack/oslo.config',
+            branch: master}
+         - {name: oslo-context,
+            repository: 'git://git.openstack.org/openstack/oslo.context.git',
+            branch: master}
+         - {name: oslo-db,
+            repository: 'git://git.openstack.org/openstack/oslo.db',
+            branch: master}
+         - {name: oslo-i18n,
+            repository: 'git://git.openstack.org/openstack/oslo.i18n',
+            branch: master}
+         - {name: oslo-messaging,
+            repository: 'git://git.openstack.org/openstack/oslo.messaging.git',
+            branch: master}
+         - {name: oslo-middleware,
+            repository': 'git://git.openstack.org/openstack/oslo.middleware.git',
+            branch: master}
+         - {name: oslo-rootwrap',
+            repository: 'git://git.openstack.org/openstack/oslo.rootwrap.git',
+            branch: master}
+         - {name: oslo-serialization,
+            repository: 'git://git.openstack.org/openstack/oslo.serialization',
+            branch: master}
+         - {name: oslo-utils,
+            repository: 'git://git.openstack.org/openstack/oslo.utils',
+            branch: master}
+         - {name: pbr,
+            repository: 'git://git.openstack.org/openstack-dev/pbr',
+            branch: master}
+         - {name: stevedore,
+            repository: 'git://git.openstack.org/openstack/stevedore.git',
+            branch: 'master'}
+         - {name: python-keystoneclient,
+            repository: 'git://git.openstack.org/openstack/python-keystoneclient',
+            branch: master}
+         - {name: python-neutronclient,
+            repository: 'git://git.openstack.org/openstack/python-neutronclient.git',
+            branch: master}
+         - {name: python-novaclient,
+            repository': 'git://git.openstack.org/openstack/python-novaclient.git',
+            branch: master}
+         - {name: keystonemiddleware,
+            repository: 'git://git.openstack.org/openstack/keystonemiddleware',
+            branch: master}
+         - {name: neutron-fwaas,
+            repository': 'git://git.openstack.org/openstack/neutron-fwaas.git',
+            branch: master}
+         - {name: neutron-lbaas,
+            repository: 'git://git.openstack.org/openstack/neutron-lbaas.git',
+            branch: master}
+         - {name: neutron-vpnaas,
+            repository: 'git://git.openstack.org/openstack/neutron-vpnaas.git',
+            branch: master}
+         - {name: neutron,
+            repository: 'git://git.openstack.org/openstack/neutron',
+            branch: master}"
