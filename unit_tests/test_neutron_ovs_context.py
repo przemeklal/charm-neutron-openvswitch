@@ -13,6 +13,7 @@ TO_PATCH = [
     'add_bridge_port',
     'service_running',
     'service_start',
+    'service_restart',
     'get_host_ip',
 ]
 
