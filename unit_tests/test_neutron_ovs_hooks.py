@@ -1,7 +1,6 @@
 
 from mock import MagicMock, patch, call
 from test_utils import CharmTestCase
-import neutron_ovs_context
 
 with patch('charmhelpers.core.hookenv.config') as config:
     config.return_value = 'neutron'

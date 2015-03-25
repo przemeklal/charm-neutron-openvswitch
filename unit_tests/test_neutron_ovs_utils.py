@@ -61,7 +61,7 @@ class TestNeutronOVSUtils(CharmTestCase):
         # Reset cached cache
         hookenv.cache = {}
 
-    @patch.object(nutils, 'use_dvr') 
+    @patch.object(nutils, 'use_dvr')
     @patch.object(charmhelpers.contrib.openstack.neutron, 'os_release')
     @patch.object(charmhelpers.contrib.openstack.neutron, 'headers_package')
     def test_determine_packages(self, _head_pkgs, _os_rel, _use_dvr):
@@ -72,7 +72,7 @@ class TestNeutronOVSUtils(CharmTestCase):
         expect = [['neutron-plugin-openvswitch-agent'], [head_pkg]]
         self.assertItemsEqual(pkg_list, expect)
 
-    @patch.object(nutils, 'use_dvr') 
+    @patch.object(nutils, 'use_dvr')
     def test_register_configs(self, _use_dvr):
         class _mock_OSConfigRenderer():
             def __init__(self, templates_dir=None, openstack_release=None):
@@ -92,7 +92,7 @@ class TestNeutronOVSUtils(CharmTestCase):
                  '/etc/init/os-charm-phy-nic-mtu.conf']
         self.assertItemsEqual(_regconfs.configs, confs)
 
-    @patch.object(nutils, 'use_dvr') 
+    @patch.object(nutils, 'use_dvr')
     def test_resource_map(self, _use_dvr):
         _use_dvr.return_value = False
         _map = nutils.resource_map()
@@ -101,7 +101,7 @@ class TestNeutronOVSUtils(CharmTestCase):
         [self.assertIn(q_conf, _map.keys()) for q_conf in confs]
         self.assertEqual(_map[nutils.NEUTRON_CONF]['services'], svcs)
 
-    @patch.object(nutils, 'use_dvr') 
+    @patch.object(nutils, 'use_dvr')
     def test_resource_map_dvr(self, _use_dvr):
         _use_dvr.return_value = True
         _map = nutils.resource_map()
@@ -111,7 +111,7 @@ class TestNeutronOVSUtils(CharmTestCase):
         [self.assertIn(q_conf, _map.keys()) for q_conf in confs]
         self.assertEqual(_map[nutils.NEUTRON_CONF]['services'], svcs)
 
-    @patch.object(nutils, 'use_dvr') 
+    @patch.object(nutils, 'use_dvr')
     def test_restart_map(self, _use_dvr):
         _use_dvr.return_value = False
         _restart_map = nutils.restart_map()
