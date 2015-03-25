@@ -4,24 +4,26 @@ from charmhelpers.core.hookenv import (
     config,
     unit_get,
 )
-from charmhelpers.contrib.network.ip import (
-    get_address_in_network,
-)
 from charmhelpers.contrib.openstack.ip import resolve_address
-from charmhelpers.core.host import list_nics, get_nic_hwaddr
 from charmhelpers.contrib.openstack import context
-from charmhelpers.core.host import service_running, service_start
+from charmhelpers.core.host import (
+    service_running,
+    service_start,
+    service_restart,
+)
 from charmhelpers.contrib.network.ovs import add_bridge, add_bridge_port
 from charmhelpers.contrib.openstack.utils import get_host_ip
+from charmhelpers.contrib.network.ip import get_address_in_network
 from charmhelpers.contrib.openstack.context import (
     OSContextGenerator,
     NeutronAPIContext,
+    DataPortContext,
 )
-
-import re
-
+from charmhelpers.contrib.openstack.neutron import (
+    parse_bridge_mappings,
+    parse_vlan_range_mappings,
+)
 OVS_BRIDGE = 'br-int'
-DATA_BRIDGE = 'br-data'
 
 
 class OVSPluginContext(context.NeutronContext):
@@ -37,34 +39,28 @@ class OVSPluginContext(context.NeutronContext):
 
     @property
     def neutron_security_groups(self):
+        if config('disable-security-groups'):
+            return False
         neutron_api_settings = NeutronAPIContext()()
         return neutron_api_settings['neutron_security_groups']
-
-    def get_data_port(self):
-        data_ports = config('data-port')
-        if not data_ports:
-            return None
-        hwaddrs = {}
-        for nic in list_nics(['eth', 'bond']):
-            hwaddrs[get_nic_hwaddr(nic).lower()] = nic
-        mac_regex = re.compile(r'([0-9A-F]{2}[:-]){5}([0-9A-F]{2})', re.I)
-        for entry in data_ports.split():
-            entry = entry.strip().lower()
-            if re.match(mac_regex, entry):
-                if entry in hwaddrs:
-                    return hwaddrs[entry]
-            else:
-                return entry
-        return None
 
     def _ensure_bridge(self):
         if not service_running('openvswitch-switch'):
             service_start('openvswitch-switch')
+
         add_bridge(OVS_BRIDGE)
-        add_bridge(DATA_BRIDGE)
-        data_port = self.get_data_port()
-        if data_port:
-            add_bridge_port(DATA_BRIDGE, data_port, promisc=True)
+
+        portmaps = DataPortContext()()
+        bridgemaps = parse_bridge_mappings(config('bridge-mappings'))
+        for provider, br in bridgemaps.iteritems():
+            add_bridge(br)
+
+            if not portmaps or br not in portmaps:
+                continue
+
+            add_bridge_port(br, portmaps[br], promisc=True)
+
+        service_restart('os-charm-phy-nic-mtu')
 
     def ovs_ctxt(self):
         # In addition to generating config context, ensure the OVS service
@@ -91,6 +87,25 @@ class OVSPluginContext(context.NeutronContext):
         ovs_ctxt['use_syslog'] = conf['use-syslog']
         ovs_ctxt['verbose'] = conf['verbose']
         ovs_ctxt['debug'] = conf['debug']
+
+        net_dev_mtu = neutron_api_settings.get('network_device_mtu')
+        if net_dev_mtu:
+            # neutron.conf
+            ovs_ctxt['network_device_mtu'] = net_dev_mtu
+            # ml2 conf
+            ovs_ctxt['veth_mtu'] = net_dev_mtu
+
+        mappings = config('bridge-mappings')
+        if mappings:
+            ovs_ctxt['bridge_mappings'] = mappings
+
+        vlan_ranges = config('vlan-ranges')
+        vlan_range_mappings = parse_vlan_range_mappings(config('vlan-ranges'))
+        if vlan_ranges:
+            providers = vlan_range_mappings.keys()
+            ovs_ctxt['network_providers'] = ' '.join(providers)
+            ovs_ctxt['vlan_ranges'] = vlan_ranges
+
         return ovs_ctxt
 
 

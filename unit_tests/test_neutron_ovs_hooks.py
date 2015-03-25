@@ -59,16 +59,12 @@ class NeutronOVSHooksTests(CharmTestCase):
             call(_pkgs, fatal=True),
         ])
 
-    @patch.object(neutron_ovs_context, 'use_dvr')
-    def test_config_changed(self, _use_dvr):
-        _use_dvr.return_value = False
+    def test_config_changed(self):
         self._call_hook('config-changed')
         self.assertTrue(self.CONFIGS.write_all.called)
         self.configure_ovs.assert_called_with()
 
-    @patch.object(neutron_ovs_context, 'use_dvr')
-    def test_config_changed_dvr(self, _use_dvr):
-        _use_dvr.return_value = True
+    def test_config_changed_dvr(self):
         self.determine_dvr_packages.return_value = ['dvr']
         self._call_hook('config-changed')
         self.apt_update.assert_called_with()
@@ -79,9 +75,7 @@ class NeutronOVSHooksTests(CharmTestCase):
         self.configure_ovs.assert_called_with()
 
     @patch.object(hooks, 'neutron_plugin_joined')
-    @patch.object(neutron_ovs_context, 'use_dvr')
-    def test_neutron_plugin_api(self, _use_dvr, _plugin_joined):
-        _use_dvr.return_value = False
+    def test_neutron_plugin_api(self, _plugin_joined):
         self.relation_ids.return_value = ['rid']
         self._call_hook('neutron-plugin-api-relation-changed')
         self.configure_ovs.assert_called_with()
