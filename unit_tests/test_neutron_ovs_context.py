@@ -16,12 +16,14 @@ TO_PATCH = [
     'get_host_ip',
 ]
 
+
 def fake_context(settings):
     def outer():
         def inner():
             return settings
         return inner
     return outer
+
 
 class OVSPluginContextTest(CharmTestCase):
 
@@ -262,7 +264,6 @@ class DVRSharedSecretContext(CharmTestCase):
                                                   TO_PATCH)
         self.config.side_effect = self.test_config.get
 
-
     @patch('os.path')
     @patch('uuid.uuid4')
     def test_secret_created_stored(self, _uuid4, _path):
@@ -287,7 +288,8 @@ class DVRSharedSecretContext(CharmTestCase):
 
     @patch.object(context, 'NeutronAPIContext')
     @patch.object(context, 'get_shared_secret')
-    def test_shared_secretcontext_dvr(self, _shared_secret, _NeutronAPIContext):
+    def test_shared_secretcontext_dvr(self, _shared_secret,
+                                      _NeutronAPIContext):
         _NeutronAPIContext.side_effect = fake_context({'enable_dvr': True})
         _shared_secret.return_value = 'secret_thing'
         #_use_dvr.return_value = True
@@ -298,7 +300,8 @@ class DVRSharedSecretContext(CharmTestCase):
 
     @patch.object(context, 'NeutronAPIContext')
     @patch.object(context, 'get_shared_secret')
-    def test_shared_secretcontext_nodvr(self, _shared_secret, _NeutronAPIContext):
+    def test_shared_secretcontext_nodvr(self, _shared_secret,
+                                        _NeutronAPIContext):
         _NeutronAPIContext.side_effect = fake_context({'enable_dvr': False})
         _shared_secret.return_value = 'secret_thing'
         self.resolve_address.return_value = '10.0.0.10'
