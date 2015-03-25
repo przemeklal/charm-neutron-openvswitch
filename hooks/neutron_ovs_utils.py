@@ -50,7 +50,7 @@ DVR_RESOURCE_MAP = OrderedDict([
     (NEUTRON_METADATA_AGENT_CONF, {
         'services': ['neutron-metadata-agent'],
         'contexts': [neutron_ovs_context.DVRSharedSecretContext(),
-                     neutron_ovs_context.NetworkServiceContext()],
+                     context.NetworkServiceContext()],
     }),
 ])
 TEMPLATES = 'templates/'
@@ -118,4 +118,4 @@ def get_shared_secret():
 
 
 def use_dvr():
-    return neutron_ovs_context.use_dvr()
+    return context.NeutronAPIContext()()['enable_dvr']
