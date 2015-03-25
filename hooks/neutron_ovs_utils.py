@@ -22,6 +22,8 @@ ML2_CONF = '%s/plugins/ml2/ml2_conf.ini' % NEUTRON_CONF_DIR
 EXT_PORT_CONF = '/etc/init/ext-port.conf'
 NEUTRON_METADATA_AGENT_CONF = "/etc/neutron/metadata_agent.ini"
 DVR_PACKAGES = ['neutron-vpn-agent']
+PHY_NIC_MTU_CONF = '/etc/init/os-charm-phy-nic-mtu.conf'
+TEMPLATES = 'templates/'
 
 BASE_RESOURCE_MAP = OrderedDict([
     (NEUTRON_CONF, {
@@ -32,6 +34,10 @@ BASE_RESOURCE_MAP = OrderedDict([
     (ML2_CONF, {
         'services': ['neutron-plugin-openvswitch-agent'],
         'contexts': [neutron_ovs_context.OVSPluginContext()],
+    }),
+    (PHY_NIC_MTU_CONF, {
+        'services': ['os-charm-phy-nic-mtu'],
+        'contexts': [context.PhyNICMTUContext()],
     }),
 ])
 DVR_RESOURCE_MAP = OrderedDict([

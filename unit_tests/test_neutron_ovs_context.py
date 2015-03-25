@@ -5,9 +5,6 @@ from mock import patch
 import neutron_ovs_context as context
 import charmhelpers
 TO_PATCH = [
-    'relation_get',
-    'relation_ids',
-    'related_units',
     'resolve_address',
     'config',
     'unit_get',
@@ -15,17 +12,21 @@ TO_PATCH = [
     'add_bridge_port',
     'service_running',
     'service_start',
+    'service_restart',
     'get_host_ip',
-    'get_nic_hwaddr',
-    'list_nics',
 ]
 
+def fake_context(settings):
+    def outer():
+        def inner():
+            return settings
+        return inner
+    return outer
 
 class OVSPluginContextTest(CharmTestCase):
 
     def setUp(self):
         super(OVSPluginContextTest, self).setUp(context, TO_PATCH)
-        self.relation_get.side_effect = self.test_relation.get
         self.config.side_effect = self.test_config.get
         self.test_config.set('debug', True)
         self.test_config.set('verbose', True)
@@ -34,38 +35,57 @@ class OVSPluginContextTest(CharmTestCase):
     def tearDown(self):
         super(OVSPluginContextTest, self).tearDown()
 
-    def test_data_port_name(self):
-        self.test_config.set('data-port', 'em1')
-        self.assertEquals(context.OVSPluginContext().get_data_port(), 'em1')
+    @patch('charmhelpers.contrib.openstack.context.config')
+    @patch('charmhelpers.contrib.openstack.context.NeutronPortContext.'
+           'resolve_ports')
+    def test_data_port_name(self, mock_resolve_ports, config):
+        self.test_config.set('data-port', 'br-data:em1')
+        config.side_effect = self.test_config.get
+        mock_resolve_ports.side_effect = lambda ports: ports
+        self.assertEquals(context.DataPortContext()(),
+                          {'br-data': 'em1'})
 
-    def test_data_port_mac(self):
+    @patch('charmhelpers.contrib.openstack.context.config')
+    @patch('charmhelpers.contrib.openstack.context.get_nic_hwaddr')
+    @patch('charmhelpers.contrib.openstack.context.list_nics')
+    def test_data_port_mac(self, list_nics, get_nic_hwaddr, config):
         machine_machs = {
             'em1': 'aa:aa:aa:aa:aa:aa',
             'eth0': 'bb:bb:bb:bb:bb:bb',
         }
         absent_mac = "cc:cc:cc:cc:cc:cc"
-        config_macs = "%s %s" % (absent_mac, machine_machs['em1'])
+        config_macs = ("br-d1:%s br-d2:%s" %
+                       (absent_mac, machine_machs['em1']))
         self.test_config.set('data-port', config_macs)
+        config.side_effect = self.test_config.get
+        list_nics.return_value = machine_machs.keys()
+        get_nic_hwaddr.side_effect = lambda nic: machine_machs[nic]
+        self.assertEquals(context.DataPortContext()(),
+                          {'br-d2': 'em1'})
 
-        def get_hwaddr(eth):
-            return machine_machs[eth]
-        self.get_nic_hwaddr.side_effect = get_hwaddr
-        self.list_nics.return_value = machine_machs.keys()
-        self.assertEquals(context.OVSPluginContext().get_data_port(), 'em1')
+    @patch('charmhelpers.contrib.openstack.context.config')
+    @patch('charmhelpers.contrib.openstack.context.NeutronPortContext.'
+           'resolve_ports')
+    def test_ensure_bridge_data_port_present(self, mock_resolve_ports, config):
+        self.test_config.set('data-port', 'br-data:em1')
+        self.test_config.set('bridge-mappings', 'phybr1:br-data')
+        config.side_effect = self.test_config.get
 
-    @patch.object(context.OVSPluginContext, 'get_data_port')
-    def test_ensure_bridge_data_port_present(self, get_data_port):
         def add_port(bridge, port, promisc):
+
             if bridge == 'br-data' and port == 'em1' and promisc is True:
                 self.bridge_added = True
                 return
             self.bridge_added = False
 
-        get_data_port.return_value = 'em1'
+        mock_resolve_ports.side_effect = lambda ports: ports
         self.add_bridge_port.side_effect = add_port
         context.OVSPluginContext()._ensure_bridge()
         self.assertEquals(self.bridge_added, True)
 
+    @patch.object(charmhelpers.contrib.openstack.context, 'relation_get')
+    @patch.object(charmhelpers.contrib.openstack.context, 'relation_ids')
+    @patch.object(charmhelpers.contrib.openstack.context, 'related_units')
     @patch.object(charmhelpers.contrib.openstack.context, 'config')
     @patch.object(charmhelpers.contrib.openstack.context, 'unit_get')
     @patch.object(charmhelpers.contrib.openstack.context, 'is_clustered')
@@ -77,7 +97,7 @@ class OVSPluginContextTest(CharmTestCase):
     @patch.object(charmhelpers.contrib.openstack.context, 'unit_private_ip')
     def test_neutroncc_context_api_rel(self, _unit_priv_ip, _npa, _ens_pkgs,
                                        _save_ff, _https, _is_clus, _unit_get,
-                                       _config):
+                                       _config, _runits, _rids, _rget):
         def mock_npa(plugin, section, manager):
             if section == "driver":
                 return "neutron.randomdriver"
@@ -88,13 +108,16 @@ class OVSPluginContextTest(CharmTestCase):
         _unit_get.return_value = '127.0.0.13'
         _unit_priv_ip.return_value = '127.0.0.14'
         _is_clus.return_value = False
-        self.related_units.return_value = ['unit1']
-        self.relation_ids.return_value = ['rid2']
-        self.test_relation.set({'neutron-security-groups': 'True',
-                                'l2-population': 'True',
-                                'enable-dvr': 'True',
-                                'overlay-network-type': 'gre',
-                                })
+        _runits.return_value = ['unit1']
+        _rids.return_value = ['rid2']
+        rdata = {
+            'neutron-security-groups': 'True',
+            'l2-population': 'True',
+            'network-device-mtu': 1500,
+            'overlay-network-type': 'gre',
+            'enable-dvr': 'True',
+        }
+        _rget.side_effect = lambda *args, **kwargs: rdata
         self.get_host_ip.return_value = '127.0.0.15'
         self.service_running.return_value = False
         napi_ctxt = context.OVSPluginContext()
@@ -104,6 +127,8 @@ class OVSPluginContextTest(CharmTestCase):
             'distributed_routing': True,
             'verbose': True,
             'local_ip': '127.0.0.15',
+            'network_device_mtu': 1500,
+            'veth_mtu': 1500,
             'config': 'neutron.randomconfig',
             'use_syslog': True,
             'network_manager': 'neutron',
@@ -113,10 +138,16 @@ class OVSPluginContextTest(CharmTestCase):
             'neutron_url': 'https://127.0.0.13:9696',
             'l2_population': True,
             'overlay_network_type': 'gre',
+            'network_providers': 'physnet1',
+            'bridge_mappings': 'physnet1:br-data',
+            'vlan_ranges': 'physnet1:1000:2000',
         }
         self.assertEquals(expect, napi_ctxt())
         self.service_start.assertCalled()
 
+    @patch.object(charmhelpers.contrib.openstack.context, 'relation_get')
+    @patch.object(charmhelpers.contrib.openstack.context, 'relation_ids')
+    @patch.object(charmhelpers.contrib.openstack.context, 'related_units')
     @patch.object(charmhelpers.contrib.openstack.context, 'config')
     @patch.object(charmhelpers.contrib.openstack.context, 'unit_get')
     @patch.object(charmhelpers.contrib.openstack.context, 'is_clustered')
@@ -131,24 +162,29 @@ class OVSPluginContextTest(CharmTestCase):
                                                         _ens_pkgs, _save_ff,
                                                         _https, _is_clus,
                                                         _unit_get,
-                                                        _config):
+                                                        _config, _runits,
+                                                        _rids, _rget):
         def mock_npa(plugin, section, manager):
             if section == "driver":
                 return "neutron.randomdriver"
             if section == "config":
                 return "neutron.randomconfig"
+
         _npa.side_effect = mock_npa
         _config.return_value = 'ovs'
         _unit_get.return_value = '127.0.0.13'
         _unit_priv_ip.return_value = '127.0.0.14'
         _is_clus.return_value = False
         self.test_config.set('disable-security-groups', True)
-        self.related_units.return_value = ['unit1']
-        self.relation_ids.return_value = ['rid2']
-        self.test_relation.set({'neutron-security-groups': 'True',
-                                'l2-population': 'True',
-                                'overlay-network-type': 'gre',
-                                })
+        _runits.return_value = ['unit1']
+        _rids.return_value = ['rid2']
+        rdata = {
+            'neutron-security-groups': 'True',
+            'l2-population': 'True',
+            'network-device-mtu': 1500,
+            'overlay-network-type': 'gre',
+        }
+        _rget.side_effect = lambda *args, **kwargs: rdata
         self.get_host_ip.return_value = '127.0.0.15'
         self.service_running.return_value = False
         napi_ctxt = context.OVSPluginContext()
@@ -158,6 +194,8 @@ class OVSPluginContextTest(CharmTestCase):
             'neutron_security_groups': False,
             'verbose': True,
             'local_ip': '127.0.0.15',
+            'veth_mtu': 1500,
+            'network_device_mtu': 1500,
             'config': 'neutron.randomconfig',
             'use_syslog': True,
             'network_manager': 'neutron',
@@ -167,6 +205,9 @@ class OVSPluginContextTest(CharmTestCase):
             'neutron_url': 'https://127.0.0.13:9696',
             'l2_population': True,
             'overlay_network_type': 'gre',
+            'network_providers': 'physnet1',
+            'bridge_mappings': 'physnet1:br-data',
+            'vlan_ranges': 'physnet1:1000:2000',
         }
         self.assertEquals(expect, napi_ctxt())
         self.service_start.assertCalled()
@@ -176,59 +217,42 @@ class L3AgentContextTest(CharmTestCase):
 
     def setUp(self):
         super(L3AgentContextTest, self).setUp(context, TO_PATCH)
-        self.relation_get.side_effect = self.test_relation.get
         self.config.side_effect = self.test_config.get
 
     def tearDown(self):
         super(L3AgentContextTest, self).tearDown()
 
-    def test_dvr_enabled(self):
-        self.related_units.return_value = ['unit1']
-        self.relation_ids.return_value = ['rid2']
-        self.test_relation.set({'neutron-security-groups': 'True',
-                                'enable-dvr': 'True',
-                                'l2-population': 'True',
-                                'overlay-network-type': 'vxlan'})
+    @patch.object(charmhelpers.contrib.openstack.context, 'relation_get')
+    @patch.object(charmhelpers.contrib.openstack.context, 'relation_ids')
+    @patch.object(charmhelpers.contrib.openstack.context, 'related_units')
+    def test_dvr_enabled(self, _runits, _rids, _rget):
+        _runits.return_value = ['unit1']
+        _rids.return_value = ['rid2']
+        rdata = {
+            'neutron-security-groups': 'True',
+            'enable-dvr': 'True',
+            'l2-population': 'True',
+            'overlay-network-type': 'vxlan',
+            'network-device-mtu': 1500,
+        }
+        _rget.side_effect = lambda *args, **kwargs: rdata
         self.assertEquals(context.L3AgentContext()(), {'agent_mode': 'dvr'})
 
-    def test_dvr_disabled(self):
-        self.related_units.return_value = ['unit1']
-        self.relation_ids.return_value = ['rid2']
-        self.test_relation.set({'neutron-security-groups': 'True',
-                                'enable-dvr': 'False',
-                                'l2-population': 'True',
-                                'overlay-network-type': 'vxlan'})
+    @patch.object(charmhelpers.contrib.openstack.context, 'relation_get')
+    @patch.object(charmhelpers.contrib.openstack.context, 'relation_ids')
+    @patch.object(charmhelpers.contrib.openstack.context, 'related_units')
+    def test_dvr_disabled(self, _runits, _rids, _rget):
+        _runits.return_value = ['unit1']
+        _rids.return_value = ['rid2']
+        rdata = {
+            'neutron-security-groups': 'True',
+            'enable-dvr': 'False',
+            'l2-population': 'True',
+            'overlay-network-type': 'vxlan',
+            'network-device-mtu': 1500,
+        }
+        _rget.side_effect = lambda *args, **kwargs: rdata
         self.assertEquals(context.L3AgentContext()(), {'agent_mode': 'legacy'})
-
-
-class NetworkServiceContext(CharmTestCase):
-
-    def setUp(self):
-        super(NetworkServiceContext, self).setUp(context, TO_PATCH)
-        self.relation_get.side_effect = self.test_relation.get
-        self.config.side_effect = self.test_config.get
-
-    def tearDown(self):
-        super(NetworkServiceContext, self).tearDown()
-
-    def test_network_svc_ctxt(self):
-        self.related_units.return_value = ['unit1']
-        self.relation_ids.return_value = ['rid2']
-        self.test_relation.set({'service_protocol': 'http',
-                                'keystone_host': '10.0.0.10',
-                                'service_port': '8080',
-                                'region': 'region1',
-                                'service_tenant': 'tenant',
-                                'service_username': 'bob',
-                                'service_password': 'reallyhardpass'})
-        self.assertEquals(context.NetworkServiceContext()(),
-                          {'service_protocol': 'http',
-                           'keystone_host': '10.0.0.10',
-                           'service_port': '8080',
-                           'region': 'region1',
-                           'service_tenant': 'tenant',
-                           'service_username': 'bob',
-                           'service_password': 'reallyhardpass'})
 
 
 class DVRSharedSecretContext(CharmTestCase):
@@ -237,6 +261,7 @@ class DVRSharedSecretContext(CharmTestCase):
         super(DVRSharedSecretContext, self).setUp(context,
                                                   TO_PATCH)
         self.config.side_effect = self.test_config.get
+
 
     @patch('os.path')
     @patch('uuid.uuid4')
@@ -260,20 +285,21 @@ class DVRSharedSecretContext(CharmTestCase):
             _open.assert_called_with(
                 context.SHARED_SECRET.format('quantum'), 'r')
 
-    @patch.object(context, 'use_dvr')
+    @patch.object(context, 'NeutronAPIContext')
     @patch.object(context, 'get_shared_secret')
-    def test_shared_secretcontext_dvr(self, _shared_secret, _use_dvr):
+    def test_shared_secretcontext_dvr(self, _shared_secret, _NeutronAPIContext):
+        _NeutronAPIContext.side_effect = fake_context({'enable_dvr': True})
         _shared_secret.return_value = 'secret_thing'
-        _use_dvr.return_value = True
+        #_use_dvr.return_value = True
         self.resolve_address.return_value = '10.0.0.10'
         self.assertEquals(context.DVRSharedSecretContext()(),
                           {'shared_secret': 'secret_thing',
                            'local_ip': '10.0.0.10'})
 
-    @patch.object(context, 'use_dvr')
+    @patch.object(context, 'NeutronAPIContext')
     @patch.object(context, 'get_shared_secret')
-    def test_shared_secretcontext_nodvr(self, _shared_secret, _use_dvr):
+    def test_shared_secretcontext_nodvr(self, _shared_secret, _NeutronAPIContext):
+        _NeutronAPIContext.side_effect = fake_context({'enable_dvr': False})
         _shared_secret.return_value = 'secret_thing'
-        _use_dvr.return_value = False
         self.resolve_address.return_value = '10.0.0.10'
         self.assertEquals(context.DVRSharedSecretContext()(), {})
