@@ -6,24 +6,15 @@ from charmhelpers.core.hookenv import (
 )
 from charmhelpers.contrib.openstack.ip import resolve_address
 from charmhelpers.contrib.openstack import context
-from charmhelpers.core.host import (
-    service_running,
-    service_start,
-    service_restart,
-)
-from charmhelpers.contrib.network.ovs import add_bridge, add_bridge_port
 from charmhelpers.contrib.openstack.utils import get_host_ip
 from charmhelpers.contrib.network.ip import get_address_in_network
 from charmhelpers.contrib.openstack.context import (
     OSContextGenerator,
     NeutronAPIContext,
-    DataPortContext,
 )
 from charmhelpers.contrib.openstack.neutron import (
-    parse_bridge_mappings,
     parse_vlan_range_mappings,
 )
-OVS_BRIDGE = 'br-int'
 
 
 class OVSPluginContext(context.NeutronContext):
@@ -43,7 +34,6 @@ class OVSPluginContext(context.NeutronContext):
             return False
         neutron_api_settings = NeutronAPIContext()()
         return neutron_api_settings['neutron_security_groups']
-
 
     def ovs_ctxt(self):
         # In addition to generating config context, ensure the OVS service
