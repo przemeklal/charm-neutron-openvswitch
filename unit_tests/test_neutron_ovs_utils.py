@@ -2,7 +2,6 @@
 from mock import MagicMock, patch, call
 from collections import OrderedDict
 import charmhelpers.contrib.openstack.templating as templating
-from charmhelpers.contrib.openstack import context
 
 templating.OSConfigRenderer = MagicMock()
 
@@ -19,8 +18,13 @@ import charmhelpers.core.hookenv as hookenv
 TO_PATCH = [
     'add_bridge',
     'add_bridge_port',
+    'config',
     'os_release',
     'neutron_plugin_attribute',
+    'full_restart',
+    'service_running',
+    'service_restart',
+    'ExternalPortContext',
 ]
 
 head_pkg = 'linux-headers-3.15.0-5-generic'
@@ -56,6 +60,7 @@ class TestNeutronOVSUtils(CharmTestCase):
     def setUp(self):
         super(TestNeutronOVSUtils, self).setUp(nutils, TO_PATCH)
         self.neutron_plugin_attribute.side_effect = _mock_npa
+        self.config.side_effect = self.test_config.get
 
     def tearDown(self):
         # Reset cached cache
@@ -126,9 +131,58 @@ class TestNeutronOVSUtils(CharmTestCase):
             self.assertTrue(item in _restart_map)
             self.assertTrue(expect[item] == _restart_map[item])
 
-    @patch.object(context, 'ExternalPortContext')
-    def test_configure_ovs_ovs_ext_port(self, _ext_port_ctxt):
-        _ext_port_ctxt.return_value = \
+    @patch('charmhelpers.contrib.openstack.context.config')
+    def test_configure_ovs_ovs_data_port(self, mock_config):
+        mock_config.side_effect = self.test_config.get
+        self.config.side_effect = self.test_config.get
+        self.ExternalPortContext.return_value = \
+            DummyContext(return_value=None)
+        # Test back-compatibility i.e. port but no bridge (so br-data is
+        # assumed)
+        self.test_config.set('data-port', 'eth0')
+        nutils.configure_ovs()
+        self.add_bridge.assert_has_calls([
+            call('br-int'),
+            call('br-ex'),
+            call('br-data')
+        ])
+        self.assertTrue(self.add_bridge_port.called)
+
+        # Now test with bridge:port format
+        self.test_config.set('data-port', 'br-foo:eth0')
+        self.add_bridge.reset_mock()
+        self.add_bridge_port.reset_mock()
+        nutils.configure_ovs()
+        self.add_bridge.assert_has_calls([
+            call('br-int'),
+            call('br-ex'),
+            call('br-data')
+        ])
+        # Not called since we have a bogus bridge in data-ports
+        self.assertFalse(self.add_bridge_port.called)
+
+    @patch('charmhelpers.contrib.openstack.context.config')
+    def test_configure_ovs_starts_service_if_required(self, mock_config):
+        mock_config.side_effect = self.test_config.get
+        self.config.return_value = 'ovs'
+        self.service_running.return_value = False
+        nutils.configure_ovs()
+        self.assertTrue(self.full_restart.called)
+
+    @patch('charmhelpers.contrib.openstack.context.config')
+    def test_configure_ovs_doesnt_restart_service(self, mock_config):
+        mock_config.side_effect = self.test_config.get
+        self.config.side_effect = self.test_config.get
+        self.service_running.return_value = True
+        nutils.configure_ovs()
+        self.assertFalse(self.full_restart.called)
+
+    @patch('charmhelpers.contrib.openstack.context.config')
+    def test_configure_ovs_ovs_ext_port(self, mock_config):
+        mock_config.side_effect = self.test_config.get
+        self.config.side_effect = self.test_config.get
+        self.test_config.set('ext-port', 'eth0')
+        self.ExternalPortContext.return_value = \
             DummyContext(return_value={'ext_port': 'eth0'})
         nutils.configure_ovs()
         self.add_bridge.assert_has_calls([
@@ -137,6 +191,17 @@ class TestNeutronOVSUtils(CharmTestCase):
             call('br-data')
         ])
         self.add_bridge_port.assert_called_with('br-ex', 'eth0')
+#    @patch.object(context, 'ExternalPortContext')
+#    def test_configure_ovs_ovs_ext_port(self, _ext_port_ctxt):
+#        _ext_port_ctxt.return_value = \
+#            DummyContext(return_value={'ext_port': 'eth0'})
+#        nutils.configure_ovs()
+#        self.add_bridge.assert_has_calls([
+#            call('br-int'),
+#            call('br-ex'),
+#            call('br-data')
+#        ])
+#        self.add_bridge_port.assert_called_with('br-ex', 'eth0')
 
     @patch.object(neutron_ovs_context, 'DVRSharedSecretContext')
     def test_get_shared_secret(self, _dvr_secret_ctxt):

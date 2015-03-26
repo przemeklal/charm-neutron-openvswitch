@@ -10,6 +10,21 @@ import neutron_ovs_context
 from charmhelpers.contrib.network.ovs import (
     add_bridge,
     add_bridge_port,
+    full_restart,
+)
+from charmhelpers.core.hookenv import (
+    config,
+)
+from charmhelpers.contrib.openstack.neutron import (
+    parse_bridge_mappings,
+)
+from charmhelpers.contrib.openstack.context import (
+    ExternalPortContext,
+    DataPortContext,
+)
+from charmhelpers.core.host import (
+    service_restart,
+    service_running,
 )
 
 NOVA_CONF_DIR = "/etc/nova"
@@ -110,13 +125,28 @@ def restart_map():
 
 
 def configure_ovs():
+    if not service_running('openvswitch-switch'):
+        full_restart()
     add_bridge(INT_BRIDGE)
     add_bridge(EXT_BRIDGE)
-    ext_port_ctx = context.ExternalPortContext()()
+    ext_port_ctx = ExternalPortContext()()
     if ext_port_ctx and ext_port_ctx['ext_port']:
         add_bridge_port(EXT_BRIDGE, ext_port_ctx['ext_port'])
 
-    add_bridge(DATA_BRIDGE)
+    portmaps = DataPortContext()()
+    bridgemaps = parse_bridge_mappings(config('bridge-mappings'))
+    print bridgemaps
+    for provider, br in bridgemaps.iteritems():
+        add_bridge(br)
+        print portmaps
+        if not portmaps or br not in portmaps:
+            continue
+
+        add_bridge_port(br, portmaps[br], promisc=True)
+
+    # Ensure this runs so that mtu is applied to data-port interfaces if
+    # provided.
+    service_restart('os-charm-phy-nic-mtu')
 
 
 def get_shared_secret():
