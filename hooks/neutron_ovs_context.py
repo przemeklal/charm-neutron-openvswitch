@@ -44,23 +44,6 @@ class OVSPluginContext(context.NeutronContext):
         neutron_api_settings = NeutronAPIContext()()
         return neutron_api_settings['neutron_security_groups']
 
-    def _ensure_bridge(self):
-        if not service_running('openvswitch-switch'):
-            service_start('openvswitch-switch')
-
-        add_bridge(OVS_BRIDGE)
-
-        portmaps = DataPortContext()()
-        bridgemaps = parse_bridge_mappings(config('bridge-mappings'))
-        for provider, br in bridgemaps.iteritems():
-            add_bridge(br)
-
-            if not portmaps or br not in portmaps:
-                continue
-
-            add_bridge_port(br, portmaps[br], promisc=True)
-
-        service_restart('os-charm-phy-nic-mtu')
 
     def ovs_ctxt(self):
         # In addition to generating config context, ensure the OVS service
@@ -69,8 +52,6 @@ class OVSPluginContext(context.NeutronContext):
         ovs_ctxt = super(OVSPluginContext, self).ovs_ctxt()
         if not ovs_ctxt:
             return {}
-
-        self._ensure_bridge()
 
         conf = config()
         ovs_ctxt['local_ip'] = \

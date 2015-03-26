@@ -65,26 +65,6 @@ class OVSPluginContextTest(CharmTestCase):
         self.assertEquals(context.DataPortContext()(),
                           {'br-d2': 'em1'})
 
-    @patch('charmhelpers.contrib.openstack.context.config')
-    @patch('charmhelpers.contrib.openstack.context.NeutronPortContext.'
-           'resolve_ports')
-    def test_ensure_bridge_data_port_present(self, mock_resolve_ports, config):
-        self.test_config.set('data-port', 'br-data:em1')
-        self.test_config.set('bridge-mappings', 'phybr1:br-data')
-        config.side_effect = self.test_config.get
-
-        def add_port(bridge, port, promisc):
-
-            if bridge == 'br-data' and port == 'em1' and promisc is True:
-                self.bridge_added = True
-                return
-            self.bridge_added = False
-
-        mock_resolve_ports.side_effect = lambda ports: ports
-        self.add_bridge_port.side_effect = add_port
-        context.OVSPluginContext()._ensure_bridge()
-        self.assertEquals(self.bridge_added, True)
-
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_get')
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_ids')
     @patch.object(charmhelpers.contrib.openstack.context, 'related_units')
