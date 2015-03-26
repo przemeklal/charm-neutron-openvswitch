@@ -1,4 +1,4 @@
-branch: lp:~gnuoy/charm-helpers/neutron-shuffle
+branch: lp:charm-helpers
 destination: hooks/charmhelpers
 include:
     - core
