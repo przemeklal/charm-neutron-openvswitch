@@ -129,16 +129,16 @@ def configure_ovs():
         full_restart()
     add_bridge(INT_BRIDGE)
     add_bridge(EXT_BRIDGE)
-    ext_port_ctx = ExternalPortContext()()
+    ext_port_ctx = None
+    if use_dvr():
+        ext_port_ctx = ExternalPortContext()()
     if ext_port_ctx and ext_port_ctx['ext_port']:
         add_bridge_port(EXT_BRIDGE, ext_port_ctx['ext_port'])
 
     portmaps = DataPortContext()()
     bridgemaps = parse_bridge_mappings(config('bridge-mappings'))
-    print bridgemaps
     for provider, br in bridgemaps.iteritems():
         add_bridge(br)
-        print portmaps
         if not portmaps or br not in portmaps:
             continue
 

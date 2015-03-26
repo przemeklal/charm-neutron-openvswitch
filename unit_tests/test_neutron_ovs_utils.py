@@ -131,8 +131,10 @@ class TestNeutronOVSUtils(CharmTestCase):
             self.assertTrue(item in _restart_map)
             self.assertTrue(expect[item] == _restart_map[item])
 
+    @patch.object(nutils, 'use_dvr')
     @patch('charmhelpers.contrib.openstack.context.config')
-    def test_configure_ovs_ovs_data_port(self, mock_config):
+    def test_configure_ovs_ovs_data_port(self, mock_config, _use_dvr):
+        _use_dvr.return_value = False
         mock_config.side_effect = self.test_config.get
         self.config.side_effect = self.test_config.get
         self.ExternalPortContext.return_value = \
@@ -161,24 +163,31 @@ class TestNeutronOVSUtils(CharmTestCase):
         # Not called since we have a bogus bridge in data-ports
         self.assertFalse(self.add_bridge_port.called)
 
+    @patch.object(nutils, 'use_dvr')
     @patch('charmhelpers.contrib.openstack.context.config')
-    def test_configure_ovs_starts_service_if_required(self, mock_config):
+    def test_configure_ovs_starts_service_if_required(self, mock_config,
+                                                      _use_dvr):
+        _use_dvr = False
         mock_config.side_effect = self.test_config.get
         self.config.return_value = 'ovs'
         self.service_running.return_value = False
         nutils.configure_ovs()
         self.assertTrue(self.full_restart.called)
 
+    @patch.object(nutils, 'use_dvr')
     @patch('charmhelpers.contrib.openstack.context.config')
-    def test_configure_ovs_doesnt_restart_service(self, mock_config):
+    def test_configure_ovs_doesnt_restart_service(self, mock_config, _usedvr):
+        _use_dvr = False
         mock_config.side_effect = self.test_config.get
         self.config.side_effect = self.test_config.get
         self.service_running.return_value = True
         nutils.configure_ovs()
         self.assertFalse(self.full_restart.called)
 
+    @patch.object(nutils, 'use_dvr')
     @patch('charmhelpers.contrib.openstack.context.config')
-    def test_configure_ovs_ovs_ext_port(self, mock_config):
+    def test_configure_ovs_ovs_ext_port(self, mock_config, _usedvr):
+        _use_dvr = False
         mock_config.side_effect = self.test_config.get
         self.config.side_effect = self.test_config.get
         self.test_config.set('ext-port', 'eth0')
