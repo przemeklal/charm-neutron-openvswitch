@@ -1,11 +1,7 @@
 from charmhelpers.core.hookenv import (
-    relation_ids,
-    related_units,
-    relation_get,
     config,
     unit_get,
 )
-from charmhelpers.core.strutils import bool_from_string
 from charmhelpers.contrib.openstack import context
 from charmhelpers.core.host import (
     service_running,
@@ -15,66 +11,15 @@ from charmhelpers.core.host import (
 from charmhelpers.contrib.network.ovs import add_bridge, add_bridge_port
 from charmhelpers.contrib.openstack.utils import get_host_ip
 from charmhelpers.contrib.network.ip import get_address_in_network
+from charmhelpers.contrib.openstack.context import (
+    NeutronAPIContext,
+    DataPortContext,
+)
 from charmhelpers.contrib.openstack.neutron import (
     parse_bridge_mappings,
-    parse_data_port_mappings,
     parse_vlan_range_mappings,
 )
-from charmhelpers.core.host import (
-    get_nic_hwaddr,
-)
 OVS_BRIDGE = 'br-int'
-
-
-def _neutron_api_settings():
-    '''
-    Inspects current neutron-plugin relation
-    '''
-    neutron_settings = {
-        'neutron_security_groups': False,
-        'l2_population': True,
-        'overlay_network_type': 'gre',
-    }
-
-    for rid in relation_ids('neutron-plugin-api'):
-        for unit in related_units(rid):
-            rdata = relation_get(rid=rid, unit=unit)
-            if 'l2-population' in rdata:
-                neutron_settings.update({
-                    'l2_population': bool_from_string(rdata['l2-population']),
-                    'overlay_network_type': rdata['overlay-network-type'],
-                    'neutron_security_groups':
-                        bool_from_string(rdata['neutron-security-groups'])
-                })
-
-            # Override with configuration if set to true
-            if config('disable-security-groups'):
-                neutron_settings['neutron_security_groups'] = False
-
-            net_dev_mtu = rdata.get('network-device-mtu')
-            if net_dev_mtu:
-                neutron_settings['network_device_mtu'] = net_dev_mtu
-
-    return neutron_settings
-
-
-class DataPortContext(context.NeutronPortContext):
-
-    def __call__(self):
-        ports = config('data-port')
-        if ports:
-            portmap = parse_data_port_mappings(ports)
-            ports = portmap.values()
-            resolved = self.resolve_ports(ports)
-            normalized = {get_nic_hwaddr(port): port for port in resolved
-                          if port not in ports}
-            normalized.update({port: port for port in resolved
-                               if port in ports})
-            if resolved:
-                return {bridge: normalized[port] for bridge, port in
-                        portmap.iteritems() if port in normalized.keys()}
-
-        return None
 
 
 class OVSPluginContext(context.NeutronContext):
@@ -90,7 +35,9 @@ class OVSPluginContext(context.NeutronContext):
 
     @property
     def neutron_security_groups(self):
-        neutron_api_settings = _neutron_api_settings()
+        if config('disable-security-groups'):
+            return False
+        neutron_api_settings = NeutronAPIContext()()
         return neutron_api_settings['neutron_security_groups']
 
     def _ensure_bridge(self):
@@ -125,7 +72,7 @@ class OVSPluginContext(context.NeutronContext):
         ovs_ctxt['local_ip'] = \
             get_address_in_network(config('os-data-network'),
                                    get_host_ip(unit_get('private-address')))
-        neutron_api_settings = _neutron_api_settings()
+        neutron_api_settings = NeutronAPIContext()()
         ovs_ctxt['neutron_security_groups'] = self.neutron_security_groups
         ovs_ctxt['l2_population'] = neutron_api_settings['l2_population']
         ovs_ctxt['overlay_network_type'] = \
@@ -155,20 +102,3 @@ class OVSPluginContext(context.NeutronContext):
             ovs_ctxt['vlan_ranges'] = vlan_ranges
 
         return ovs_ctxt
-
-
-class PhyNICMTUContext(DataPortContext):
-    """Context used to apply settings to neutron data-port devices"""
-
-    def __call__(self):
-        ctxt = {}
-        mappings = super(PhyNICMTUContext, self).__call__()
-        if mappings and mappings.values():
-            ports = mappings.values()
-            neutron_api_settings = _neutron_api_settings()
-            mtu = neutron_api_settings.get('network_device_mtu')
-            if mtu:
-                ctxt['devs'] = '\\n'.join(ports)
-                ctxt['mtu'] = mtu
-
-        return ctxt

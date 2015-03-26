@@ -28,7 +28,7 @@ BASE_RESOURCE_MAP = OrderedDict([
     }),
     (PHY_NIC_MTU_CONF, {
         'services': ['os-charm-phy-nic-mtu'],
-        'contexts': [neutron_ovs_context.PhyNICMTUContext()],
+        'contexts': [context.PhyNICMTUContext()],
     }),
 ])
 
