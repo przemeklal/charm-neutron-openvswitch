@@ -25,8 +25,10 @@ options:
     type: string
     default:
     description: |
-      The data port will be added to br-data and will allow usage of flat or VLAN
-      network types
+      Space-delimited list of bridge:port mappings. Ports will be added to
+      their corresponding bridge. The bridges will allow usage of flat or
+      VLAN network types with Neutron and should match this defined in
+      bridge-mappings.
   disable-security-groups:
     type: boolean
     default: false
@@ -36,6 +38,17 @@ options:
       .
       BE CAREFUL - this option allows you to disable all port level security within
       an OpenStack cloud.
+  bridge-mappings:
+    type: string
+    default: 'physnet1:br-data'
+    description: |
+      Space-delimited list of ML2 data bridge mappings with format
+      <provider>:<bridge>.
+  vlan-ranges:
+    type: string
+    default: "physnet1:1000:2000"
+    description: |
+      Space-delimited list of network provider vlan id ranges.
   # Network configuration options
   # by default all access is over 'private-address'
   os-data-network:
