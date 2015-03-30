@@ -36,7 +36,7 @@ NEUTRON_FWAAS_CONF = "/etc/neutron/fwaas_driver.ini"
 ML2_CONF = '%s/plugins/ml2/ml2_conf.ini' % NEUTRON_CONF_DIR
 EXT_PORT_CONF = '/etc/init/ext-port.conf'
 NEUTRON_METADATA_AGENT_CONF = "/etc/neutron/metadata_agent.ini"
-DVR_PACKAGES = ['neutron-vpn-agent']
+DVR_PACKAGES = ['neutron-l3-agent']
 PHY_NIC_MTU_CONF = '/etc/init/os-charm-phy-nic-mtu.conf'
 TEMPLATES = 'templates/'
 
@@ -57,15 +57,15 @@ BASE_RESOURCE_MAP = OrderedDict([
 ])
 DVR_RESOURCE_MAP = OrderedDict([
     (NEUTRON_L3_AGENT_CONF, {
-        'services': ['neutron-vpn-agent'],
+        'services': ['neutron-l3-agent'],
         'contexts': [neutron_ovs_context.L3AgentContext()],
     }),
     (NEUTRON_FWAAS_CONF, {
-        'services': ['neutron-vpn-agent'],
+        'services': ['neutron-l3-agent'],
         'contexts': [neutron_ovs_context.L3AgentContext()],
     }),
     (EXT_PORT_CONF, {
-        'services': ['neutron-vpn-agent'],
+        'services': ['neutron-l3-agent'],
         'contexts': [context.ExternalPortContext()],
     }),
     (NEUTRON_METADATA_AGENT_CONF, {
@@ -111,7 +111,7 @@ def resource_map():
     resource_map = deepcopy(BASE_RESOURCE_MAP)
     if use_dvr():
         resource_map.update(DVR_RESOURCE_MAP)
-        dvr_services = ['neutron-metadata-agent', 'neutron-vpn-agent']
+        dvr_services = ['neutron-metadata-agent', 'neutron-l3-agent']
         resource_map[NEUTRON_CONF]['services'] += dvr_services
     return resource_map
 
