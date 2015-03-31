@@ -2,6 +2,9 @@ import os
 import uuid
 from charmhelpers.core.hookenv import (
     config,
+    relation_get,
+    relation_ids,
+    related_units,
     unit_get,
 )
 from charmhelpers.contrib.openstack.ip import resolve_address
@@ -118,3 +121,22 @@ class DVRSharedSecretContext(OSContextGenerator):
         else:
             ctxt = {}
         return ctxt
+
+class APIIdentityServiceContext(context.IdentityServiceContext):
+
+    def __init__(self):
+        super(APIIdentityServiceContext,
+              self).__init__(rel_name='neutron-plugin-api')
+
+    def __call__(self):
+        ctxt = super(APIIdentityServiceContext, self).__call__()
+        if not ctxt:
+            return
+        for rid in relation_ids('neutron-plugin-api'):
+            for unit in related_units(rid):
+                rdata = relation_get(rid=rid, unit=unit)
+                ctxt['region'] = rdata.get('region')
+                if ctxt['region']:
+                    return ctxt
+        return ctxt
+

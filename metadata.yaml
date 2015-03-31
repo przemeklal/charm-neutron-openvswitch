@@ -20,8 +20,6 @@ provides:
   neutron-plugin:
     interface: neutron-plugin
     scope: container
-  neutron-network-service:
-    interface: quantum
 requires:
   amqp:
     interface: rabbitmq
