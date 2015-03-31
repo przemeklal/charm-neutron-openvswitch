@@ -71,9 +71,7 @@ DVR_RESOURCE_MAP = OrderedDict([
     (NEUTRON_METADATA_AGENT_CONF, {
         'services': ['neutron-metadata-agent'],
         'contexts': [neutron_ovs_context.DVRSharedSecretContext(),
-                     context.NetworkServiceContext(
-                         rel_name='neutron-network-service'
-                     )],
+                     neutron_ovs_context.APIIdentityServiceContext()],
     }),
 ])
 TEMPLATES = 'templates/'
