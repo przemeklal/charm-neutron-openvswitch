@@ -1,25 +1,23 @@
+import os
+import uuid
 from charmhelpers.core.hookenv import (
     config,
+    relation_get,
+    relation_ids,
+    related_units,
     unit_get,
 )
+from charmhelpers.contrib.openstack.ip import resolve_address
 from charmhelpers.contrib.openstack import context
-from charmhelpers.core.host import (
-    service_running,
-    service_start,
-    service_restart,
-)
-from charmhelpers.contrib.network.ovs import add_bridge, add_bridge_port
 from charmhelpers.contrib.openstack.utils import get_host_ip
 from charmhelpers.contrib.network.ip import get_address_in_network
 from charmhelpers.contrib.openstack.context import (
+    OSContextGenerator,
     NeutronAPIContext,
-    DataPortContext,
 )
 from charmhelpers.contrib.openstack.neutron import (
-    parse_bridge_mappings,
     parse_vlan_range_mappings,
 )
-OVS_BRIDGE = 'br-int'
 
 
 class OVSPluginContext(context.NeutronContext):
@@ -40,24 +38,6 @@ class OVSPluginContext(context.NeutronContext):
         neutron_api_settings = NeutronAPIContext()()
         return neutron_api_settings['neutron_security_groups']
 
-    def _ensure_bridge(self):
-        if not service_running('openvswitch-switch'):
-            service_start('openvswitch-switch')
-
-        add_bridge(OVS_BRIDGE)
-
-        portmaps = DataPortContext()()
-        bridgemaps = parse_bridge_mappings(config('bridge-mappings'))
-        for provider, br in bridgemaps.iteritems():
-            add_bridge(br)
-
-            if not portmaps or br not in portmaps:
-                continue
-
-            add_bridge_port(br, portmaps[br], promisc=True)
-
-        service_restart('os-charm-phy-nic-mtu')
-
     def ovs_ctxt(self):
         # In addition to generating config context, ensure the OVS service
         # is running and the OVS bridge exists. Also need to ensure
@@ -66,8 +46,6 @@ class OVSPluginContext(context.NeutronContext):
         if not ovs_ctxt:
             return {}
 
-        self._ensure_bridge()
-
         conf = config()
         ovs_ctxt['local_ip'] = \
             get_address_in_network(config('os-data-network'),
@@ -75,6 +53,7 @@ class OVSPluginContext(context.NeutronContext):
         neutron_api_settings = NeutronAPIContext()()
         ovs_ctxt['neutron_security_groups'] = self.neutron_security_groups
         ovs_ctxt['l2_population'] = neutron_api_settings['l2_population']
+        ovs_ctxt['distributed_routing'] = neutron_api_settings['enable_dvr']
         ovs_ctxt['overlay_network_type'] = \
             neutron_api_settings['overlay_network_type']
         # TODO: We need to sort out the syslog and debug/verbose options as a
@@ -102,3 +81,62 @@ class OVSPluginContext(context.NeutronContext):
             ovs_ctxt['vlan_ranges'] = vlan_ranges
 
         return ovs_ctxt
+
+
+class L3AgentContext(OSContextGenerator):
+
+    def __call__(self):
+        neutron_api_settings = NeutronAPIContext()()
+        ctxt = {}
+        if neutron_api_settings['enable_dvr']:
+            ctxt['agent_mode'] = 'dvr'
+        else:
+            ctxt['agent_mode'] = 'legacy'
+        return ctxt
+
+
+SHARED_SECRET = "/etc/neutron/secret.txt"
+
+
+def get_shared_secret():
+    secret = None
+    if not os.path.exists(SHARED_SECRET):
+        secret = str(uuid.uuid4())
+        with open(SHARED_SECRET, 'w') as secret_file:
+            secret_file.write(secret)
+    else:
+        with open(SHARED_SECRET, 'r') as secret_file:
+            secret = secret_file.read().strip()
+    return secret
+
+
+class DVRSharedSecretContext(OSContextGenerator):
+
+    def __call__(self):
+        if NeutronAPIContext()()['enable_dvr']:
+            ctxt = {
+                'shared_secret': get_shared_secret(),
+                'local_ip': resolve_address(),
+            }
+        else:
+            ctxt = {}
+        return ctxt
+
+
+class APIIdentityServiceContext(context.IdentityServiceContext):
+
+    def __init__(self):
+        super(APIIdentityServiceContext,
+              self).__init__(rel_name='neutron-plugin-api')
+
+    def __call__(self):
+        ctxt = super(APIIdentityServiceContext, self).__call__()
+        if not ctxt:
+            return
+        for rid in relation_ids('neutron-plugin-api'):
+            for unit in related_units(rid):
+                rdata = relation_get(rid=rid, unit=unit)
+                ctxt['region'] = rdata.get('region')
+                if ctxt['region']:
+                    return ctxt
+        return ctxt
