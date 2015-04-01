@@ -122,6 +122,7 @@ class DVRSharedSecretContext(OSContextGenerator):
             ctxt = {}
         return ctxt
 
+
 class APIIdentityServiceContext(context.IdentityServiceContext):
 
     def __init__(self):
@@ -139,4 +140,3 @@ class APIIdentityServiceContext(context.IdentityServiceContext):
                 if ctxt['region']:
                     return ctxt
         return ctxt
-

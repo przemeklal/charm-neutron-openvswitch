@@ -22,8 +22,8 @@ TO_PATCH = [
     'os_release',
     'neutron_plugin_attribute',
     'full_restart',
-    'service_running',
     'service_restart',
+    'service_running',
     'ExternalPortContext',
 ]
 
@@ -111,7 +111,7 @@ class TestNeutronOVSUtils(CharmTestCase):
         _use_dvr.return_value = True
         _map = nutils.resource_map()
         svcs = ['neutron-plugin-openvswitch-agent', 'neutron-metadata-agent',
-                'neutron-vpn-agent']
+                'neutron-l3-agent']
         confs = [nutils.NEUTRON_CONF]
         [self.assertIn(q_conf, _map.keys()) for q_conf in confs]
         self.assertEqual(_map[nutils.NEUTRON_CONF]['services'], svcs)
@@ -187,7 +187,7 @@ class TestNeutronOVSUtils(CharmTestCase):
     @patch.object(nutils, 'use_dvr')
     @patch('charmhelpers.contrib.openstack.context.config')
     def test_configure_ovs_ovs_ext_port(self, mock_config, _use_dvr):
-        _use_dvr.return_value = False
+        _use_dvr.return_value = True
         mock_config.side_effect = self.test_config.get
         self.config.side_effect = self.test_config.get
         self.test_config.set('ext-port', 'eth0')
