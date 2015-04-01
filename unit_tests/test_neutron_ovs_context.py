@@ -4,15 +4,11 @@ from test_utils import patch_open
 from mock import patch
 import neutron_ovs_context as context
 import charmhelpers
+
 TO_PATCH = [
     'resolve_address',
     'config',
     'unit_get',
-    'add_bridge',
-    'add_bridge_port',
-    'service_running',
-    'service_start',
-    'service_restart',
     'get_host_ip',
 ]
 
@@ -44,8 +40,10 @@ class OVSPluginContextTest(CharmTestCase):
         self.test_config.set('data-port', 'br-data:em1')
         config.side_effect = self.test_config.get
         mock_resolve_ports.side_effect = lambda ports: ports
-        self.assertEquals(context.DataPortContext()(),
-                          {'br-data': 'em1'})
+        self.assertEquals(
+            charmhelpers.contrib.openstack.context.DataPortContext()(),
+            {'br-data': 'em1'}
+        )
 
     @patch('charmhelpers.contrib.openstack.context.config')
     @patch('charmhelpers.contrib.openstack.context.get_nic_hwaddr')
@@ -62,8 +60,10 @@ class OVSPluginContextTest(CharmTestCase):
         config.side_effect = self.test_config.get
         list_nics.return_value = machine_machs.keys()
         get_nic_hwaddr.side_effect = lambda nic: machine_machs[nic]
-        self.assertEquals(context.DataPortContext()(),
-                          {'br-d2': 'em1'})
+        self.assertEquals(
+            charmhelpers.contrib.openstack.context.DataPortContext()(),
+            {'br-d2': 'em1'}
+        )
 
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_get')
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_ids')
@@ -101,7 +101,6 @@ class OVSPluginContextTest(CharmTestCase):
         }
         _rget.side_effect = lambda *args, **kwargs: rdata
         self.get_host_ip.return_value = '127.0.0.15'
-        self.service_running.return_value = False
         napi_ctxt = context.OVSPluginContext()
         expect = {
             'neutron_alchemy_flags': {},
@@ -125,7 +124,6 @@ class OVSPluginContextTest(CharmTestCase):
             'vlan_ranges': 'physnet1:1000:2000',
         }
         self.assertEquals(expect, napi_ctxt())
-        self.service_start.assertCalled()
 
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_get')
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_ids')
@@ -168,7 +166,6 @@ class OVSPluginContextTest(CharmTestCase):
         }
         _rget.side_effect = lambda *args, **kwargs: rdata
         self.get_host_ip.return_value = '127.0.0.15'
-        self.service_running.return_value = False
         napi_ctxt = context.OVSPluginContext()
         expect = {
             'distributed_routing': False,
@@ -192,7 +189,6 @@ class OVSPluginContextTest(CharmTestCase):
             'vlan_ranges': 'physnet1:1000:2000',
         }
         self.assertEquals(expect, napi_ctxt())
-        self.service_start.assertCalled()
 
 
 class L3AgentContextTest(CharmTestCase):
@@ -272,7 +268,6 @@ class DVRSharedSecretContext(CharmTestCase):
                                       _NeutronAPIContext):
         _NeutronAPIContext.side_effect = fake_context({'enable_dvr': True})
         _shared_secret.return_value = 'secret_thing'
-        #_use_dvr.return_value = True
         self.resolve_address.return_value = '10.0.0.10'
         self.assertEquals(context.DVRSharedSecretContext()(),
                           {'shared_secret': 'secret_thing',
