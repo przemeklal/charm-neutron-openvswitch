@@ -59,8 +59,11 @@ class NeutronOVSHooksTests(CharmTestCase):
         ])
 
     def test_config_changed(self):
+        self.relation_ids.return_value = ['relid']
+        _zmq_joined = self.patch('zeromq_configuration_relation_joined')
         self._call_hook('config-changed')
         self.assertTrue(self.CONFIGS.write_all.called)
+        self.assertTrue(_zmq_joined.called_with('relid'))
         self.configure_ovs.assert_called_with()
 
     def test_config_changed_dvr(self):

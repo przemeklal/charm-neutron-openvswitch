@@ -19,10 +19,15 @@ from charmhelpers.fetch import (
     apt_install, apt_update, apt_purge
 )
 
+from charmhelpers.contrib.openstack.utils import (
+    os_requires_version,
+)
+
 from neutron_ovs_utils import (
     DVR_PACKAGES,
     configure_ovs,
     determine_packages,
+    get_topics,
     determine_dvr_packages,
     get_shared_secret,
     register_configs,
@@ -51,6 +56,8 @@ def config_changed():
         apt_install(determine_dvr_packages(), fatal=True)
     configure_ovs()
     CONFIGS.write_all()
+    for rid in relation_ids('zeromq-configuration'):
+        zeromq_configuration_relation_joined(rid)
 
 
 @hooks.hook('neutron-plugin-api-relation-changed')
@@ -91,6 +98,20 @@ def amqp_changed():
     if 'amqp' not in CONFIGS.complete_contexts():
         log('amqp relation incomplete. Peer not ready?')
         return
+    CONFIGS.write_all()
+
+
+@hooks.hook('zeromq-configuration-relation-joined')
+@os_requires_version('kilo', 'neutron-common')
+def zeromq_configuration_relation_joined(relid=None):
+    relation_set(relation_id=relid,
+                 topics=" ".join(get_topics()),
+                 users="neutron")
+
+
+@hooks.hook('zeromq-configuration-relation-changed')
+@restart_on_change(restart_map(), stopstart=True)
+def zeromq_configuration_relation_changed():
     CONFIGS.write_all()
 
 

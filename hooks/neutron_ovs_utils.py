@@ -44,7 +44,9 @@ BASE_RESOURCE_MAP = OrderedDict([
     (NEUTRON_CONF, {
         'services': ['neutron-plugin-openvswitch-agent'],
         'contexts': [neutron_ovs_context.OVSPluginContext(),
-                     context.AMQPContext(ssl_dir=NEUTRON_CONF_DIR)],
+                     context.AMQPContext(ssl_dir=NEUTRON_CONF_DIR),
+                     context.ZeroMQContext(),
+                     context.NotificationDriverContext()],
     }),
     (ML2_CONF, {
         'services': ['neutron-plugin-openvswitch-agent'],
@@ -120,6 +122,18 @@ def restart_map():
     state.
     '''
     return {k: v['services'] for k, v in resource_map().iteritems()}
+
+
+def get_topics():
+    topics = []
+    topics.append('q-agent-notifier-port-update')
+    topics.append('q-agent-notifier-network-delete')
+    topics.append('q-agent-notifier-tunnel-update')
+    topics.append('q-agent-notifier-security_group-update')
+    topics.append('q-agent-notifier-dvr-update')
+    if context.NeutronAPIContext()()['l2_population']:
+        topics.append('q-agent-notifier-l2population-update')
+    return topics
 
 
 def configure_ovs():
