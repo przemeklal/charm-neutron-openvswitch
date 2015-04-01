@@ -16,7 +16,7 @@ from charmhelpers.core.host import (
 )
 
 from charmhelpers.fetch import (
-    apt_install, apt_update
+    apt_install, apt_update, apt_purge
 )
 
 from charmhelpers.contrib.openstack.utils import (
@@ -24,10 +24,15 @@ from charmhelpers.contrib.openstack.utils import (
 )
 
 from neutron_ovs_utils import (
+    DVR_PACKAGES,
+    configure_ovs,
     determine_packages,
     get_topics,
+    determine_dvr_packages,
+    get_shared_secret,
     register_configs,
     restart_map,
+    use_dvr,
 )
 
 hooks = Hooks()
@@ -43,13 +48,40 @@ def install():
 
 
 @hooks.hook('neutron-plugin-relation-changed')
-@hooks.hook('neutron-plugin-api-relation-changed')
 @hooks.hook('config-changed')
 @restart_on_change(restart_map())
 def config_changed():
+    if determine_dvr_packages():
+        apt_update()
+        apt_install(determine_dvr_packages(), fatal=True)
+    configure_ovs()
     CONFIGS.write_all()
     for rid in relation_ids('zeromq-configuration'):
         zeromq_configuration_relation_joined(rid)
+
+
+@hooks.hook('neutron-plugin-api-relation-changed')
+@restart_on_change(restart_map())
+def neutron_plugin_api_changed():
+    if use_dvr():
+        apt_update()
+        apt_install(DVR_PACKAGES, fatal=True)
+    else:
+        apt_purge(DVR_PACKAGES, fatal=True)
+    configure_ovs()
+    CONFIGS.write_all()
+    # If dvr setting has changed, need to pass that on
+    for rid in relation_ids('neutron-plugin'):
+        neutron_plugin_joined(relation_id=rid)
+
+
+@hooks.hook('neutron-plugin-relation-joined')
+def neutron_plugin_joined(relation_id=None):
+    secret = get_shared_secret() if use_dvr() else None
+    rel_data = {
+        'metadata-shared-secret': secret,
+    }
+    relation_set(relation_id=relation_id, **rel_data)
 
 
 @hooks.hook('amqp-relation-joined')
