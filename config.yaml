@@ -60,3 +60,12 @@ options:
       .
       This network will be used for tenant network traffic in overlay
       networks.
+  ext-port:
+    type: string
+    default:
+    description: |
+      A space-separated list of external ports to use for routing of instance
+      traffic to the external public network. Valid values are either MAC
+      addresses (in which case only MAC addresses for interfaces without an IP
+      address already assigned will be used), or interfaces (eth0)
+
