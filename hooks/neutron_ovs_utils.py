@@ -7,12 +7,36 @@ from charmhelpers.contrib.openstack.utils import (
     os_release,
 )
 import neutron_ovs_context
+from charmhelpers.contrib.network.ovs import (
+    add_bridge,
+    add_bridge_port,
+    full_restart,
+)
+from charmhelpers.core.hookenv import (
+    config,
+)
+from charmhelpers.contrib.openstack.neutron import (
+    parse_bridge_mappings,
+)
+from charmhelpers.contrib.openstack.context import (
+    ExternalPortContext,
+    DataPortContext,
+)
+from charmhelpers.core.host import (
+    service_restart,
+    service_running,
+)
 
 NOVA_CONF_DIR = "/etc/nova"
 NEUTRON_CONF_DIR = "/etc/neutron"
 NEUTRON_CONF = '%s/neutron.conf' % NEUTRON_CONF_DIR
 NEUTRON_DEFAULT = '/etc/default/neutron-server'
+NEUTRON_L3_AGENT_CONF = "/etc/neutron/l3_agent.ini"
+NEUTRON_FWAAS_CONF = "/etc/neutron/fwaas_driver.ini"
 ML2_CONF = '%s/plugins/ml2/ml2_conf.ini' % NEUTRON_CONF_DIR
+EXT_PORT_CONF = '/etc/init/ext-port.conf'
+NEUTRON_METADATA_AGENT_CONF = "/etc/neutron/metadata_agent.ini"
+DVR_PACKAGES = ['neutron-l3-agent']
 PHY_NIC_MTU_CONF = '/etc/init/os-charm-phy-nic-mtu.conf'
 TEMPLATES = 'templates/'
 
@@ -33,10 +57,41 @@ BASE_RESOURCE_MAP = OrderedDict([
         'contexts': [context.PhyNICMTUContext()],
     }),
 ])
+DVR_RESOURCE_MAP = OrderedDict([
+    (NEUTRON_L3_AGENT_CONF, {
+        'services': ['neutron-l3-agent'],
+        'contexts': [neutron_ovs_context.L3AgentContext()],
+    }),
+    (NEUTRON_FWAAS_CONF, {
+        'services': ['neutron-l3-agent'],
+        'contexts': [neutron_ovs_context.L3AgentContext()],
+    }),
+    (EXT_PORT_CONF, {
+        'services': ['neutron-l3-agent'],
+        'contexts': [context.ExternalPortContext()],
+    }),
+    (NEUTRON_METADATA_AGENT_CONF, {
+        'services': ['neutron-metadata-agent'],
+        'contexts': [neutron_ovs_context.DVRSharedSecretContext(),
+                     neutron_ovs_context.APIIdentityServiceContext()],
+    }),
+])
+TEMPLATES = 'templates/'
+INT_BRIDGE = "br-int"
+EXT_BRIDGE = "br-ex"
+DATA_BRIDGE = 'br-data'
+
+
+def determine_dvr_packages():
+    if use_dvr():
+        return DVR_PACKAGES
+    return []
 
 
 def determine_packages():
-    return neutron_plugin_attribute('ovs', 'packages', 'neutron')
+    pkgs = neutron_plugin_attribute('ovs', 'packages', 'neutron')
+    pkgs.extend(determine_dvr_packages())
+    return pkgs
 
 
 def register_configs(release=None):
@@ -54,6 +109,10 @@ def resource_map():
     hook execution.
     '''
     resource_map = deepcopy(BASE_RESOURCE_MAP)
+    if use_dvr():
+        resource_map.update(DVR_RESOURCE_MAP)
+        dvr_services = ['neutron-metadata-agent', 'neutron-l3-agent']
+        resource_map[NEUTRON_CONF]['services'] += dvr_services
     return resource_map
 
 
@@ -75,3 +134,38 @@ def get_topics():
     if context.NeutronAPIContext()()['l2_population']:
         topics.append('q-agent-notifier-l2population-update')
     return topics
+
+
+def configure_ovs():
+    if not service_running('openvswitch-switch'):
+        full_restart()
+    add_bridge(INT_BRIDGE)
+    add_bridge(EXT_BRIDGE)
+    ext_port_ctx = None
+    if use_dvr():
+        ext_port_ctx = ExternalPortContext()()
+    if ext_port_ctx and ext_port_ctx['ext_port']:
+        add_bridge_port(EXT_BRIDGE, ext_port_ctx['ext_port'])
+
+    portmaps = DataPortContext()()
+    bridgemaps = parse_bridge_mappings(config('bridge-mappings'))
+    for provider, br in bridgemaps.iteritems():
+        add_bridge(br)
+        if not portmaps or br not in portmaps:
+            continue
+
+        add_bridge_port(br, portmaps[br], promisc=True)
+
+    # Ensure this runs so that mtu is applied to data-port interfaces if
+    # provided.
+    service_restart('os-charm-phy-nic-mtu')
+
+
+def get_shared_secret():
+    ctxt = neutron_ovs_context.DVRSharedSecretContext()()
+    if 'shared_secret' in ctxt:
+        return ctxt['shared_secret']
+
+
+def use_dvr():
+    return context.NeutronAPIContext()()['enable_dvr']
