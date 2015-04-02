@@ -1,4 +1,21 @@
 options:
+  openstack-origin-git:
+    default:
+    type: string
+    description: |
+      Specifies a YAML-formatted dictionary listing the git
+      repositories and branches from which to install OpenStack and
+      its dependencies.
+
+      When openstack-origin-git is specified, openstack-specific
+      packages will be installed from source rather than from the
+      the nova-compute charm's openstack-origin repository.
+
+      Note that the installed config files will be determined based on
+      the OpenStack release of the nova-compute charm's openstack-origin
+      option.
+
+      For more details see README.md.
   rabbit-user:
     default: neutron
     type: string
@@ -60,3 +77,12 @@ options:
       .
       This network will be used for tenant network traffic in overlay
       networks.
+  ext-port:
+    type: string
+    default:
+    description: |
+      A space-separated list of external ports to use for routing of instance
+      traffic to the external public network. Valid values are either MAC
+      addresses (in which case only MAC addresses for interfaces without an IP
+      address already assigned will be used), or interfaces (eth0)
+
