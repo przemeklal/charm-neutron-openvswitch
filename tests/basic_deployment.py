@@ -159,7 +159,7 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
         conf = "/etc/neutron/plugins/ml2/ml2_conf.ini"
         for value in vpair:
             self.d.configure(service, {charm_key: value})
-            time.sleep(30)
+            time.sleep(60)
             ret = u.validate_config_data(unit, conf, section,
                                          {config_file_key: value})
             msg = "Propagation error, expected %s=%s" % (config_file_key,
