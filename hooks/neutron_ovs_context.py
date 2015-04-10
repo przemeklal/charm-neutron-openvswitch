@@ -71,14 +71,14 @@ class OVSPluginContext(context.NeutronContext):
 
         mappings = config('bridge-mappings')
         if mappings:
-            ovs_ctxt['bridge_mappings'] = mappings
+            ovs_ctxt['bridge_mappings'] = ','.join(mappings.split())
 
         vlan_ranges = config('vlan-ranges')
-        vlan_range_mappings = parse_vlan_range_mappings(config('vlan-ranges'))
+        vlan_range_mappings = parse_vlan_range_mappings(vlan_ranges)
         if vlan_ranges:
             providers = vlan_range_mappings.keys()
-            ovs_ctxt['network_providers'] = ' '.join(providers)
-            ovs_ctxt['vlan_ranges'] = vlan_ranges
+            ovs_ctxt['network_providers'] = ','.join(sorted(providers))
+            ovs_ctxt['vlan_ranges'] = ','.join(vlan_ranges.split())
 
         return ovs_ctxt
 
