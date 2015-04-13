@@ -16,7 +16,7 @@ from charmhelpers.contrib.openstack.amulet.utils import (
 )
 
 # Use DEBUG to turn on debug logging
-u = OpenStackAmuletUtils(ERROR)
+u = OpenStackAmuletUtils(DEBUG)
 
 # XXX Tests inspecting relation data from the perspective of the
 # neutron-openvswitch are missing because amulet sentries aren't created for
