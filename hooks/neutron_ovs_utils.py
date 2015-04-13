@@ -268,7 +268,7 @@ def git_post_install(projects_yaml):
     for conf, files in configs.iteritems():
         shutil.copyfile(files['src'], files['dest'])
 
-    render('neutron_sudoers', '/etc/sudoers.d/neutron_sudoers', {},
+    render('git/neutron_sudoers', '/etc/sudoers.d/neutron_sudoers', {},
            perms=0o440)
 
     neutron_ovs_agent_context = {
@@ -288,10 +288,10 @@ def git_post_install(projects_yaml):
     }
 
     # NOTE(coreycb): Needs systemd support
-    render('upstart/neutron-plugin-openvswitch-agent.upstart',
+    render('git/upstart/neutron-plugin-openvswitch-agent.upstart',
            '/etc/init/neutron-plugin-openvswitch-agent.conf',
            neutron_ovs_agent_context, perms=0o644)
-    render('upstart/neutron-ovs-cleanup.upstart',
+    render('git/upstart/neutron-ovs-cleanup.upstart',
            '/etc/init/neutron-ovs-cleanup.conf',
            neutron_ovs_cleanup_context, perms=0o644)
 
