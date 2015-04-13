@@ -246,10 +246,6 @@ class TestNeutronOVSUtils(CharmTestCase):
         add_group.assert_called_with('neutron', system_group=True)
         add_user_to_group.assert_called_with('neutron', 'neutron')
         expected = [
-            call('/etc/neutron', owner='neutron',
-                 group='neutron', perms=0700, force=False),
-            call('/etc/neutron/rootwrap.d', owner='neutron',
-                 group='neutron', perms=0700, force=False),
             call('/var/lib/neutron', owner='neutron',
                  group='neutron', perms=0700, force=False),
             call('/var/lib/neutron/lock', owner='neutron',
@@ -268,18 +264,20 @@ class TestNeutronOVSUtils(CharmTestCase):
     @patch.object(nutils, 'service_restart')
     @patch.object(nutils, 'render')
     @patch('os.path.join')
-    @patch('shutil.copyfile')
-    def test_git_post_install(self, copyfile, join, render,
+    @patch('os.path.exists')
+    @patch('shutil.copytree')
+    @patch('shutil.rmtree')
+    def test_git_post_install(self, rmtree, copytree, exists, join, render,
                               service_restart, git_src_dir):
         projects_yaml = openstack_origin_git
         join.return_value = 'joined-string'
         nutils.git_post_install(projects_yaml)
         expected = [
-            call('joined-string', '/etc/neutron/rootwrap.d/debug.filters'),
-            call('joined-string', '/etc/neutron/policy.json'),
-            call('joined-string', '/etc/neutron/rootwrap.conf'),
+            call('joined-string', '/etc/neutron'),
+            call('joined-string', '/etc/neutron/plugins'),
+            call('joined-string', '/etc/neutron/rootwrap.d'),
         ]
-        copyfile.assert_has_calls(expected, any_order=True)
+        copytree.assert_has_calls(expected)
         neutron_ovs_agent_context = {
             'service_description': 'Neutron OpenvSwitch Plugin Agent',
             'charm_name': 'neutron-openvswitch',
