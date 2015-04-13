@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import amulet
+import os
 import time
 import yaml
 
@@ -67,6 +68,7 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
         neutron_ovs_config = {}
         if self.git:
             branch = 'stable/' + self._get_openstack_release_string()
+            amulet_http_proxy = os.environ.get('AMULET_HTTP_PROXY')
             openstack_origin_git = {
                 'repositories': [
                     {'name': 'requirements',
@@ -77,8 +79,8 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
                      'branch': branch},
                 ],
                 'directory': '/mnt/openstack-git',
-                'http_proxy': 'http://squid.internal:3128',
-                'https_proxy': 'https://squid.internal:3128',
+                'http_proxy': amulet_http_proxy,
+                'https_proxy': amulet_http_proxy,
             }
             neutron_ovs_config['openstack-origin-git'] = yaml.dump(openstack_origin_git)
         configs = {'neutron-openvswitch': neutron_ovs_config}
