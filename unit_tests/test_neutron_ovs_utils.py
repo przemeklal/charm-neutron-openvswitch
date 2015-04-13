@@ -295,12 +295,12 @@ class TestNeutronOVSUtils(CharmTestCase):
             'log_file': '/var/log/neutron/ovs-cleanup.log',
         }
         expected = [
-            call('neutron_sudoers', '/etc/sudoers.d/neutron_sudoers', {},
+            call('git/neutron_sudoers', '/etc/sudoers.d/neutron_sudoers', {},
                  perms=0o440),
-            call('upstart/neutron-plugin-openvswitch-agent.upstart',
+            call('git/upstart/neutron-plugin-openvswitch-agent.upstart',
                  '/etc/init/neutron-plugin-openvswitch-agent.conf',
                  neutron_ovs_agent_context, perms=0o644),
-            call('upstart/neutron-ovs-cleanup.upstart',
+            call('git/upstart/neutron-ovs-cleanup.upstart',
                  '/etc/init/neutron-ovs-cleanup.conf',
                  neutron_ovs_cleanup_context, perms=0o644),
         ]
