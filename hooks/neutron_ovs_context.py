@@ -15,9 +15,6 @@ from charmhelpers.contrib.openstack.context import (
     OSContextGenerator,
     NeutronAPIContext,
 )
-from charmhelpers.contrib.openstack.neutron import (
-    parse_vlan_range_mappings,
-)
 
 
 class OVSPluginContext(context.NeutronContext):
@@ -73,11 +70,12 @@ class OVSPluginContext(context.NeutronContext):
         if mappings:
             ovs_ctxt['bridge_mappings'] = ','.join(mappings.split())
 
+        flat_providers = config('flat-network-providers')
+        if flat_providers:
+            ovs_ctxt['network_providers'] = ','.join(flat_providers.split())
+
         vlan_ranges = config('vlan-ranges')
-        vlan_range_mappings = parse_vlan_range_mappings(vlan_ranges)
         if vlan_ranges:
-            providers = vlan_range_mappings.keys()
-            ovs_ctxt['network_providers'] = ','.join(sorted(providers))
             ovs_ctxt['vlan_ranges'] = ','.join(vlan_ranges.split())
 
         return ovs_ctxt
