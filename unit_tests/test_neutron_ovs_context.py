@@ -65,6 +65,8 @@ class OVSPluginContextTest(CharmTestCase):
             {'br-d2': 'em1'}
         )
 
+    @patch.object(charmhelpers.contrib.openstack.context, 'config',
+                  lambda *args: None)
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_get')
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_ids')
     @patch.object(charmhelpers.contrib.openstack.context, 'related_units')
@@ -85,8 +87,22 @@ class OVSPluginContextTest(CharmTestCase):
                 return "neutron.randomdriver"
             if section == "config":
                 return "neutron.randomconfig"
+
+        config = {'vlan-ranges': "physnet1:1000:1500 physnet2:2000:2500",
+                  'use-syslog': True,
+                  'verbose': True,
+                  'debug': True,
+                  'bridge-mappings': "physnet1:br-data physnet2:br-data"}
+
+        def mock_config(key=None):
+            if key:
+                return config.get(key)
+
+            return config
+
+        self.maxDiff = None
+        self.config.side_effect = mock_config 
         _npa.side_effect = mock_npa
-        _config.return_value = 'ovs'
         _unit_get.return_value = '127.0.0.13'
         _unit_priv_ip.return_value = '127.0.0.14'
         _is_clus.return_value = False
@@ -103,7 +119,6 @@ class OVSPluginContextTest(CharmTestCase):
         self.get_host_ip.return_value = '127.0.0.15'
         napi_ctxt = context.OVSPluginContext()
         expect = {
-            'neutron_alchemy_flags': {},
             'neutron_security_groups': True,
             'distributed_routing': True,
             'verbose': True,
@@ -119,9 +134,9 @@ class OVSPluginContextTest(CharmTestCase):
             'neutron_url': 'https://127.0.0.13:9696',
             'l2_population': True,
             'overlay_network_type': 'gre',
-            'network_providers': 'physnet1',
-            'bridge_mappings': 'physnet1:br-data',
-            'vlan_ranges': 'physnet1:1000:2000',
+            'network_providers': 'physnet1,physnet2',
+            'bridge_mappings': 'physnet1:br-data,physnet2:br-data',
+            'vlan_ranges': 'physnet1:1000:1500,physnet2:2000:2500',
         }
         self.assertEquals(expect, napi_ctxt())
 
