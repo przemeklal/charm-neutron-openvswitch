@@ -92,7 +92,8 @@ class OVSPluginContextTest(CharmTestCase):
                   'use-syslog': True,
                   'verbose': True,
                   'debug': True,
-                  'bridge-mappings': "physnet1:br-data physnet2:br-data"}
+                  'bridge-mappings': "physnet1:br-data physnet2:br-data",
+                  'flat-network-providers': 'physnet3 physnet4'}
 
         def mock_config(key=None):
             if key:
@@ -100,8 +101,7 @@ class OVSPluginContextTest(CharmTestCase):
 
             return config
 
-        self.maxDiff = None
-        self.config.side_effect = mock_config 
+        self.config.side_effect = mock_config
         _npa.side_effect = mock_npa
         _unit_get.return_value = '127.0.0.13'
         _unit_priv_ip.return_value = '127.0.0.14'
@@ -134,7 +134,7 @@ class OVSPluginContextTest(CharmTestCase):
             'neutron_url': 'https://127.0.0.13:9696',
             'l2_population': True,
             'overlay_network_type': 'gre',
-            'network_providers': 'physnet1,physnet2',
+            'network_providers': 'physnet3,physnet4',
             'bridge_mappings': 'physnet1:br-data,physnet2:br-data',
             'vlan_ranges': 'physnet1:1000:1500,physnet2:2000:2500',
         }
@@ -199,7 +199,6 @@ class OVSPluginContextTest(CharmTestCase):
             'neutron_url': 'https://127.0.0.13:9696',
             'l2_population': True,
             'overlay_network_type': 'gre',
-            'network_providers': 'physnet1',
             'bridge_mappings': 'physnet1:br-data',
             'vlan_ranges': 'physnet1:1000:2000',
         }
