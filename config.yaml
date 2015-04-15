@@ -54,7 +54,7 @@ options:
     default: "physnet1:1000:2000"
     description: |
       Space-delimited list of Neutron network-provider & vlan-id-ranges using
-      the following format (<provider>:<start>:<end>).
+      the following format "<provider>:<start>:<end> ...".
   # Network configuration options
   # by default all access is over 'private-address'
   os-data-network:
