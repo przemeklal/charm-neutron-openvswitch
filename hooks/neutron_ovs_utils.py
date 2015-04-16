@@ -1,7 +1,15 @@
+import os
+import shutil
+
 from charmhelpers.contrib.openstack.neutron import neutron_plugin_attribute
 from copy import deepcopy
 
 from charmhelpers.contrib.openstack import context, templating
+from charmhelpers.contrib.openstack.utils import (
+    git_install_requested,
+    git_clone_and_install,
+    git_src_dir,
+)
 from collections import OrderedDict
 from charmhelpers.contrib.openstack.utils import (
     os_release,
@@ -23,9 +31,35 @@ from charmhelpers.contrib.openstack.context import (
     DataPortContext,
 )
 from charmhelpers.core.host import (
+    adduser,
+    add_group,
+    add_user_to_group,
+    mkdir,
     service_restart,
     service_running,
+    write_file,
 )
+
+from charmhelpers.core.templating import render
+
+BASE_GIT_PACKAGES = [
+    'libxml2-dev',
+    'libxslt1-dev',
+    'openvswitch-switch',
+    'python-dev',
+    'python-pip',
+    'python-setuptools',
+    'zlib1g-dev',
+]
+
+# ubuntu packages that should not be installed when deploying from git
+GIT_PACKAGE_BLACKLIST = [
+    'neutron-l3-agent',
+    'neutron-metadata-agent',
+    'neutron-server',
+    'neutron-plugin-openvswitch',
+    'neutron-plugin-openvswitch-agent',
+]
 
 NOVA_CONF_DIR = "/etc/nova"
 NEUTRON_CONF_DIR = "/etc/neutron"
@@ -83,14 +117,23 @@ DATA_BRIDGE = 'br-data'
 
 
 def determine_dvr_packages():
-    if use_dvr():
-        return DVR_PACKAGES
+    if not git_install_requested():
+        if use_dvr():
+            return DVR_PACKAGES
     return []
 
 
 def determine_packages():
     pkgs = neutron_plugin_attribute('ovs', 'packages', 'neutron')
     pkgs.extend(determine_dvr_packages())
+
+    if git_install_requested():
+        pkgs.extend(BASE_GIT_PACKAGES)
+        # don't include packages that will be installed from git
+        for p in GIT_PACKAGE_BLACKLIST:
+            if p in pkgs:
+                pkgs.remove(p)
+
     return pkgs
 
 
@@ -169,3 +212,81 @@ def get_shared_secret():
 
 def use_dvr():
     return context.NeutronAPIContext()()['enable_dvr']
+
+
+def git_install(projects_yaml):
+    """Perform setup, and install git repos specified in yaml parameter."""
+    if git_install_requested():
+        git_pre_install()
+        git_clone_and_install(projects_yaml, core_project='neutron')
+        git_post_install(projects_yaml)
+
+
+def git_pre_install():
+    """Perform pre-install setup."""
+    dirs = [
+        '/var/lib/neutron',
+        '/var/lib/neutron/lock',
+        '/var/log/neutron',
+    ]
+
+    logs = [
+        '/var/log/neutron/server.log',
+    ]
+
+    adduser('neutron', shell='/bin/bash', system_user=True)
+    add_group('neutron', system_group=True)
+    add_user_to_group('neutron', 'neutron')
+
+    for d in dirs:
+        mkdir(d, owner='neutron', group='neutron', perms=0700, force=False)
+
+    for l in logs:
+        write_file(l, '', owner='neutron', group='neutron', perms=0600)
+
+
+def git_post_install(projects_yaml):
+    """Perform post-install setup."""
+    src_etc = os.path.join(git_src_dir(projects_yaml, 'neutron'), 'etc')
+    configs = [
+        {'src': src_etc,
+         'dest': '/etc/neutron'},
+        {'src': os.path.join(src_etc, 'neutron/plugins'),
+         'dest': '/etc/neutron/plugins'},
+        {'src': os.path.join(src_etc, 'neutron/rootwrap.d'),
+         'dest': '/etc/neutron/rootwrap.d'},
+    ]
+
+    for c in configs:
+        if os.path.exists(c['dest']):
+            shutil.rmtree(c['dest'])
+        shutil.copytree(c['src'], c['dest'])
+
+    render('git/neutron_sudoers', '/etc/sudoers.d/neutron_sudoers', {},
+           perms=0o440)
+
+    neutron_ovs_agent_context = {
+        'service_description': 'Neutron OpenvSwitch Plugin Agent',
+        'charm_name': 'neutron-openvswitch',
+        'process_name': 'neutron-openvswitch-agent',
+        'cleanup_process_name': 'neutron-ovs-cleanup',
+        'plugin_config': '/etc/neutron/plugins/ml2/ml2_conf.ini',
+        'log_file': '/var/log/neutron/openvswitch-agent.log',
+    }
+
+    neutron_ovs_cleanup_context = {
+        'service_description': 'Neutron OpenvSwitch Cleanup',
+        'charm_name': 'neutron-openvswitch',
+        'process_name': 'neutron-ovs-cleanup',
+        'log_file': '/var/log/neutron/ovs-cleanup.log',
+    }
+
+    # NOTE(coreycb): Needs systemd support
+    render('git/upstart/neutron-plugin-openvswitch-agent.upstart',
+           '/etc/init/neutron-plugin-openvswitch-agent.conf',
+           neutron_ovs_agent_context, perms=0o644)
+    render('git/upstart/neutron-ovs-cleanup.upstart',
+           '/etc/init/neutron-ovs-cleanup.conf',
+           neutron_ovs_cleanup_context, perms=0o644)
+
+    service_restart('neutron-plugin-openvswitch-agent')

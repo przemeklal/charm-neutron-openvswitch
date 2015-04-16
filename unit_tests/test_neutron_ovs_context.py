@@ -101,6 +101,7 @@ class OVSPluginContextTest(CharmTestCase):
 
             return config
 
+        self.maxDiff = None
         self.config.side_effect = mock_config
         _npa.side_effect = mock_npa
         _unit_get.return_value = '127.0.0.13'

@@ -2,6 +2,11 @@
 
 import sys
 
+from charmhelpers.contrib.openstack.utils import (
+    config_value_changed,
+    git_install_requested,
+)
+
 from charmhelpers.core.hookenv import (
     Hooks,
     UnregisteredHookError,
@@ -27,6 +32,7 @@ from neutron_ovs_utils import (
     DVR_PACKAGES,
     configure_ovs,
     determine_packages,
+    git_install,
     get_topics,
     determine_dvr_packages,
     get_shared_secret,
@@ -46,6 +52,8 @@ def install():
     for pkg in pkgs:
         apt_install(pkg, fatal=True)
 
+    git_install(config('openstack-origin-git'))
+
 
 @hooks.hook('neutron-plugin-relation-changed')
 @hooks.hook('config-changed')
@@ -54,6 +62,11 @@ def config_changed():
     if determine_dvr_packages():
         apt_update()
         apt_install(determine_dvr_packages(), fatal=True)
+
+    if git_install_requested():
+        if config_value_changed('openstack-origin-git'):
+            git_install(config('openstack-origin-git'))
+
     configure_ovs()
     CONFIGS.write_all()
     for rid in relation_ids('zeromq-configuration'):
