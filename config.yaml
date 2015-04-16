@@ -44,11 +44,17 @@ options:
     description: |
       Space-delimited list of ML2 data bridge mappings with format
       <provider>:<bridge>.
+  flat-network-providers:
+    type: string
+    default:
+    description: |
+      Space-delimited list of Neutron flat network providers.
   vlan-ranges:
     type: string
     default: "physnet1:1000:2000"
     description: |
-      Space-delimited list of network provider vlan id ranges.
+      Space-delimited list of Neutron network-provider & vlan-id-ranges using
+      the following format "<provider>:<start>:<end> ...".
   # Network configuration options
   # by default all access is over 'private-address'
   os-data-network:
