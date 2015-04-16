@@ -29,6 +29,15 @@ TO_PATCH = [
 
 head_pkg = 'linux-headers-3.15.0-5-generic'
 
+openstack_origin_git = \
+    """repositories:
+         - {name: requirements,
+            repository: 'git://git.openstack.org/openstack/requirements',
+            branch: stable/juno}
+         - {name: neutron,
+            repository: 'git://git.openstack.org/openstack/neutron',
+            branch: stable/juno}"""
+
 
 def _mock_npa(plugin, attr, net_manager=None):
     plugins = {
@@ -67,9 +76,12 @@ class TestNeutronOVSUtils(CharmTestCase):
         hookenv.cache = {}
 
     @patch.object(nutils, 'use_dvr')
+    @patch.object(nutils, 'git_install_requested')
     @patch.object(charmhelpers.contrib.openstack.neutron, 'os_release')
     @patch.object(charmhelpers.contrib.openstack.neutron, 'headers_package')
-    def test_determine_packages(self, _head_pkgs, _os_rel, _use_dvr):
+    def test_determine_packages(self, _head_pkgs, _os_rel, _git_requested,
+                                _use_dvr):
+        _git_requested.return_value = False
         _use_dvr.return_value = False
         _os_rel.return_value = 'trusty'
         _head_pkgs.return_value = head_pkg
@@ -206,3 +218,92 @@ class TestNeutronOVSUtils(CharmTestCase):
         _dvr_secret_ctxt.return_value = \
             DummyContext(return_value={'shared_secret': 'supersecret'})
         self.assertEqual(nutils.get_shared_secret(), 'supersecret')
+
+    @patch.object(nutils, 'git_install_requested')
+    @patch.object(nutils, 'git_clone_and_install')
+    @patch.object(nutils, 'git_post_install')
+    @patch.object(nutils, 'git_pre_install')
+    def test_git_install(self, git_pre, git_post, git_clone_and_install,
+                         git_requested):
+        projects_yaml = openstack_origin_git
+        git_requested.return_value = True
+        nutils.git_install(projects_yaml)
+        self.assertTrue(git_pre.called)
+        git_clone_and_install.assert_called_with(openstack_origin_git,
+                                                 core_project='neutron')
+        self.assertTrue(git_post.called)
+
+    @patch.object(nutils, 'mkdir')
+    @patch.object(nutils, 'write_file')
+    @patch.object(nutils, 'add_user_to_group')
+    @patch.object(nutils, 'add_group')
+    @patch.object(nutils, 'adduser')
+    def test_git_pre_install(self, adduser, add_group, add_user_to_group,
+                             write_file, mkdir):
+        nutils.git_pre_install()
+        adduser.assert_called_with('neutron', shell='/bin/bash',
+                                   system_user=True)
+        add_group.assert_called_with('neutron', system_group=True)
+        add_user_to_group.assert_called_with('neutron', 'neutron')
+        expected = [
+            call('/var/lib/neutron', owner='neutron',
+                 group='neutron', perms=0700, force=False),
+            call('/var/lib/neutron/lock', owner='neutron',
+                 group='neutron', perms=0700, force=False),
+            call('/var/log/neutron', owner='neutron',
+                 group='neutron', perms=0700, force=False),
+        ]
+        self.assertEquals(mkdir.call_args_list, expected)
+        expected = [
+            call('/var/log/neutron/server.log', '', owner='neutron',
+                 group='neutron', perms=0600),
+        ]
+        self.assertEquals(write_file.call_args_list, expected)
+
+    @patch.object(nutils, 'git_src_dir')
+    @patch.object(nutils, 'service_restart')
+    @patch.object(nutils, 'render')
+    @patch('os.path.join')
+    @patch('os.path.exists')
+    @patch('shutil.copytree')
+    @patch('shutil.rmtree')
+    def test_git_post_install(self, rmtree, copytree, exists, join, render,
+                              service_restart, git_src_dir):
+        projects_yaml = openstack_origin_git
+        join.return_value = 'joined-string'
+        nutils.git_post_install(projects_yaml)
+        expected = [
+            call('joined-string', '/etc/neutron'),
+            call('joined-string', '/etc/neutron/plugins'),
+            call('joined-string', '/etc/neutron/rootwrap.d'),
+        ]
+        copytree.assert_has_calls(expected)
+        neutron_ovs_agent_context = {
+            'service_description': 'Neutron OpenvSwitch Plugin Agent',
+            'charm_name': 'neutron-openvswitch',
+            'process_name': 'neutron-openvswitch-agent',
+            'cleanup_process_name': 'neutron-ovs-cleanup',
+            'plugin_config': '/etc/neutron/plugins/ml2/ml2_conf.ini',
+            'log_file': '/var/log/neutron/openvswitch-agent.log',
+        }
+        neutron_ovs_cleanup_context = {
+            'service_description': 'Neutron OpenvSwitch Cleanup',
+            'charm_name': 'neutron-openvswitch',
+            'process_name': 'neutron-ovs-cleanup',
+            'log_file': '/var/log/neutron/ovs-cleanup.log',
+        }
+        expected = [
+            call('git/neutron_sudoers', '/etc/sudoers.d/neutron_sudoers', {},
+                 perms=0o440),
+            call('git/upstart/neutron-plugin-openvswitch-agent.upstart',
+                 '/etc/init/neutron-plugin-openvswitch-agent.conf',
+                 neutron_ovs_agent_context, perms=0o644),
+            call('git/upstart/neutron-ovs-cleanup.upstart',
+                 '/etc/init/neutron-ovs-cleanup.conf',
+                 neutron_ovs_cleanup_context, perms=0o644),
+        ]
+        self.assertEquals(render.call_args_list, expected)
+        expected = [
+            call('neutron-plugin-openvswitch-agent'),
+        ]
+        self.assertEquals(service_restart.call_args_list, expected)

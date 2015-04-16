@@ -1,7 +1,9 @@
 #!/usr/bin/python
 
 import amulet
+import os
 import time
+import yaml
 
 from charmhelpers.contrib.openstack.amulet.deployment import (
     OpenStackAmuletDeployment
@@ -14,7 +16,7 @@ from charmhelpers.contrib.openstack.amulet.utils import (
 )
 
 # Use DEBUG to turn on debug logging
-u = OpenStackAmuletUtils(ERROR)
+u = OpenStackAmuletUtils(DEBUG)
 
 # XXX Tests inspecting relation data from the perspective of the
 # neutron-openvswitch are missing because amulet sentries aren't created for
@@ -24,10 +26,12 @@ u = OpenStackAmuletUtils(ERROR)
 class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
     """Amulet tests on a basic neutron-openvswtich deployment."""
 
-    def __init__(self, series, openstack=None, source=None, stable=False):
+    def __init__(self, series, openstack=None, source=None, git=False,
+                 stable=False):
         """Deploy the entire test environment."""
         super(NeutronOVSBasicDeployment, self).__init__(series, openstack,
                                                         source, stable)
+        self.git = git
         self._add_services()
         self._add_relations()
         self._configure_services()
@@ -61,7 +65,25 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
 
     def _configure_services(self):
         """Configure all of the services."""
-        configs = {}
+        neutron_ovs_config = {}
+        if self.git:
+            branch = 'stable/' + self._get_openstack_release_string()
+            amulet_http_proxy = os.environ.get('AMULET_HTTP_PROXY')
+            openstack_origin_git = {
+                'repositories': [
+                    {'name': 'requirements',
+                     'repository': 'git://git.openstack.org/openstack/requirements',
+                     'branch': branch},
+                    {'name': 'neutron',
+                     'repository': 'git://git.openstack.org/openstack/neutron',
+                     'branch': branch},
+                ],
+                'directory': '/mnt/openstack-git',
+                'http_proxy': amulet_http_proxy,
+                'https_proxy': amulet_http_proxy,
+            }
+            neutron_ovs_config['openstack-origin-git'] = yaml.dump(openstack_origin_git)
+        configs = {'neutron-openvswitch': neutron_ovs_config}
         super(NeutronOVSBasicDeployment, self)._configure_services(configs)
 
     def _initialize_tests(self):
@@ -76,7 +98,8 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
            service units."""
 
         commands = {
-            self.compute_sentry: ['status nova-compute'],
+            self.compute_sentry: ['status nova-compute',
+                                  'status neutron-plugin-openvswitch-agent'],
             self.rabbitmq_sentry: ['service rabbitmq-server status'],
             self.neutron_api_sentry: ['status neutron-server'],
         }
@@ -138,7 +161,7 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
         conf = "/etc/neutron/plugins/ml2/ml2_conf.ini"
         for value in vpair:
             self.d.configure(service, {charm_key: value})
-            time.sleep(30)
+            time.sleep(60)
             ret = u.validate_config_data(unit, conf, section,
                                          {config_file_key: value})
             msg = "Propagation error, expected %s=%s" % (config_file_key,
