@@ -239,7 +239,7 @@ def git_pre_install():
     add_user_to_group('neutron', 'neutron')
 
     for d in dirs:
-        mkdir(d, owner='neutron', group='neutron', perms=0700, force=False)
+        mkdir(d, owner='neutron', group='neutron', perms=0755, force=False)
 
     for l in logs:
         write_file(l, '', owner='neutron', group='neutron', perms=0600)
