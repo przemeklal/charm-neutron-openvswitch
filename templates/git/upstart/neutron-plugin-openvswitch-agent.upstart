@@ -13,6 +13,6 @@ pre-start script
   chown neutron:root /var/run/neutron
 end script
 
-exec start-stop-daemon --start --chuid neutron --exec /usr/local/bin/{{ process_name }} -- \
+exec start-stop-daemon --start --chuid neutron --exec {{ executable_name }} -- \
     --config-file=/etc/neutron/neutron.conf --config-file={{ plugin_config }} \
     --log-file={{ log_file }}

@@ -21,6 +21,7 @@ from charmhelpers.contrib.network.ovs import (
     full_restart,
 )
 from charmhelpers.core.hookenv import (
+    charm_dir,
     config,
 )
 from charmhelpers.contrib.openstack.neutron import (
@@ -265,10 +266,12 @@ def git_post_install(projects_yaml):
     render('git/neutron_sudoers', '/etc/sudoers.d/neutron_sudoers', {},
            perms=0o440)
 
+    bin_dir = os.path.join(charm_dir(), 'venv/bin')
     neutron_ovs_agent_context = {
         'service_description': 'Neutron OpenvSwitch Plugin Agent',
         'charm_name': 'neutron-openvswitch',
         'process_name': 'neutron-openvswitch-agent',
+        'executable_name': os.path.join(bin_dir, 'neutron-openvswitch-agent'),
         'cleanup_process_name': 'neutron-ovs-cleanup',
         'plugin_config': '/etc/neutron/plugins/ml2/ml2_conf.ini',
         'log_file': '/var/log/neutron/openvswitch-agent.log',
@@ -278,6 +281,7 @@ def git_post_install(projects_yaml):
         'service_description': 'Neutron OpenvSwitch Cleanup',
         'charm_name': 'neutron-openvswitch',
         'process_name': 'neutron-ovs-cleanup',
+        'executable_name': os.path.join(bin_dir, 'neutron-ovs-cleanup'),
         'log_file': '/var/log/neutron/ovs-cleanup.log',
     }
 
