@@ -282,6 +282,7 @@ class TestNeutronOVSUtils(CharmTestCase):
             'service_description': 'Neutron OpenvSwitch Plugin Agent',
             'charm_name': 'neutron-openvswitch',
             'process_name': 'neutron-openvswitch-agent',
+            'executable_name': 'joined-string',
             'cleanup_process_name': 'neutron-ovs-cleanup',
             'plugin_config': '/etc/neutron/plugins/ml2/ml2_conf.ini',
             'log_file': '/var/log/neutron/openvswitch-agent.log',
@@ -290,6 +291,7 @@ class TestNeutronOVSUtils(CharmTestCase):
             'service_description': 'Neutron OpenvSwitch Cleanup',
             'charm_name': 'neutron-openvswitch',
             'process_name': 'neutron-ovs-cleanup',
+            'executable_name': 'joined-string',
             'log_file': '/var/log/neutron/ovs-cleanup.log',
         }
         expected = [
