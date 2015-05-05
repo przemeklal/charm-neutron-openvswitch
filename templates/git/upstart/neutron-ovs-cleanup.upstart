@@ -11,7 +11,7 @@ end script
 
 pre-start script
   [ ! -x /usr/bin/{{ process_name }} ] && exit 0
-  start-stop-daemon --start --chuid neutron --exec /usr/local/bin/{{ process_name }} -- \
+  start-stop-daemon --start --chuid neutron --exec {{ executable_name }} -- \
     --log-file /var/log/neutron/{{ log_file }} \
     --config-file /etc/neutron/neutron.conf --verbose
 end script
