@@ -540,7 +540,7 @@ def git_clone_and_install(projects_yaml, core_project, depth=1):
     if 'directory' in projects.keys():
         parent_dir = projects['directory']
 
-    pip_create_virtualenv()
+    pip_create_virtualenv(os.path.join(parent_dir, 'venv'))
 
     for p in projects['repositories']:
         repo = p['repository']
@@ -653,5 +653,20 @@ def git_src_dir(projects_yaml, project):
     for p in projects['repositories']:
         if p['name'] == project:
             return os.path.join(parent_dir, os.path.basename(p['repository']))
+
+    return None
+
+
+def git_yaml_value(projects_yaml, key):
+    """
+    Return the value in projects_yaml for the specified key.
+    """
+    if not projects_yaml:
+        return None
+
+    projects = yaml.load(projects_yaml)
+
+    if key in projects.keys():
+        return projects[key]
 
     return None
