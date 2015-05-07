@@ -264,6 +264,17 @@ def git_post_install(projects_yaml):
             shutil.rmtree(c['dest'])
         shutil.copytree(c['src'], c['dest'])
 
+    symlinks = [
+        {'src': os.path.join(git_pip_venv_dir(projects_yaml),
+                             'bin/neutron-rootwrap'),
+         'link': '/usr/local/bin/neutron-rootwrap'},
+    ]
+
+    for s in symlinks:
+        if os.path.lexists(s['link']):
+            os.remove(s['link'])
+        os.symlink(s['src'], s['link'])
+
     render('git/neutron_sudoers', '/etc/sudoers.d/neutron_sudoers', {},
            perms=0o440)
 
