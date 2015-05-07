@@ -31,6 +31,9 @@ from charmhelpers.contrib.openstack.context import (
     ExternalPortContext,
     DataPortContext,
 )
+from charmhelpers.contrib.python.packages import (
+    pip_get_virtualenv_path,
+)
 from charmhelpers.core.host import (
     adduser,
     add_group,
@@ -266,7 +269,7 @@ def git_post_install(projects_yaml):
     render('git/neutron_sudoers', '/etc/sudoers.d/neutron_sudoers', {},
            perms=0o440)
 
-    bin_dir = os.path.join(charm_dir(), 'venv/bin')
+    bin_dir = os.path.join(pip_get_virtualenv_path(), 'bin')
     neutron_ovs_agent_context = {
         'service_description': 'Neutron OpenvSwitch Plugin Agent',
         'charm_name': 'neutron-openvswitch',
