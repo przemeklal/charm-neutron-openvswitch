@@ -263,15 +263,19 @@ class TestNeutronOVSUtils(CharmTestCase):
     @patch.object(nutils, 'git_src_dir')
     @patch.object(nutils, 'service_restart')
     @patch.object(nutils, 'render')
+    @patch.object(nutils, 'git_pip_venv_dir')
     @patch('os.path.join')
     @patch('os.path.exists')
     @patch('os.symlink')
     @patch('shutil.copytree')
     @patch('shutil.rmtree')
-    def test_git_post_install(self, rmtree, copytree, symlink, exists, join,
-                              render, service_restart, git_src_dir):
+    @patch('subprocess.check_call')
+    def test_git_post_install(self, check_call, rmtree, copytree, symlink,
+                              exists, join, venv, render, service_restart,
+                              git_src_dir):
         projects_yaml = openstack_origin_git
         join.return_value = 'joined-string'
+        venv.return_value = '/mnt/openstack-git/venv'
         nutils.git_post_install(projects_yaml)
         expected = [
             call('joined-string', '/etc/neutron'),
