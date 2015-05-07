@@ -22,7 +22,6 @@ from charmhelpers.contrib.network.ovs import (
     full_restart,
 )
 from charmhelpers.core.hookenv import (
-    charm_dir,
     config,
 )
 from charmhelpers.contrib.openstack.neutron import (
