@@ -46,6 +46,7 @@ from charmhelpers.core.templating import render
 BASE_GIT_PACKAGES = [
     'libxml2-dev',
     'libxslt1-dev',
+    'libyaml-dev',
     'openvswitch-switch',
     'python-dev',
     'python-pip',
