@@ -1,4 +1,17 @@
 options:
+  debug:
+    default: False
+    type: boolean
+    description: Enable debug logging.
+  verbose:
+    default: False
+    type: boolean
+    description: Enable verbose logging.
+  use-syslog:
+    type: boolean
+    default: False
+    description: |
+      Setting this to True will allow supporting services to log to syslog.
   openstack-origin-git:
     default:
     type: string
@@ -24,20 +37,6 @@ options:
     default: openstack
     type: string
     description: RabbitMQ vhost
-  use-syslog:
-    type: boolean
-    default: False
-    description: |
-      By default, all services will log into their corresponding log files.
-      Setting this to True will force all services to log to the syslog.
-  debug:
-    default: False
-    type: boolean
-    description: Enable debug logging
-  verbose:
-    default: False
-    type: boolean
-    description: Enable verbose logging
   data-port:
     type: string
     default:
@@ -53,8 +52,8 @@ options:
       Disable neutron based security groups - setting this configuration option
       will override any settings configured via the neutron-api charm.
       .
-      BE CAREFUL - this option allows you to disable all port level security within
-      an OpenStack cloud.
+      BE CAREFUL - this option allows you to disable all port level security
+      within an OpenStack cloud.
   bridge-mappings:
     type: string
     default: 'physnet1:br-data'
