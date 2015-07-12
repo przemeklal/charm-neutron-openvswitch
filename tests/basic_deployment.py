@@ -76,16 +76,16 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
                          'repository': 'git://github.com/openstack/requirements',
                          'branch': branch},
                         {'name': 'neutron-fwaas',
-                         'repository': 'git://github.com/coreycb/neutron-fwaas',
+                         'repository': 'git://github.com/openstack/neutron-fwaas',
                          'branch': branch},
                         {'name': 'neutron-lbaas',
-                         'repository': 'git://github.com/coreycb/neutron-lbaas',
+                         'repository': 'git://github.com/openstack/neutron-lbaas',
                          'branch': branch},
                         {'name': 'neutron-vpnaas',
-                         'repository': 'git://github.com/coreycb/neutron-vpnaas',
+                         'repository': 'git://github.com/openstack/neutron-vpnaas',
                          'branch': branch},
                         {'name': 'neutron',
-                         'repository': 'git://github.com/coreycb/neutron',
+                         'repository': 'git://github.com/openstack/neutron',
                          'branch': branch},
                     ],
                     'directory': '/mnt/openstack-git',
@@ -93,13 +93,19 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
                     'https_proxy': amulet_http_proxy,
                 }
             else:
+                if self._get_openstack_release() == self.trusty_icehouse:
+                    reqs_repo = 'git://github.com/coreycb/requirements'
+                    neutron_repo = 'git://github.com/coreycb/neutron'
+                else:   
+                    reqs_repo = 'git://github.com/openstack/requirements'
+                    neutron_repo = 'git://github.com/openstack/neutron'
                 openstack_origin_git = {
                     'repositories': [
                         {'name': 'requirements',
-                         'repository': 'git://github.com/openstack/requirements',
+                         'repository': reqs_repo,
                          'branch': branch},
                         {'name': 'neutron',
-                         'repository': 'git://github.com/coreycb/neutron',
+                         'repository': neutron_repo,
                          'branch': branch},
                     ],
                     'directory': '/mnt/openstack-git',
