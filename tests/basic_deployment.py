@@ -67,26 +67,45 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
         """Configure all of the services."""
         neutron_ovs_config = {}
         if self.git:
-            release = self._get_openstack_release_string()
-            reqs_branch = 'stable/' + release
-            if self._get_openstack_release() == self.trusty_icehouse:
-                neutron_branch = release + '-eol'
-            else:
-                neutron_branch = 'stable/' + release
+            branch = 'stable/' + self._get_openstack_release_string()
             amulet_http_proxy = os.environ.get('AMULET_HTTP_PROXY')
-            openstack_origin_git = {
-                'repositories': [
-                    {'name': 'requirements',
-                     'repository': 'git://github.com/openstack/requirements',
-                     'branch': reqs_branch},
-                    {'name': 'neutron',
-                     'repository': 'git://github.com/openstack/neutron',
-                     'branch': neutron_branch},
-                ],
-                'directory': '/mnt/openstack-git',
-                'http_proxy': amulet_http_proxy,
-                'https_proxy': amulet_http_proxy,
-            }
+            if self._get_openstack_release() >= self.trusty_kilo:
+                openstack_origin_git = {
+                    'repositories': [
+                        {'name': 'requirements',
+                         'repository': 'git://github.com/openstack/requirements',
+                         'branch': branch},
+                        {'name': 'neutron-fwaas',
+                         'repository': 'git://github.com/coreycb/neutron-fwaas',
+                         'branch': branch},
+                        {'name': 'neutron-lbaas',
+                         'repository': 'git://github.com/coreycb/neutron-lbaas',
+                         'branch': branch},
+                        {'name': 'neutron-vpnaas',
+                         'repository': 'git://github.com/coreycb/neutron-vpnaas',
+                         'branch': branch},
+                        {'name': 'neutron',
+                         'repository': 'git://github.com/coreycb/neutron',
+                         'branch': branch},
+                    ],
+                    'directory': '/mnt/openstack-git',
+                    'http_proxy': amulet_http_proxy,
+                    'https_proxy': amulet_http_proxy,
+                }
+            else:
+                openstack_origin_git = {
+                    'repositories': [
+                        {'name': 'requirements',
+                         'repository': 'git://github.com/openstack/requirements',
+                         'branch': branch},
+                        {'name': 'neutron',
+                         'repository': 'git://github.com/coreycb/neutron',
+                         'branch': branch},
+                    ],
+                    'directory': '/mnt/openstack-git',
+                    'http_proxy': amulet_http_proxy,
+                    'https_proxy': amulet_http_proxy,
+                }
             neutron_ovs_config['openstack-origin-git'] = yaml.dump(openstack_origin_git)
         configs = {'neutron-openvswitch': neutron_ovs_config}
         super(NeutronOVSBasicDeployment, self)._configure_services(configs)
