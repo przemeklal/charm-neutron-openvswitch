@@ -103,7 +103,6 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
                 if self._get_openstack_release() == self.trusty_icehouse:
                     reqs_repo = 'git://github.com/coreycb/requirements'
                     neutron_repo = 'git://github.com/coreycb/neutron'
-                    neutron_branch = release + '-eol'
 
                 openstack_origin_git = {
                     'repositories': [
