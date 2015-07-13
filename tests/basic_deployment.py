@@ -95,10 +95,9 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
             else:
                 if self._get_openstack_release() == self.trusty_icehouse:
                     reqs_repo = 'git://github.com/coreycb/requirements'
-                    neutron_repo = 'git://github.com/coreycb/neutron'
                 else:   
                     reqs_repo = 'git://github.com/openstack/requirements'
-                    neutron_repo = 'git://github.com/openstack/neutron'
+                neutron_repo = 'git://github.com/openstack/neutron'
                 openstack_origin_git = {
                     'repositories': [
                         {'name': 'requirements',
