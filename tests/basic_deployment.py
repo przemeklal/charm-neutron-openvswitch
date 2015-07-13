@@ -69,28 +69,26 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
         if self.git:
             amulet_http_proxy = os.environ.get('AMULET_HTTP_PROXY')
 
-            release = self._get_openstack_release_string()
-            reqs_branch = 'stable/' + release
-            neutron_branch = 'stable/' + release
+            branch = 'stable/' + self._get_openstack_release_string()
 
             if self._get_openstack_release() >= self.trusty_kilo:
                 openstack_origin_git = {
                     'repositories': [
                         {'name': 'requirements',
                          'repository': 'git://github.com/openstack/requirements',
-                         'branch': reqs_branch},
+                         'branch': branch},
                         {'name': 'neutron-fwaas',
                          'repository': 'git://github.com/openstack/neutron-fwaas',
-                         'branch': neutron_branch},
+                         'branch': branch},
                         {'name': 'neutron-lbaas',
                          'repository': 'git://github.com/openstack/neutron-lbaas',
-                         'branch': neutron_branch},
+                         'branch': branch},
                         {'name': 'neutron-vpnaas',
                          'repository': 'git://github.com/openstack/neutron-vpnaas',
-                         'branch': neutron_branch},
+                         'branch': branch},
                         {'name': 'neutron',
                          'repository': 'git://github.com/openstack/neutron',
-                         'branch': neutron_branch},
+                         'branch': branch},
                     ],
                     'directory': '/mnt/openstack-git',
                     'http_proxy': amulet_http_proxy,
@@ -107,10 +105,10 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
                     'repositories': [
                         {'name': 'requirements',
                          'repository': reqs_repo,
-                         'branch': reqs_branch},
+                         'branch': branch},
                         {'name': 'neutron',
                          'repository': neutron_repo,
-                         'branch': neutron_branch},
+                         'branch': branch},
                     ],
                     'directory': '/mnt/openstack-git',
                     'http_proxy': amulet_http_proxy,
