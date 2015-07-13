@@ -97,12 +97,13 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
                     'https_proxy': amulet_http_proxy,
                 }
             else:
-                neutron_branch = 'stable/' + release
                 reqs_repo = 'git://github.com/openstack/requirements'
                 neutron_repo = 'git://github.com/openstack/neutron'
+                neutron_branch = 'stable/' + release
                 if self._get_openstack_release() == self.trusty_icehouse:
-                    neutron_branch = release + '-eol'
                     reqs_repo = 'git://github.com/coreycb/requirements'
+                    neutron_repo = 'git://github.com/coreycb/neutron'
+                    neutron_branch = release + '-eol'
 
                 openstack_origin_git = {
                     'repositories': [
