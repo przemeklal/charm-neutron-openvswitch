@@ -45,6 +45,7 @@ from charmhelpers.core.templating import render
 
 BASE_GIT_PACKAGES = [
     'libffi-dev',
+    'libssl-dev',
     'libxml2-dev',
     'libxslt1-dev',
     'libyaml-dev',
