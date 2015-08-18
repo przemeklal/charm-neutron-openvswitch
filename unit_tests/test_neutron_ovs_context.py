@@ -45,6 +45,8 @@ class OVSPluginContextTest(CharmTestCase):
             {'br-data': 'em1'}
         )
 
+    @patch('charmhelpers.contrib.openstack.context.is_phy_iface',
+           lambda port: True)
     @patch('charmhelpers.contrib.openstack.context.config')
     @patch('charmhelpers.contrib.openstack.context.get_nic_hwaddr')
     @patch('charmhelpers.contrib.openstack.context.list_nics')
