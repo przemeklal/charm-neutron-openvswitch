@@ -45,6 +45,12 @@ options:
       their corresponding bridge. The bridges will allow usage of flat or
       VLAN network types with Neutron and should match this defined in
       bridge-mappings.
+      .
+      Ports provided can be the name or MAC address of the interface to be
+      added to the bridge. If MAC addresses are used, you may provide multiple
+      bridge:mac for the same bridge so as to be able to configure multiple
+      units. In this case the charm will run through the provided MAC addresses
+      for each bridge until it finds one it can resolve to an interface name.
   disable-security-groups:
     type: boolean
     default: false

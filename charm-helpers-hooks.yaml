@@ -1,4 +1,4 @@
-branch: lp:charm-helpers
+branch: lp:~hopem/charm-helpers/allow-list-nics-return-all 
 destination: hooks/charmhelpers
 include:
     - core
