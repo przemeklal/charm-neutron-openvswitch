@@ -39,6 +39,7 @@ from neutron_ovs_utils import (
     register_configs,
     restart_map,
     use_dvr,
+    enable_metadata,
 )
 
 hooks = Hooks()
@@ -71,6 +72,8 @@ def config_changed():
     CONFIGS.write_all()
     for rid in relation_ids('zeromq-configuration'):
         zeromq_configuration_relation_joined(rid)
+    for rid in relation_ids('neutron-plugin'):
+        neutron_plugin_joined(relation_id=rid)
 
 
 @hooks.hook('neutron-plugin-api-relation-changed')
@@ -90,10 +93,14 @@ def neutron_plugin_api_changed():
 
 @hooks.hook('neutron-plugin-relation-joined')
 def neutron_plugin_joined(relation_id=None):
-    secret = get_shared_secret() if use_dvr() else None
+    print "Enable metadata: {}".format(enable_metadata())
+    if config('enable-local-dhcp-and-metadata'):
+        apt_install(['neutron-metadata-agent', 'neutron-dhcp-agent'] fatal=True)
+    secret = get_shared_secret() if enable_metadata() else None
     rel_data = {
         'metadata-shared-secret': secret,
     }
+    print rel_data
     relation_set(relation_id=relation_id, **rel_data)
 
 
