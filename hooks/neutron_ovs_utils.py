@@ -43,6 +43,12 @@ from charmhelpers.core.host import (
 
 from charmhelpers.core.templating import render
 
+from charmhelpers.fetch import (
+    apt_install,
+    apt_update,
+    filter_installed_packages,
+)
+
 BASE_GIT_PACKAGES = [
     'libffi-dev',
     'libssl-dev',
@@ -102,6 +108,8 @@ METADATA_RESOURCE_MAP = OrderedDict([
         'contexts': [neutron_ovs_context.SharedSecretContext(),
                      neutron_ovs_context.APIIdentityServiceContext()],
     }),
+])
+DHCP_RESOURCE_MAP = OrderedDict([
     (NEUTRON_DHCP_AGENT_CONF, {
         'services': ['neutron-dhcp-agent'],
         'contexts': [],
@@ -127,16 +135,17 @@ EXT_BRIDGE = "br-ex"
 DATA_BRIDGE = 'br-data'
 
 
-def determine_dvr_packages():
-    if not git_install_requested():
-        if use_dvr():
-            return DVR_PACKAGES
-    return []
+def install_packages():
+    apt_update()
+    apt_install(filter_installed_packages(determine_packages()))
 
 
 def determine_packages():
     pkgs = neutron_plugin_attribute('ovs', 'packages', 'neutron')
-    pkgs.extend(determine_dvr_packages())
+    if use_dvr():
+        pkgs.extend(DVR_PACKAGES)
+    if enable_local_dhcp():
+        pkgs.extend(['neutron-metadata-agent', 'neutron-dhcp-agent'])
 
     if git_install_requested():
         pkgs.extend(BASE_GIT_PACKAGES)
@@ -168,9 +177,10 @@ def resource_map():
         resource_map.update(METADATA_RESOURCE_MAP)
         dvr_services = ['neutron-metadata-agent', 'neutron-l3-agent']
         resource_map[NEUTRON_CONF]['services'] += dvr_services
-    if enable_metadata():
+    if enable_local_dhcp():
         resource_map.update(METADATA_RESOURCE_MAP)
-        metadata_services = ['neutron-metadata-agent']
+        resource_map.update(DHCP_RESOURCE_MAP)
+        metadata_services = ['neutron-metadata-agent', 'neutron-dhcp-agent']
         resource_map[NEUTRON_CONF]['services'] += metadata_services
     return resource_map
 
@@ -230,8 +240,12 @@ def use_dvr():
     return context.NeutronAPIContext()()['enable_dvr']
 
 
-def enable_metadata():
+def enable_nova_metadata():
     return use_dvr() or config('enable-local-dhcp-and-metadata')
+
+
+def enable_local_dhcp():
+    return config('enable-local-dhcp-and-metadata')
 
 
 def git_install(projects_yaml):
