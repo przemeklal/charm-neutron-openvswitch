@@ -231,7 +231,7 @@ def use_dvr():
 
 
 def enable_metadata():
-    return use_dvr() or config('enable-metadata')
+    return use_dvr() or config('enable-local-dhcp-and-metadata')
 
 
 def git_install(projects_yaml):

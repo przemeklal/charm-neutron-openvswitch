@@ -94,9 +94,8 @@ def neutron_plugin_api_changed():
 @hooks.hook('neutron-plugin-relation-joined')
 def neutron_plugin_joined(relation_id=None):
     print "Enable metadata: {}".format(enable_metadata())
-    if config('enable-metadata'):
-        apt_install('neutron-metadata-agent', fatal=True)
-        apt_install('neutron-dhcp-agent', fatal=True)
+    if config('enable-local-dhcp-and-metadata'):
+        apt_install(['neutron-metadata-agent', 'neutron-dhcp-agent'] fatal=True)
     secret = get_shared_secret() if enable_metadata() else None
     rel_data = {
         'metadata-shared-secret': secret,
