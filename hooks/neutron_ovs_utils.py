@@ -141,7 +141,10 @@ def install_packages():
 
 
 def determine_packages():
-    pkgs = neutron_plugin_attribute('ovs', 'packages', 'neutron')
+    pkgs = []
+    plugin_pkgs = neutron_plugin_attribute('ovs', 'packages', 'neutron')
+    for plugin_pkg in plugin_pkgs:
+        pkgs.extend(plugin_pkg)
     if use_dvr():
         pkgs.extend(DVR_PACKAGES)
     if enable_local_dhcp():
