@@ -98,6 +98,6 @@ options:
       traffic to the external public network. Valid values are either MAC
       addresses (in which case only MAC addresses for interfaces without an IP
       address already assigned will be used), or interfaces (eth0)
-  enable-metadata:
+  enable-local-dhcp-and-metadata:
     type: boolean
     default: false
