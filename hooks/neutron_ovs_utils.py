@@ -66,6 +66,7 @@ GIT_PACKAGE_BLACKLIST = [
 ]
 
 NOVA_CONF_DIR = "/etc/nova"
+NEUTRON_DHCP_AGENT_CONF = "/etc/neutron/dhcp_agent.ini"
 NEUTRON_CONF_DIR = "/etc/neutron"
 NEUTRON_CONF = '%s/neutron.conf' % NEUTRON_CONF_DIR
 NEUTRON_DEFAULT = '/etc/default/neutron-server'
@@ -95,6 +96,17 @@ BASE_RESOURCE_MAP = OrderedDict([
         'contexts': [context.PhyNICMTUContext()],
     }),
 ])
+METADATA_RESOURCE_MAP = OrderedDict([
+    (NEUTRON_METADATA_AGENT_CONF, {
+        'services': ['neutron-metadata-agent'],
+        'contexts': [neutron_ovs_context.SharedSecretContext(),
+                     neutron_ovs_context.APIIdentityServiceContext()],
+    }),
+    (NEUTRON_DHCP_AGENT_CONF, {
+        'services': ['neutron-dhcp-agent'],
+        'contexts': [],
+    }),
+])
 DVR_RESOURCE_MAP = OrderedDict([
     (NEUTRON_L3_AGENT_CONF, {
         'services': ['neutron-l3-agent'],
@@ -107,11 +119,6 @@ DVR_RESOURCE_MAP = OrderedDict([
     (EXT_PORT_CONF, {
         'services': ['neutron-l3-agent'],
         'contexts': [context.ExternalPortContext()],
-    }),
-    (NEUTRON_METADATA_AGENT_CONF, {
-        'services': ['neutron-metadata-agent'],
-        'contexts': [neutron_ovs_context.DVRSharedSecretContext(),
-                     neutron_ovs_context.APIIdentityServiceContext()],
     }),
 ])
 TEMPLATES = 'templates/'
@@ -158,8 +165,13 @@ def resource_map():
     resource_map = deepcopy(BASE_RESOURCE_MAP)
     if use_dvr():
         resource_map.update(DVR_RESOURCE_MAP)
+        resource_map.update(METADATA_RESOURCE_MAP)
         dvr_services = ['neutron-metadata-agent', 'neutron-l3-agent']
         resource_map[NEUTRON_CONF]['services'] += dvr_services
+    if enable_metadata():
+        resource_map.update(METADATA_RESOURCE_MAP)
+        metadata_services = ['neutron-metadata-agent']
+        resource_map[NEUTRON_CONF]['services'] += metadata_services
     return resource_map
 
 
@@ -209,13 +221,17 @@ def configure_ovs():
 
 
 def get_shared_secret():
-    ctxt = neutron_ovs_context.DVRSharedSecretContext()()
+    ctxt = neutron_ovs_context.SharedSecretContext()()
     if 'shared_secret' in ctxt:
         return ctxt['shared_secret']
 
 
 def use_dvr():
     return context.NeutronAPIContext()()['enable_dvr']
+
+
+def enable_metadata():
+    return use_dvr() or config('enable-local-dhcp-and-metadata')
 
 
 def git_install(projects_yaml):
