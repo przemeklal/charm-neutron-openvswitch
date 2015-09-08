@@ -21,7 +21,7 @@ from charmhelpers.core.host import (
 )
 
 from charmhelpers.fetch import (
-    apt_install, apt_update, apt_purge
+    apt_purge,
 )
 
 from charmhelpers.contrib.openstack.utils import (
@@ -31,15 +31,15 @@ from charmhelpers.contrib.openstack.utils import (
 from neutron_ovs_utils import (
     DVR_PACKAGES,
     configure_ovs,
-    determine_packages,
     git_install,
     get_topics,
-    determine_dvr_packages,
     get_shared_secret,
     register_configs,
     restart_map,
     use_dvr,
-    enable_metadata,
+    enable_nova_metadata,
+    enable_local_dhcp,
+    install_packages,
 )
 
 hooks = Hooks()
@@ -48,11 +48,7 @@ CONFIGS = register_configs()
 
 @hooks.hook()
 def install():
-    apt_update()
-    pkgs = determine_packages()
-    for pkg in pkgs:
-        apt_install(pkg, fatal=True)
-
+    install_packages()
     git_install(config('openstack-origin-git'))
 
 
@@ -60,10 +56,7 @@ def install():
 @hooks.hook('config-changed')
 @restart_on_change(restart_map())
 def config_changed():
-    if determine_dvr_packages():
-        apt_update()
-        apt_install(determine_dvr_packages(), fatal=True)
-
+    install_packages()
     if git_install_requested():
         if config_value_changed('openstack-origin-git'):
             git_install(config('openstack-origin-git'))
@@ -80,8 +73,7 @@ def config_changed():
 @restart_on_change(restart_map())
 def neutron_plugin_api_changed():
     if use_dvr():
-        apt_update()
-        apt_install(DVR_PACKAGES, fatal=True)
+        install_packages()
     else:
         apt_purge(DVR_PACKAGES, fatal=True)
     configure_ovs()
@@ -93,14 +85,12 @@ def neutron_plugin_api_changed():
 
 @hooks.hook('neutron-plugin-relation-joined')
 def neutron_plugin_joined(relation_id=None):
-    print "Enable metadata: {}".format(enable_metadata())
-    if config('enable-local-dhcp-and-metadata'):
-        apt_install(['neutron-metadata-agent', 'neutron-dhcp-agent'] fatal=True)
-    secret = get_shared_secret() if enable_metadata() else None
+    if enable_local_dhcp():
+        install_packages()
+    secret = get_shared_secret() if enable_nova_metadata() else None
     rel_data = {
         'metadata-shared-secret': secret,
     }
-    print rel_data
     relation_set(relation_id=relation_id, **rel_data)
 
 
