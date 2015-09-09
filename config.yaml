@@ -101,3 +101,6 @@ options:
   enable-local-dhcp-and-metadata:
     type: boolean
     default: false
+    description: |
+      Enable a local dhcp server which also serves metadata. Useful for
+      deployments which do not include a neutron-gateway.
