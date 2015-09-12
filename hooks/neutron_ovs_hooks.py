@@ -20,15 +20,12 @@ from charmhelpers.core.host import (
     restart_on_change
 )
 
-from charmhelpers.fetch import (
-    apt_purge,
-)
-
 from charmhelpers.contrib.openstack.utils import (
     os_requires_version,
 )
 
 from neutron_ovs_utils import (
+    DHCP_PACKAGES,
     DVR_PACKAGES,
     configure_ovs,
     git_install,
@@ -40,6 +37,7 @@ from neutron_ovs_utils import (
     enable_nova_metadata,
     enable_local_dhcp,
     install_packages,
+    purge_packages,
 )
 
 hooks = Hooks()
@@ -75,7 +73,7 @@ def neutron_plugin_api_changed():
     if use_dvr():
         install_packages()
     else:
-        apt_purge(DVR_PACKAGES, fatal=True)
+        purge_packages(DVR_PACKAGES)
     configure_ovs()
     CONFIGS.write_all()
     # If dvr setting has changed, need to pass that on
@@ -87,6 +85,8 @@ def neutron_plugin_api_changed():
 def neutron_plugin_joined(relation_id=None):
     if enable_local_dhcp():
         install_packages()
+    else:
+        purge_packages(DHCP_PACKAGES)
     secret = get_shared_secret() if enable_nova_metadata() else None
     rel_data = {
         'metadata-shared-secret': secret,

@@ -45,6 +45,7 @@ from charmhelpers.core.templating import render
 
 from charmhelpers.fetch import (
     apt_install,
+    apt_purge,
     apt_update,
     filter_installed_packages,
 )
@@ -82,6 +83,7 @@ ML2_CONF = '%s/plugins/ml2/ml2_conf.ini' % NEUTRON_CONF_DIR
 EXT_PORT_CONF = '/etc/init/ext-port.conf'
 NEUTRON_METADATA_AGENT_CONF = "/etc/neutron/metadata_agent.ini"
 DVR_PACKAGES = ['neutron-l3-agent']
+DHCP_PACKAGES = ['neutron-metadata-agent', 'neutron-dhcp-agent']
 PHY_NIC_MTU_CONF = '/etc/init/os-charm-phy-nic-mtu.conf'
 TEMPLATES = 'templates/'
 
@@ -140,6 +142,16 @@ def install_packages():
     apt_install(filter_installed_packages(determine_packages()))
 
 
+def purge_packages(pkg_list):
+    purge_pkgs = []
+    required_packages = determine_packages()
+    for pkg in pkg_list:
+        if pkg not in required_packages:
+            purge_pkgs.append(pkg)
+    if purge_pkgs:
+        apt_purge(purge_pkgs, fatal=True)
+
+
 def determine_packages():
     pkgs = []
     plugin_pkgs = neutron_plugin_attribute('ovs', 'packages', 'neutron')
@@ -148,7 +160,7 @@ def determine_packages():
     if use_dvr():
         pkgs.extend(DVR_PACKAGES)
     if enable_local_dhcp():
-        pkgs.extend(['neutron-metadata-agent', 'neutron-dhcp-agent'])
+        pkgs.extend(DHCP_PACKAGES)
 
     if git_install_requested():
         pkgs.extend(BASE_GIT_PACKAGES)
