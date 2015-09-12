@@ -19,7 +19,6 @@ utils.register_configs = _reg
 utils.restart_map = _map
 
 TO_PATCH = [
-    'apt_purge',
     'config',
     'CONFIGS',
     'get_shared_secret',
@@ -30,6 +29,7 @@ TO_PATCH = [
     'configure_ovs',
     'use_dvr',
     'install_packages',
+    'purge_packages',
     'enable_nova_metadata',
     'enable_local_dhcp',
 ]
@@ -137,7 +137,7 @@ class NeutronOVSHooksTests(CharmTestCase):
         self.configure_ovs.assert_called_with()
         self.assertTrue(self.CONFIGS.write_all.called)
         _plugin_joined.assert_called_with(relation_id='rid')
-        self.apt_purge.assert_called_with(['neutron-l3-agent'], fatal=True)
+        self.purge_packages.assert_called_with(['neutron-l3-agent'])
 
     @patch.object(hooks, 'git_install_requested')
     def test_neutron_plugin_joined(self, git_requested):
