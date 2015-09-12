@@ -256,7 +256,7 @@ def use_dvr():
 
 
 def enable_nova_metadata():
-    return use_dvr() or config('enable-local-dhcp-and-metadata')
+    return use_dvr() or enable_local_dhcp()
 
 
 def enable_local_dhcp():
