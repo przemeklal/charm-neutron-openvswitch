@@ -103,4 +103,5 @@ options:
     default: false
     description: |
       Enable a local dhcp server which also serves metadata. Useful for
-      deployments which do not include a neutron-gateway.
+      deployments which do not include a neutron-gateway. This is a good option
+      for VLAN provider network management.
