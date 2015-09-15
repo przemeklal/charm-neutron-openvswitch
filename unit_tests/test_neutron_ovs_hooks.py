@@ -1,4 +1,4 @@
-from mock import MagicMock, patch, call
+from mock import MagicMock, patch
 import yaml
 
 from test_utils import CharmTestCase
@@ -19,13 +19,8 @@ utils.register_configs = _reg
 utils.restart_map = _map
 
 TO_PATCH = [
-    'apt_update',
-    'apt_install',
-    'apt_purge',
     'config',
     'CONFIGS',
-    'determine_packages',
-    'determine_dvr_packages',
     'get_shared_secret',
     'git_install',
     'log',
@@ -33,6 +28,10 @@ TO_PATCH = [
     'relation_set',
     'configure_ovs',
     'use_dvr',
+    'install_packages',
+    'purge_packages',
+    'enable_nova_metadata',
+    'enable_local_dhcp',
 ]
 NEUTRON_CONF_DIR = "/etc/neutron"
 
@@ -54,19 +53,12 @@ class NeutronOVSHooksTests(CharmTestCase):
     @patch.object(hooks, 'git_install_requested')
     def test_install_hook(self, git_requested):
         git_requested.return_value = False
-        _pkgs = ['foo', 'bar']
-        self.determine_packages.return_value = [_pkgs]
         self._call_hook('install')
-        self.apt_update.assert_called_with()
-        self.apt_install.assert_has_calls([
-            call(_pkgs, fatal=True),
-        ])
+        self.install_packages.assert_called_with()
 
     @patch.object(hooks, 'git_install_requested')
     def test_install_hook_git(self, git_requested):
         git_requested.return_value = True
-        _pkgs = ['foo', 'bar']
-        self.determine_packages.return_value = _pkgs
         openstack_origin_git = {
             'repositories': [
                 {'name': 'requirements',
@@ -81,8 +73,7 @@ class NeutronOVSHooksTests(CharmTestCase):
         projects_yaml = yaml.dump(openstack_origin_git)
         self.test_config.set('openstack-origin-git', projects_yaml)
         self._call_hook('install')
-        self.apt_update.assert_called_with()
-        self.assertTrue(self.determine_packages)
+        self.install_packages.assert_called_with()
         self.git_install.assert_called_with(projects_yaml)
 
     @patch.object(hooks, 'git_install_requested')
@@ -124,13 +115,9 @@ class NeutronOVSHooksTests(CharmTestCase):
     @patch.object(hooks, 'git_install_requested')
     def test_config_changed_dvr(self, git_requested):
         git_requested.return_value = False
-        self.determine_dvr_packages.return_value = ['dvr']
         self._call_hook('config-changed')
-        self.apt_update.assert_called_with()
+        self.install_packages.assert_called_with()
         self.assertTrue(self.CONFIGS.write_all.called)
-        self.apt_install.assert_has_calls([
-            call(['dvr'], fatal=True),
-        ])
         self.configure_ovs.assert_called_with()
 
     @patch.object(hooks, 'neutron_plugin_joined')
@@ -140,9 +127,22 @@ class NeutronOVSHooksTests(CharmTestCase):
         self.configure_ovs.assert_called_with()
         self.assertTrue(self.CONFIGS.write_all.called)
         _plugin_joined.assert_called_with(relation_id='rid')
+        self.install_packages.assert_called_with()
+
+    @patch.object(hooks, 'neutron_plugin_joined')
+    def test_neutron_plugin_api_nodvr(self, _plugin_joined):
+        self.use_dvr.return_value = False
+        self.relation_ids.return_value = ['rid']
+        self._call_hook('neutron-plugin-api-relation-changed')
+        self.configure_ovs.assert_called_with()
+        self.assertTrue(self.CONFIGS.write_all.called)
+        _plugin_joined.assert_called_with(relation_id='rid')
+        self.purge_packages.assert_called_with(['neutron-l3-agent'])
 
     @patch.object(hooks, 'git_install_requested')
     def test_neutron_plugin_joined(self, git_requested):
+        self.enable_nova_metadata.return_value = True
+        self.enable_local_dhcp.return_value = True
         git_requested.return_value = False
         self.get_shared_secret.return_value = 'secret'
         self._call_hook('neutron-plugin-relation-joined')

@@ -98,4 +98,11 @@ options:
       traffic to the external public network. Valid values are either MAC
       addresses (in which case only MAC addresses for interfaces without an IP
       address already assigned will be used), or interfaces (eth0)
-
+  enable-local-dhcp-and-metadata:
+    type: boolean
+    default: false
+    description: |
+      Enable local Neutron DHCP and Metadata Agents. This is useful for deployments
+      which do not include a neutron-gateway (do not require l3, lbaas or vpnaas
+      services) and should only be used in-conjunction with flat or VLAN provider
+      networks configurations.

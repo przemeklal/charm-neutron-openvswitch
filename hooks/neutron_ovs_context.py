@@ -108,10 +108,11 @@ def get_shared_secret():
     return secret
 
 
-class DVRSharedSecretContext(OSContextGenerator):
+class SharedSecretContext(OSContextGenerator):
 
     def __call__(self):
-        if NeutronAPIContext()()['enable_dvr']:
+        if NeutronAPIContext()()['enable_dvr'] or \
+                config('enable-local-dhcp-and-metadata'):
             ctxt = {
                 'shared_secret': get_shared_secret(),
                 'local_ip': resolve_address(),

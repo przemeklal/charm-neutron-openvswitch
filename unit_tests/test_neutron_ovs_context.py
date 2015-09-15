@@ -250,11 +250,11 @@ class L3AgentContextTest(CharmTestCase):
         self.assertEquals(context.L3AgentContext()(), {'agent_mode': 'legacy'})
 
 
-class DVRSharedSecretContext(CharmTestCase):
+class SharedSecretContext(CharmTestCase):
 
     def setUp(self):
-        super(DVRSharedSecretContext, self).setUp(context,
-                                                  TO_PATCH)
+        super(SharedSecretContext, self).setUp(context,
+                                               TO_PATCH)
         self.config.side_effect = self.test_config.get
 
     @patch('os.path')
@@ -286,7 +286,7 @@ class DVRSharedSecretContext(CharmTestCase):
         _NeutronAPIContext.side_effect = fake_context({'enable_dvr': True})
         _shared_secret.return_value = 'secret_thing'
         self.resolve_address.return_value = '10.0.0.10'
-        self.assertEquals(context.DVRSharedSecretContext()(),
+        self.assertEquals(context.SharedSecretContext()(),
                           {'shared_secret': 'secret_thing',
                            'local_ip': '10.0.0.10'})
 
@@ -297,4 +297,4 @@ class DVRSharedSecretContext(CharmTestCase):
         _NeutronAPIContext.side_effect = fake_context({'enable_dvr': False})
         _shared_secret.return_value = 'secret_thing'
         self.resolve_address.return_value = '10.0.0.10'
-        self.assertEquals(context.DVRSharedSecretContext()(), {})
+        self.assertEquals(context.SharedSecretContext()(), {})

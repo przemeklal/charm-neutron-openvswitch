@@ -18,8 +18,11 @@ import charmhelpers.core.hookenv as hookenv
 TO_PATCH = [
     'add_bridge',
     'add_bridge_port',
+    'apt_install',
+    'apt_update',
     'config',
     'os_release',
+    'filter_installed_packages',
     'neutron_plugin_attribute',
     'full_restart',
     'service_restart',
@@ -75,19 +78,57 @@ class TestNeutronOVSUtils(CharmTestCase):
         # Reset cached cache
         hookenv.cache = {}
 
+    @patch.object(nutils, 'determine_packages')
+    def test_install_packages(self, _determine_packages):
+        _determine_packages.return_value = 'randompkg'
+        nutils.install_packages()
+        self.apt_update.assert_called_with()
+        self.apt_install.assert_called_with(self.filter_installed_packages())
+
     @patch.object(nutils, 'use_dvr')
     @patch.object(nutils, 'git_install_requested')
     @patch.object(charmhelpers.contrib.openstack.neutron, 'os_release')
     @patch.object(charmhelpers.contrib.openstack.neutron, 'headers_package')
     def test_determine_packages(self, _head_pkgs, _os_rel, _git_requested,
                                 _use_dvr):
+        self.test_config.set('enable-local-dhcp-and-metadata', False)
         _git_requested.return_value = False
         _use_dvr.return_value = False
         _os_rel.return_value = 'trusty'
         _head_pkgs.return_value = head_pkg
         pkg_list = nutils.determine_packages()
-        expect = [['neutron-plugin-openvswitch-agent'], [head_pkg]]
+        expect = ['neutron-plugin-openvswitch-agent', head_pkg]
         self.assertItemsEqual(pkg_list, expect)
+
+    @patch.object(nutils, 'use_dvr')
+    @patch.object(nutils, 'git_install_requested')
+    @patch.object(charmhelpers.contrib.openstack.neutron, 'os_release')
+    @patch.object(charmhelpers.contrib.openstack.neutron, 'headers_package')
+    def test_determine_packages_metadata(self, _head_pkgs, _os_rel,
+                                         _git_requested, _use_dvr):
+        self.test_config.set('enable-local-dhcp-and-metadata', True)
+        _git_requested.return_value = False
+        _use_dvr.return_value = False
+        _os_rel.return_value = 'trusty'
+        _head_pkgs.return_value = head_pkg
+        pkg_list = nutils.determine_packages()
+        expect = ['neutron-plugin-openvswitch-agent', head_pkg,
+                  'neutron-metadata-agent', 'neutron-dhcp-agent']
+        self.assertItemsEqual(pkg_list, expect)
+
+    @patch.object(nutils, 'use_dvr')
+    @patch.object(nutils, 'git_install_requested')
+    @patch.object(charmhelpers.contrib.openstack.neutron, 'os_release')
+    @patch.object(charmhelpers.contrib.openstack.neutron, 'headers_package')
+    def test_determine_packages_git(self, _head_pkgs, _os_rel,
+                                    _git_requested, _use_dvr):
+        self.test_config.set('enable-local-dhcp-and-metadata', False)
+        _git_requested.return_value = True
+        _use_dvr.return_value = True
+        _os_rel.return_value = 'trusty'
+        _head_pkgs.return_value = head_pkg
+        pkg_list = nutils.determine_packages()
+        self.assertFalse('neutron-l3-agent' in pkg_list)
 
     @patch.object(nutils, 'use_dvr')
     def test_register_configs(self, _use_dvr):
@@ -125,6 +166,19 @@ class TestNeutronOVSUtils(CharmTestCase):
         svcs = ['neutron-plugin-openvswitch-agent', 'neutron-metadata-agent',
                 'neutron-l3-agent']
         confs = [nutils.NEUTRON_CONF]
+        [self.assertIn(q_conf, _map.keys()) for q_conf in confs]
+        self.assertEqual(_map[nutils.NEUTRON_CONF]['services'], svcs)
+
+    @patch.object(nutils, 'enable_local_dhcp')
+    @patch.object(nutils, 'use_dvr')
+    def test_resource_map_dhcp(self, _use_dvr, _enable_local_dhcp):
+        _enable_local_dhcp.return_value = True
+        _use_dvr.return_value = False
+        _map = nutils.resource_map()
+        svcs = ['neutron-plugin-openvswitch-agent', 'neutron-metadata-agent',
+                'neutron-dhcp-agent']
+        confs = [nutils.NEUTRON_CONF, nutils.NEUTRON_METADATA_AGENT_CONF,
+                 nutils.NEUTRON_DHCP_AGENT_CONF]
         [self.assertIn(q_conf, _map.keys()) for q_conf in confs]
         self.assertEqual(_map[nutils.NEUTRON_CONF]['services'], svcs)
 
@@ -213,7 +267,7 @@ class TestNeutronOVSUtils(CharmTestCase):
         ])
         self.add_bridge_port.assert_called_with('br-ex', 'eth0')
 
-    @patch.object(neutron_ovs_context, 'DVRSharedSecretContext')
+    @patch.object(neutron_ovs_context, 'SharedSecretContext')
     def test_get_shared_secret(self, _dvr_secret_ctxt):
         _dvr_secret_ctxt.return_value = \
             DummyContext(return_value={'shared_secret': 'supersecret'})
