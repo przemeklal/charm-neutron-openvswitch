@@ -26,6 +26,8 @@ from charmhelpers.core.hookenv import (
 )
 from charmhelpers.contrib.openstack.neutron import (
     parse_bridge_mappings,
+    determine_dkms_package,
+    headers_package,
 )
 from charmhelpers.contrib.openstack.context import (
     ExternalPortContext,
@@ -139,6 +141,12 @@ DATA_BRIDGE = 'br-data'
 
 def install_packages():
     apt_update()
+    # NOTE(jamespage): ensure early install of dkms related
+    #                  dependencies for kernels which need
+    #                  openvswitch via dkms (12.04).
+    dkms_packages = determine_dkms_package()
+    if dkms_packages:
+        apt_install([headers_package()] + dkms_packages, fatal=True)
     apt_install(filter_installed_packages(determine_packages()))
 
 
