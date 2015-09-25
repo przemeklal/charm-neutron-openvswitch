@@ -28,6 +28,8 @@ TO_PATCH = [
     'service_restart',
     'service_running',
     'ExternalPortContext',
+    'determine_dkms_package',
+    'headers_package',
 ]
 
 head_pkg = 'linux-headers-3.15.0-5-generic'
@@ -84,6 +86,18 @@ class TestNeutronOVSUtils(CharmTestCase):
         nutils.install_packages()
         self.apt_update.assert_called_with()
         self.apt_install.assert_called_with(self.filter_installed_packages())
+
+    @patch.object(nutils, 'determine_packages')
+    def test_install_packages_dkms_needed(self, _determine_packages):
+        _determine_packages.return_value = 'randompkg'
+        self.determine_dkms_package.return_value = ['openvswitch-datapath-dkms']
+        self.headers_package.return_value = 'linux-headers-foobar'
+        nutils.install_packages()
+        self.apt_update.assert_called_with()
+        self.apt_install.assert_has_calls([
+            call(['linux-headers-foobar', 'openvswitch-datapath-dkms'], fatal=True),
+            call(self.filter_installed_packages()),
+        ])
 
     @patch.object(nutils, 'use_dvr')
     @patch.object(nutils, 'git_install_requested')
