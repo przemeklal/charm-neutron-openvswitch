@@ -243,10 +243,12 @@ def configure_ovs():
     bridgemaps = parse_bridge_mappings(config('bridge-mappings'))
     for provider, br in bridgemaps.iteritems():
         add_bridge(br)
-        if not portmaps or br not in portmaps:
+        if not portmaps:
             continue
 
-        add_bridge_port(br, portmaps[br], promisc=True)
+        for port, _br in portmaps.iteritems():
+            if _br == br:
+                add_bridge_port(br, port, promisc=True)
 
     # Ensure this runs so that mtu is applied to data-port interfaces if
     # provided.
