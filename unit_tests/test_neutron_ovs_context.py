@@ -42,7 +42,7 @@ class OVSPluginContextTest(CharmTestCase):
         mock_resolve_ports.side_effect = lambda ports: ports
         self.assertEquals(
             charmhelpers.contrib.openstack.context.DataPortContext()(),
-            {'br-data': 'em1'}
+            {'em1': 'br-data'}
         )
 
     @patch('charmhelpers.contrib.openstack.context.is_phy_iface',
@@ -64,7 +64,7 @@ class OVSPluginContextTest(CharmTestCase):
         get_nic_hwaddr.side_effect = lambda nic: machine_machs[nic]
         self.assertEquals(
             charmhelpers.contrib.openstack.context.DataPortContext()(),
-            {'br-d2': 'em1'}
+            {'em1': 'br-d2'}
         )
 
     @patch.object(charmhelpers.contrib.openstack.context, 'config',
