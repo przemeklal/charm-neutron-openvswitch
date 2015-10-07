@@ -30,6 +30,7 @@ TO_PATCH = [
     'ExternalPortContext',
     'determine_dkms_package',
     'headers_package',
+    'status_set',
 ]
 
 head_pkg = 'linux-headers-3.15.0-5-generic'
