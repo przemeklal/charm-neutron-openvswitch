@@ -22,7 +22,7 @@ from charmhelpers.core.host import (
 
 from charmhelpers.contrib.openstack.utils import (
     os_requires_version,
-    os_workload_status,
+    set_os_workload_status,
 )
 
 from neutron_ovs_utils import (
@@ -55,8 +55,6 @@ def install():
 
 @hooks.hook('neutron-plugin-relation-changed')
 @hooks.hook('config-changed')
-@os_workload_status(CONFIGS, REQUIRED_INTERFACES,
-                    charm_func=check_optional_relations)
 @restart_on_change(restart_map())
 def config_changed():
     install_packages()
@@ -73,8 +71,6 @@ def config_changed():
 
 
 @hooks.hook('neutron-plugin-api-relation-changed')
-@os_workload_status(CONFIGS, REQUIRED_INTERFACES,
-                    charm_func=check_optional_relations)
 @restart_on_change(restart_map())
 def neutron_plugin_api_changed():
     if use_dvr():
@@ -89,8 +85,6 @@ def neutron_plugin_api_changed():
 
 
 @hooks.hook('neutron-plugin-relation-joined')
-@os_workload_status(CONFIGS, REQUIRED_INTERFACES,
-                    charm_func=check_optional_relations)
 def neutron_plugin_joined(relation_id=None):
     if enable_local_dhcp():
         install_packages()
@@ -104,8 +98,6 @@ def neutron_plugin_joined(relation_id=None):
 
 
 @hooks.hook('amqp-relation-joined')
-@os_workload_status(CONFIGS, REQUIRED_INTERFACES,
-                    charm_func=check_optional_relations)
 def amqp_joined(relation_id=None):
     relation_set(relation_id=relation_id,
                  username=config('rabbit-user'),
@@ -114,8 +106,6 @@ def amqp_joined(relation_id=None):
 
 @hooks.hook('amqp-relation-changed')
 @hooks.hook('amqp-relation-departed')
-@os_workload_status(CONFIGS, REQUIRED_INTERFACES,
-                    charm_func=check_optional_relations)
 @restart_on_change(restart_map())
 def amqp_changed():
     if 'amqp' not in CONFIGS.complete_contexts():
@@ -125,8 +115,6 @@ def amqp_changed():
 
 
 @hooks.hook('zeromq-configuration-relation-joined')
-@os_workload_status(CONFIGS, REQUIRED_INTERFACES,
-                    charm_func=check_optional_relations)
 @os_requires_version('kilo', 'neutron-common')
 def zeromq_configuration_relation_joined(relid=None):
     relation_set(relation_id=relid,
@@ -135,8 +123,6 @@ def zeromq_configuration_relation_joined(relid=None):
 
 
 @hooks.hook('zeromq-configuration-relation-changed')
-@os_workload_status(CONFIGS, REQUIRED_INTERFACES,
-                    charm_func=check_optional_relations)
 @restart_on_change(restart_map(), stopstart=True)
 def zeromq_configuration_relation_changed():
     CONFIGS.write_all()
@@ -147,6 +133,8 @@ def main():
         hooks.execute(sys.argv)
     except UnregisteredHookError as e:
         log('Unknown hook {} - skipping.'.format(e))
+    set_os_workload_status(CONFIGS, REQUIRED_INTERFACES,
+                           charm_func=check_optional_relations)
 
 
 if __name__ == '__main__':
