@@ -22,6 +22,7 @@ from charmhelpers.core.host import (
 
 from charmhelpers.contrib.openstack.utils import (
     os_requires_version,
+    set_os_workload_status,
 )
 
 from neutron_ovs_utils import (
@@ -38,6 +39,8 @@ from neutron_ovs_utils import (
     enable_local_dhcp,
     install_packages,
     purge_packages,
+    REQUIRED_INTERFACES,
+    check_optional_relations,
 )
 
 hooks = Hooks()
@@ -130,6 +133,8 @@ def main():
         hooks.execute(sys.argv)
     except UnregisteredHookError as e:
         log('Unknown hook {} - skipping.'.format(e))
+    set_os_workload_status(CONFIGS, REQUIRED_INTERFACES,
+                           charm_func=check_optional_relations)
 
 
 if __name__ == '__main__':

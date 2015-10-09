@@ -10,6 +10,7 @@ from charmhelpers.contrib.openstack.utils import (
     git_clone_and_install,
     git_src_dir,
     git_pip_venv_dir,
+    set_os_workload_status,
 )
 from collections import OrderedDict
 from charmhelpers.contrib.openstack.utils import (
@@ -23,6 +24,8 @@ from charmhelpers.contrib.network.ovs import (
 )
 from charmhelpers.core.hookenv import (
     config,
+    status_set,
+    status_get,
 )
 from charmhelpers.contrib.openstack.neutron import (
     parse_bridge_mappings,
@@ -51,6 +54,15 @@ from charmhelpers.fetch import (
     apt_update,
     filter_installed_packages,
 )
+
+# The interface is said to be satisfied if anyone of the interfaces in the
+# list has a complete context.
+# LY: Note the neutron-plugin is always present since that is the relation
+#     with the principle and no data currently flows down from the principle
+#     so there is no point in having it in REQUIRED_INTERFACES
+REQUIRED_INTERFACES = {
+    'messaging': ['amqp', 'zeromq-configuration'],
+}
 
 BASE_GIT_PACKAGES = [
     'libffi-dev',
@@ -140,6 +152,7 @@ DATA_BRIDGE = 'br-data'
 
 
 def install_packages():
+    status_set('maintenance', 'Installing apt packages')
     apt_update()
     # NOTE(jamespage): ensure early install of dkms related
     #                  dependencies for kernels which need
@@ -151,6 +164,7 @@ def install_packages():
 
 
 def purge_packages(pkg_list):
+    status_set('maintenance', 'Purging unused apt packages')
     purge_pkgs = []
     required_packages = determine_packages()
     for pkg in pkg_list:
@@ -229,6 +243,7 @@ def get_topics():
 
 
 def configure_ovs():
+    status_set('maintenance', 'Configuring ovs')
     if not service_running('openvswitch-switch'):
         full_restart()
     add_bridge(INT_BRIDGE)
@@ -275,6 +290,7 @@ def enable_local_dhcp():
 
 def git_install(projects_yaml):
     """Perform setup, and install git repos specified in yaml parameter."""
+    status_set('maintenance', 'running git install')
     if git_install_requested():
         git_pre_install()
         git_clone_and_install(projects_yaml, core_project='neutron')
@@ -364,3 +380,14 @@ def git_post_install(projects_yaml):
            neutron_ovs_cleanup_context, perms=0o644)
 
     service_restart('neutron-plugin-openvswitch-agent')
+
+
+def check_optional_relations(configs):
+    required_interfaces = {}
+    if enable_nova_metadata():
+        required_interfaces['neutron-plugin-api'] = ['neutron-plugin-api']
+    if required_interfaces:
+        set_os_workload_status(configs, required_interfaces)
+        return status_get()
+    else:
+        return 'unknown', 'No optional relations'
