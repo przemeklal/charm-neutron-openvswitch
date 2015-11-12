@@ -140,9 +140,10 @@ class NeutronOVSHooksTests(CharmTestCase):
         self.purge_packages.assert_called_with(['neutron-l3-agent'])
 
     @patch.object(hooks, 'git_install_requested')
-    def test_neutron_plugin_joined(self, git_requested):
+    def test_neutron_plugin_joined_dvr_dhcp(self, git_requested):
         self.enable_nova_metadata.return_value = True
         self.enable_local_dhcp.return_value = True
+        self.use_dvr.return_value = True
         git_requested.return_value = False
         self.get_shared_secret.return_value = 'secret'
         self._call_hook('neutron-plugin-relation-joined')
@@ -153,6 +154,44 @@ class NeutronOVSHooksTests(CharmTestCase):
             relation_id=None,
             **rel_data
         )
+        self.assertTrue(self.install_packages.called)
+
+    @patch.object(hooks, 'git_install_requested')
+    def test_neutron_plugin_joined_dvr_nodhcp(self, git_requested):
+        self.enable_nova_metadata.return_value = True
+        self.enable_local_dhcp.return_value = False
+        self.use_dvr.return_value = True
+        git_requested.return_value = False
+        self.get_shared_secret.return_value = 'secret'
+        self._call_hook('neutron-plugin-relation-joined')
+        rel_data = {
+            'metadata-shared-secret': 'secret',
+        }
+        self.relation_set.assert_called_with(
+            relation_id=None,
+            **rel_data
+        )
+        self.purge_packages.assert_called_with(['neutron-dhcp-agent'])
+        self.assertFalse(self.install_packages.called)
+
+    @patch.object(hooks, 'git_install_requested')
+    def test_neutron_plugin_joined_nodvr_nodhcp(self, git_requested):
+        self.enable_nova_metadata.return_value = False
+        self.enable_local_dhcp.return_value = False
+        self.use_dvr.return_value = False
+        git_requested.return_value = False
+        self.get_shared_secret.return_value = 'secret'
+        self._call_hook('neutron-plugin-relation-joined')
+        rel_data = {
+            'metadata-shared-secret': None,
+        }
+        self.relation_set.assert_called_with(
+            relation_id=None,
+            **rel_data
+        )
+        self.purge_packages.assert_called_with(['neutron-dhcp-agent',
+                                                'neutron-metadata-agent'])
+        self.assertFalse(self.install_packages.called)
 
     def test_amqp_joined(self):
         self._call_hook('amqp-relation-joined')

@@ -97,7 +97,8 @@ ML2_CONF = '%s/plugins/ml2/ml2_conf.ini' % NEUTRON_CONF_DIR
 EXT_PORT_CONF = '/etc/init/ext-port.conf'
 NEUTRON_METADATA_AGENT_CONF = "/etc/neutron/metadata_agent.ini"
 DVR_PACKAGES = ['neutron-l3-agent']
-DHCP_PACKAGES = ['neutron-metadata-agent', 'neutron-dhcp-agent']
+DHCP_PACKAGES = ['neutron-dhcp-agent']
+METADATA_PACKAGES = ['neutron-metadata-agent']
 PHY_NIC_MTU_CONF = '/etc/init/os-charm-phy-nic-mtu.conf'
 TEMPLATES = 'templates/'
 
@@ -183,6 +184,7 @@ def determine_packages():
         pkgs.extend(DVR_PACKAGES)
     if enable_local_dhcp():
         pkgs.extend(DHCP_PACKAGES)
+        pkgs.extend(METADATA_PACKAGES)
 
     if git_install_requested():
         pkgs.extend(BASE_GIT_PACKAGES)

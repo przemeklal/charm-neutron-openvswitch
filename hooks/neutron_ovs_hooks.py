@@ -2,6 +2,8 @@
 
 import sys
 
+from copy import deepcopy
+
 from charmhelpers.contrib.openstack.utils import (
     config_value_changed,
     git_install_requested,
@@ -28,6 +30,7 @@ from charmhelpers.contrib.openstack.utils import (
 from neutron_ovs_utils import (
     DHCP_PACKAGES,
     DVR_PACKAGES,
+    METADATA_PACKAGES,
     configure_ovs,
     git_install,
     get_topics,
@@ -89,7 +92,13 @@ def neutron_plugin_joined(relation_id=None):
     if enable_local_dhcp():
         install_packages()
     else:
-        purge_packages(DHCP_PACKAGES)
+        pkgs = deepcopy(DHCP_PACKAGES)
+        # NOTE: only purge metadata packages if dvr is not
+        #       in use as this will remove the l3 agent
+        #       see https://pad.lv/1515008
+        if not use_dvr():
+            pkgs.extend(METADATA_PACKAGES)
+        purge_packages(pkgs)
     secret = get_shared_secret() if enable_nova_metadata() else None
     rel_data = {
         'metadata-shared-secret': secret,
