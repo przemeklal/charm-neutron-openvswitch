@@ -23,9 +23,6 @@ provides:
 requires:
   amqp:
     interface: rabbitmq
-  container:
-    interface: juju-info
-    scope: container
   neutron-plugin-api:
     interface: neutron-plugin-api
   zeromq-configuration:
