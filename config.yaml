@@ -90,6 +90,11 @@ options:
       .
       This network will be used for tenant network traffic in overlay
       networks.
+      .
+      In order to support service zones spanning multiple network
+      segments, a space-delimited list of a.b.c.d/x can be provided
+      The address of the first network found to have an address
+      configured will be used.
   ext-port:
     type: string
     default:
