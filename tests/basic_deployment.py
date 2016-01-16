@@ -9,6 +9,8 @@ from charmhelpers.contrib.openstack.amulet.deployment import (
     OpenStackAmuletDeployment
 )
 
+# This file needs de-linted.  The (mis)use of n-o q-a below causes all lint 
+# to go undetected.  Remove that & fixme.
 from charmhelpers.contrib.openstack.amulet.utils import (
     OpenStackAmuletUtils,
     DEBUG, # flake8: noqa
@@ -36,6 +38,11 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
         self._add_relations()
         self._configure_services()
         self._deploy()
+
+        u.log.info('Waiting on extended status checks...')
+        exclude_services = ['mysql']
+        self._auto_wait_for_status(exclude_services=exclude_services)
+
         self._initialize_tests()
 
     def _add_services(self):
@@ -45,22 +52,35 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
            and the rest of the service are from lp branches that are
            compatible with the local charm (e.g. stable or next).
            """
+        # Services and relations which are present merely to satisfy required_interfaces
+        # and workload status are not inspected.  Fix me.  Inspect those too.
         this_service = {'name': 'neutron-openvswitch'}
         other_services = [{'name': 'nova-compute'},
                           {'name': 'rabbitmq-server'},
+                          {'name': 'keystone'},  # satisfy workload stat
+                          {'name': 'mysql'},  # satisfy workload stat
+                          {'name': 'glance'},  # satisfy workload stat
                           {'name': 'neutron-api'}]
         super(NeutronOVSBasicDeployment, self)._add_services(this_service,
                                                              other_services)
 
     def _add_relations(self):
         """Add all of the relations for the services."""
-        relations = {
-            'neutron-openvswitch:amqp': 'rabbitmq-server:amqp',
+            'neutron-openvswitch:amqp': 'rabbitmq-server:amqp',  
             'neutron-openvswitch:neutron-plugin':
             'nova-compute:neutron-plugin',
             'neutron-openvswitch:neutron-plugin-api':
             'neutron-api:neutron-plugin-api',
-        }
+            # Satisfy workload stat:
+            'neutron-api:identity-service': 'keystone:identity-service',
+            'neutron-api:shared-db': 'mysql:shared-db',
+            'neutron-api:amqp': 'rabbitmq-server:amqp',
+            'nova-compute:amqp': 'rabbitmq-server:amqp',
+            'nova-compute:image-service': 'glance:image-service',
+            'glance:identity-service': 'keystone:identity-service',
+            'glance:shared-db': 'mysql:shared-db',
+            'glance:amqp': 'rabbitmq-server:amqp',
+            'keystone:shared-db': 'mysql:shared-db',
         super(NeutronOVSBasicDeployment, self)._add_relations(relations)
 
     def _configure_services(self):
@@ -189,6 +209,8 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
     def check_ml2_setting_propagation(self, service, charm_key,
                                       config_file_key, vpair,
                                       section):
+
+        # Needs love - test actions not clear in log
         unit = self.compute_sentry
         conf = "/etc/neutron/plugins/ml2/ml2_conf.ini"
         for value in vpair:
@@ -202,6 +224,8 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
 
     def test_l2pop_propagation(self):
         """Verify that neutron-api l2pop setting propagates to neutron-ovs"""
+
+        # Needs love - not idempotent
         self.check_ml2_setting_propagation('neutron-api',
                                            'l2-population',
                                            'l2_population',
@@ -210,6 +234,8 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
 
     def test_nettype_propagation(self):
         """Verify that neutron-api nettype setting propagates to neutron-ovs"""
+
+        # Needs love - not idempotent
         self.check_ml2_setting_propagation('neutron-api',
                                            'overlay-network-type',
                                            'tunnel_types',
@@ -218,6 +244,8 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
 
     def test_secgroup_propagation_local_override(self):
         """Verify disable-security-groups overrides what neutron-api says"""
+
+        # Needs love - not idempotent
         unit = self.compute_sentry
         conf = "/etc/neutron/plugins/ml2/ml2_conf.ini"
         self.d.configure('neutron-api', {'neutron-security-groups': 'True'})
@@ -237,20 +265,37 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
                                      {'enable_security_group': 'True'})
 
     def test_z_restart_on_config_change(self):
-        """Verify that the specified services are restarted when the config
-           is changed.
+        """Verify that the specified services are restarted when the
+        config is changed."""
 
-           Note(coreycb): The method name with the _z_ is a little odd
-           but it forces the test to run last.  It just makes things
-           easier because restarting services requires re-authorization.
-           """
-        conf = '/etc/neutron/neutron.conf'
-        self.d.configure('neutron-openvswitch', {'use-syslog': 'True'})
-        if not u.service_restarted(self.compute_sentry,
-                                   'neutron-openvswitch-agent', conf,
-                                   pgrep_full=True, sleep_time=60):
-            self.d.configure('neutron-openvswitch', {'use-syslog': 'False'})
-            msg = ('service neutron-openvswitch-agent did not restart after '
-                   'config change')
-            amulet.raise_status(amulet.FAIL, msg=msg)
-        self.d.configure('neutron-openvswitch', {'use-syslog': 'False'})
+        sentry = self.n_ovs_sentry
+        juju_service = 'neutron-openvswitch'
+
+        # Expected default and alternate values
+        set_default = {'debug': 'False'}
+        set_alternate = {'debug': 'True'}
+
+        # Services which are expected to restart upon config change,
+        # and corresponding config files affected by the change
+        conf_file = '/etc/neutron/neutron.conf'
+        services = {
+            'neutron-openvswitch-agent': conf_file
+        }
+
+        # Make config change, check for svc restart, conf file mod time change
+        u.log.debug('Making config change on {}...'.format(juju_service))
+        mtime = u.get_sentry_time(sentry)
+        self.d.configure(juju_service, set_alternate)
+
+        sleep_time = 60
+        for s, conf_file in services.iteritems():
+            u.log.debug("Checking that service restarted: {}".format(s))
+            if not u.validate_service_config_changed(sentry, mtime, s,
+                                                     conf_file,
+                                                     sleep_time=sleep_time):
+                self.d.configure(juju_service, set_default)
+                msg = "service {} didn't restart after config change".format(s)
+                amulet.raise_status(amulet.FAIL, msg=msg)
+
+        self.d.configure(juju_service, set_default)
+        u.log.debug('OK')
