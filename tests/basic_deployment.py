@@ -66,6 +66,7 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
 
     def _add_relations(self):
         """Add all of the relations for the services."""
+        relations = {
             'neutron-openvswitch:amqp': 'rabbitmq-server:amqp',  
             'neutron-openvswitch:neutron-plugin':
             'nova-compute:neutron-plugin',
@@ -81,6 +82,7 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
             'glance:shared-db': 'mysql:shared-db',
             'glance:amqp': 'rabbitmq-server:amqp',
             'keystone:shared-db': 'mysql:shared-db',
+        }
         super(NeutronOVSBasicDeployment, self)._add_relations(relations)
 
     def _configure_services(self):
