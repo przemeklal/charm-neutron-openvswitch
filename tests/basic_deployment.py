@@ -146,21 +146,25 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
         self.compute_sentry = self.d.sentry.unit['nova-compute/0']
         self.rabbitmq_sentry = self.d.sentry.unit['rabbitmq-server/0']
         self.neutron_api_sentry = self.d.sentry.unit['neutron-api/0']
+        self.n_ovs_sentry = self.d.sentry.unit['neutron-openvswitch/0']
 
-    def test_services(self):
+    def test_100_services(self):
         """Verify the expected services are running on the corresponding
            service units."""
+        u.log.debug('Checking system services on units...')
 
-        commands = {
-            self.compute_sentry: ['status nova-compute',
-                                  'status neutron-plugin-openvswitch-agent'],
-            self.rabbitmq_sentry: ['service rabbitmq-server status'],
-            self.neutron_api_sentry: ['status neutron-server'],
+        services = {
+            self.compute_sentry: ['nova-compute',
+                                  'neutron-plugin-openvswitch-agent'],
+            self.rabbitmq_sentry: ['rabbitmq-server'],
+            self.neutron_api_sentry: ['neutron-server'],
         }
 
-        ret = u.validate_services(commands)
+        ret = u.validate_services_by_name(services)
         if ret:
             amulet.raise_status(amulet.FAIL, msg=ret)
+
+        u.log.debug('OK')
 
     def test_rabbitmq_amqp_relation(self):
         """Verify data in rabbitmq-server/neutron-openvswitch amqp relation"""
