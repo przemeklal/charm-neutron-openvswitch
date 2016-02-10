@@ -118,5 +118,5 @@ options:
       Enable suppression of ARP responses that don't match an IP address that belongs
       to the port from which they originate.
       .
-      Only supported in OpenStack Liberty or newer, which as the required minimum version
+      Only supported in OpenStack Liberty or newer, which has the required minimum version
       of Open vSwitch.
