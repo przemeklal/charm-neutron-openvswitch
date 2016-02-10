@@ -58,6 +58,7 @@ class OVSPluginContext(context.NeutronContext):
         ovs_ctxt['use_syslog'] = conf['use-syslog']
         ovs_ctxt['verbose'] = conf['verbose']
         ovs_ctxt['debug'] = conf['debug']
+        ovs_ctxt['prevent_arp_spoofing'] = conf['prevent-arp-spoofing']
 
         net_dev_mtu = neutron_api_settings.get('network_device_mtu')
         if net_dev_mtu:

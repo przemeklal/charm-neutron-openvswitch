@@ -95,7 +95,8 @@ class OVSPluginContextTest(CharmTestCase):
                   'verbose': True,
                   'debug': True,
                   'bridge-mappings': "physnet1:br-data physnet2:br-data",
-                  'flat-network-providers': 'physnet3 physnet4'}
+                  'flat-network-providers': 'physnet3 physnet4',
+                  'prevent-arp-spoofing': False}
 
         def mock_config(key=None):
             if key:
@@ -140,6 +141,7 @@ class OVSPluginContextTest(CharmTestCase):
             'network_providers': 'physnet3,physnet4',
             'bridge_mappings': 'physnet1:br-data,physnet2:br-data',
             'vlan_ranges': 'physnet1:1000:1500,physnet2:2000:2500',
+            'prevent_arp_spoofing': False,
         }
         self.assertEquals(expect, napi_ctxt())
 
@@ -204,6 +206,7 @@ class OVSPluginContextTest(CharmTestCase):
             'overlay_network_type': 'gre',
             'bridge_mappings': 'physnet1:br-data',
             'vlan_ranges': 'physnet1:1000:2000',
+            'prevent_arp_spoofing': True,
         }
         self.assertEquals(expect, napi_ctxt())
 
