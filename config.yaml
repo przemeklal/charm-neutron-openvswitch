@@ -111,3 +111,12 @@ options:
       which do not include a neutron-gateway (do not require l3, lbaas or vpnaas
       services) and should only be used in-conjunction with flat or VLAN provider
       networks configurations.
+  prevent-arp-spoofing:
+    type: boolean
+    default: true
+    description: |
+      Enable suppression of ARP responses that don't match an IP address that belongs
+      to the port from which they originate.
+      .
+      Only supported in OpenStack Liberty or newer, which has the required minimum version
+      of Open vSwitch.
