@@ -9,7 +9,7 @@ from charmhelpers.contrib.openstack.amulet.deployment import (
     OpenStackAmuletDeployment
 )
 
-# This file needs de-linted.  The (mis)use of n-o q-a below causes all lint 
+# This file needs de-linted.  The (mis)use of n-o q-a below causes all lint
 # to go undetected.  Remove that & fixme.
 from charmhelpers.contrib.openstack.amulet.utils import (
     OpenStackAmuletUtils,
@@ -67,7 +67,7 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
     def _add_relations(self):
         """Add all of the relations for the services."""
         relations = {
-            'neutron-openvswitch:amqp': 'rabbitmq-server:amqp',  
+            'neutron-openvswitch:amqp': 'rabbitmq-server:amqp',
             'neutron-openvswitch:neutron-plugin':
             'nova-compute:neutron-plugin',
             'neutron-openvswitch:neutron-plugin-api':
@@ -160,6 +160,12 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
             self.neutron_api_sentry: ['neutron-server'],
         }
 
+        if self._get_openstack_release() >= self.trusty_mitaka:
+            services[self.compute_sentry] = [
+                'nova-compute',
+                'neutron-openvswitch-agent'
+            ]
+
         ret = u.validate_services_by_name(services)
         if ret:
             amulet.raise_status(amulet.FAIL, msg=ret)
@@ -218,7 +224,10 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
 
         # Needs love - test actions not clear in log
         unit = self.compute_sentry
-        conf = "/etc/neutron/plugins/ml2/ml2_conf.ini"
+        if self._get_openstack_release() >= self.trusty_mitaka:
+            conf = "/etc/neutron/plugins/ml2/openvswitch_agent.ini"
+        else:
+            conf = "/etc/neutron/plugins/ml2/ml2_conf.ini"
         for value in vpair:
             self.d.configure(service, {charm_key: value})
             time.sleep(60)
@@ -253,7 +262,10 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
 
         # Needs love - not idempotent
         unit = self.compute_sentry
-        conf = "/etc/neutron/plugins/ml2/ml2_conf.ini"
+        if self._get_openstack_release() >= self.trusty_mitaka:
+            conf = "/etc/neutron/plugins/ml2/openvswitch_agent.ini"
+        else:
+            conf = "/etc/neutron/plugins/ml2/ml2_conf.ini"
         self.d.configure('neutron-api', {'neutron-security-groups': 'True'})
         self.d.configure('neutron-openvswitch',
                          {'disable-security-groups': 'True'})
