@@ -84,6 +84,7 @@ GIT_PACKAGE_BLACKLIST = [
     'neutron-server',
     'neutron-plugin-openvswitch',
     'neutron-plugin-openvswitch-agent',
+    'neutron-openvswitch-agent',
 ]
 
 NOVA_CONF_DIR = "/etc/nova"
@@ -94,6 +95,7 @@ NEUTRON_DEFAULT = '/etc/default/neutron-server'
 NEUTRON_L3_AGENT_CONF = "/etc/neutron/l3_agent.ini"
 NEUTRON_FWAAS_CONF = "/etc/neutron/fwaas_driver.ini"
 ML2_CONF = '%s/plugins/ml2/ml2_conf.ini' % NEUTRON_CONF_DIR
+OVS_CONF = '%s/plugins/ml2/openvswitch_agent.ini' % NEUTRON_CONF_DIR
 EXT_PORT_CONF = '/etc/init/ext-port.conf'
 NEUTRON_METADATA_AGENT_CONF = "/etc/neutron/metadata_agent.ini"
 DVR_PACKAGES = ['neutron-l3-agent']
@@ -112,6 +114,10 @@ BASE_RESOURCE_MAP = OrderedDict([
     }),
     (ML2_CONF, {
         'services': ['neutron-plugin-openvswitch-agent'],
+        'contexts': [neutron_ovs_context.OVSPluginContext()],
+    }),
+    (OVS_CONF, {
+        'services': ['neutron-openvswitch-agent'],
         'contexts': [neutron_ovs_context.OVSPluginContext()],
     }),
     (PHY_NIC_MTU_CONF, {
@@ -193,6 +199,11 @@ def determine_packages():
             if p in pkgs:
                 pkgs.remove(p)
 
+    release = os_release('neutron-common', base='icehouse')
+    if release >= 'mitaka' and 'neutron-plugin-openvswitch-agent' in pkgs:
+        pkgs.remove('neutron-plugin-openvswitch-agent')
+        pkgs.append('neutron-openvswitch-agent')
+
     return pkgs
 
 
@@ -221,6 +232,19 @@ def resource_map():
         resource_map.update(DHCP_RESOURCE_MAP)
         metadata_services = ['neutron-metadata-agent', 'neutron-dhcp-agent']
         resource_map[NEUTRON_CONF]['services'] += metadata_services
+    # Remap any service names as required
+    if os_release('neutron-common', base='icehouse') >= 'mitaka':
+        # ml2_conf.ini -> openvswitch_agent.ini
+        del resource_map[ML2_CONF]
+        # drop of -plugin from service name
+        resource_map[NEUTRON_CONF]['services'].remove(
+            'neutron-plugin-openvswitch-agent'
+        )
+        resource_map[NEUTRON_CONF]['services'].append(
+            'neutron-openvswitch-agent'
+        )
+    else:
+        del resource_map[OVS_CONF]
     return resource_map
 
 

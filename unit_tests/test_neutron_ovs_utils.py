@@ -111,10 +111,27 @@ class TestNeutronOVSUtils(CharmTestCase):
         self.test_config.set('enable-local-dhcp-and-metadata', False)
         _git_requested.return_value = False
         _use_dvr.return_value = False
-        _os_rel.return_value = 'trusty'
+        _os_rel.return_value = 'icehouse'
+        self.os_release.return_value = 'icehouse'
         _head_pkgs.return_value = head_pkg
         pkg_list = nutils.determine_packages()
         expect = ['neutron-plugin-openvswitch-agent', head_pkg]
+        self.assertItemsEqual(pkg_list, expect)
+
+    @patch.object(nutils, 'use_dvr')
+    @patch.object(nutils, 'git_install_requested')
+    @patch.object(charmhelpers.contrib.openstack.neutron, 'os_release')
+    @patch.object(charmhelpers.contrib.openstack.neutron, 'headers_package')
+    def test_determine_packages_mitaka(self, _head_pkgs, _os_rel,
+                                       _git_requested, _use_dvr):
+        self.test_config.set('enable-local-dhcp-and-metadata', False)
+        _git_requested.return_value = False
+        _use_dvr.return_value = False
+        _os_rel.return_value = 'mitaka'
+        self.os_release.return_value = 'mitaka'
+        _head_pkgs.return_value = head_pkg
+        pkg_list = nutils.determine_packages()
+        expect = ['neutron-openvswitch-agent', head_pkg]
         self.assertItemsEqual(pkg_list, expect)
 
     @patch.object(nutils, 'use_dvr')
@@ -126,7 +143,8 @@ class TestNeutronOVSUtils(CharmTestCase):
         self.test_config.set('enable-local-dhcp-and-metadata', True)
         _git_requested.return_value = False
         _use_dvr.return_value = False
-        _os_rel.return_value = 'trusty'
+        _os_rel.return_value = 'icehouse'
+        self.os_release.return_value = 'icehouse'
         _head_pkgs.return_value = head_pkg
         pkg_list = nutils.determine_packages()
         expect = ['neutron-plugin-openvswitch-agent', head_pkg,
@@ -142,7 +160,8 @@ class TestNeutronOVSUtils(CharmTestCase):
         self.test_config.set('enable-local-dhcp-and-metadata', False)
         _git_requested.return_value = True
         _use_dvr.return_value = True
-        _os_rel.return_value = 'trusty'
+        _os_rel.return_value = 'icehouse'
+        self.os_release.return_value = 'icehouse'
         _head_pkgs.return_value = head_pkg
         pkg_list = nutils.determine_packages()
         self.assertFalse('neutron-l3-agent' in pkg_list)
@@ -159,7 +178,7 @@ class TestNeutronOVSUtils(CharmTestCase):
                 self.ctxts.append(ctxt)
 
         _use_dvr.return_value = False
-        self.os_release.return_value = 'trusty'
+        self.os_release.return_value = 'icehouse'
         templating.OSConfigRenderer.side_effect = _mock_OSConfigRenderer
         _regconfs = nutils.register_configs()
         confs = ['/etc/neutron/neutron.conf',
@@ -168,8 +187,29 @@ class TestNeutronOVSUtils(CharmTestCase):
         self.assertItemsEqual(_regconfs.configs, confs)
 
     @patch.object(nutils, 'use_dvr')
+    def test_register_configs_mitaka(self, _use_dvr):
+        class _mock_OSConfigRenderer():
+            def __init__(self, templates_dir=None, openstack_release=None):
+                self.configs = []
+                self.ctxts = []
+
+            def register(self, config, ctxt):
+                self.configs.append(config)
+                self.ctxts.append(ctxt)
+
+        _use_dvr.return_value = False
+        self.os_release.return_value = 'mitaka'
+        templating.OSConfigRenderer.side_effect = _mock_OSConfigRenderer
+        _regconfs = nutils.register_configs()
+        confs = ['/etc/neutron/neutron.conf',
+                 '/etc/neutron/plugins/ml2/openvswitch_agent.ini',
+                 '/etc/init/os-charm-phy-nic-mtu.conf']
+        self.assertItemsEqual(_regconfs.configs, confs)
+
+    @patch.object(nutils, 'use_dvr')
     def test_resource_map(self, _use_dvr):
         _use_dvr.return_value = False
+        self.os_release.return_value = 'icehouse'
         _map = nutils.resource_map()
         svcs = ['neutron-plugin-openvswitch-agent']
         confs = [nutils.NEUTRON_CONF]
@@ -177,8 +217,19 @@ class TestNeutronOVSUtils(CharmTestCase):
         self.assertEqual(_map[nutils.NEUTRON_CONF]['services'], svcs)
 
     @patch.object(nutils, 'use_dvr')
+    def test_resource_map_mitaka(self, _use_dvr):
+        _use_dvr.return_value = False
+        self.os_release.return_value = 'mitaka'
+        _map = nutils.resource_map()
+        svcs = ['neutron-openvswitch-agent']
+        confs = [nutils.NEUTRON_CONF]
+        [self.assertIn(q_conf, _map.keys()) for q_conf in confs]
+        self.assertEqual(_map[nutils.NEUTRON_CONF]['services'], svcs)
+
+    @patch.object(nutils, 'use_dvr')
     def test_resource_map_dvr(self, _use_dvr):
         _use_dvr.return_value = True
+        self.os_release.return_value = 'icehouse'
         _map = nutils.resource_map()
         svcs = ['neutron-plugin-openvswitch-agent', 'neutron-metadata-agent',
                 'neutron-l3-agent']
