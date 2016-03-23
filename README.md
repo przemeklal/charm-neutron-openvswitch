@@ -151,3 +151,30 @@ alternatively these can also be provided as part of a juju native bundle configu
 NOTE: Spaces must be configured in the underlying provider prior to attempting to use them.
 
 NOTE: Existing deployments using os-data-network configuration options will continue to function; this option is preferred over any network space binding provided if set.
+
+# DPDK fast packet processing support
+
+For OpenStack Mitaka running on Ubuntu 16.04, its possible to use experimental DPDK userspace network acceleration with Open vSwitch and OpenStack.
+
+Currently, this charm supports use of DPDK enabled devices in bridges supporting connectivity to provider networks.
+
+To use DPDK, you'll need to have supported network cards in your server infrastructure (see [dpdk-nics][DPDK documentation]);  DPDK must be enabled and configured during deployment of the charm, for example:
+
+    neutron-openvswitch:
+        enable-dpdk: True
+        data-port: "br-phynet1:a8:9d:21:cf:93:fc br-phynet2:a8:9d:21:cf:93:fd br-phynet3:a8:9d:21:cf:93:fe"
+
+As devices are not typically named consistently across servers, multiple instances of each bridge -> mac address mapping can be provided; the charm deals with resolution of the set of bridge -> port mappings that are required for each individual unit of the charm.
+
+DPDK requires the use of hugepages, which is not directly configured in the neutron-openvswitch charm; Hugepage configuration can either be done by providing kernel boot command line options for individual servers using MAAS or using the 'hugepages' configuration option of the nova-compute charm:
+
+    nova-compute:
+        hugepages: 50%
+
+By default, the charm will configure Open vSwitch/DPDK to consume a processor core + 1G of RAM from each NUMA node on the unit being deployed; this can be tuned using the dpdk-socket-memory and dpdk-socket-cores configuration options of the charm.  The userspace kernel driver can be configured using the dpdk-driver option.  See config.yaml for more details.
+
+**NOTE:** Changing dpdk-socket-* configuration options will trigger a restart of Open vSwitch, which currently causes connectivity to running instances to be lost - connectivity can only be restored with a stop/start of each instance.
+
+**NOTE:** Enabling DPDK support automatically disables security groups for instances.
+
+[dpdk-nics]: http://dpdk.org/doc/nics

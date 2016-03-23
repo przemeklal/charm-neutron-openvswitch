@@ -120,3 +120,34 @@ options:
       .
       Only supported in OpenStack Liberty or newer, which has the required minimum version
       of Open vSwitch.
+  enable-dpdk:
+    type: boolean
+    default: false
+    description: |
+      Enable DPDK fast userspace networking; this requires use of DPDK supported network
+      interface drivers and must be used in conjuction with the data-port configuration
+      option to configure each bridge with an appropriate DPDK enabled network device.
+  dpdk-socket-memory:
+    type: int
+    default: 1024
+    description: |
+      Amount of hugepage memory in MB to allocate per NUMA socket in deployed systems.
+      .
+      Only used when DPDK is enabled.
+  dpdk-socket-cores:
+    type: int
+    default: 1
+    description: |
+      Number of cores to allocate to DPDK per NUMA socket in deployed systems.
+      .
+      Only used when DPDK is enabled.
+  dpdk-driver:
+    type: string
+    default: uio_pci_generic
+    description: |
+      Kernel userspace device driver to use for DPDK devices, valid values include:
+      .
+        vfio-pci
+        uio_pci_generic
+      .
+      Only used when DPDK is enabled.

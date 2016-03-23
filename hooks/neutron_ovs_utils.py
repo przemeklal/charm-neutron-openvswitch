@@ -1,6 +1,7 @@
 import os
 import shutil
 from itertools import chain
+import subprocess
 
 from charmhelpers.contrib.openstack.neutron import neutron_plugin_attribute
 from copy import deepcopy
@@ -23,7 +24,7 @@ from charmhelpers.contrib.openstack.utils import (
 import neutron_ovs_context
 from charmhelpers.contrib.network.ovs import (
     add_bridge,
-    add_bridge_port,
+    # add_bridge_port,
     full_restart,
 )
 from charmhelpers.core.hookenv import (
@@ -106,6 +107,8 @@ DHCP_PACKAGES = ['neutron-dhcp-agent']
 METADATA_PACKAGES = ['neutron-metadata-agent']
 PHY_NIC_MTU_CONF = '/etc/init/os-charm-phy-nic-mtu.conf'
 TEMPLATES = 'templates/'
+OVS_DEFAULT = '/etc/default/openvswitch-switch'
+DPDK_INTERFACES = '/etc/dpdk/interfaces'
 
 BASE_RESOURCE_MAP = OrderedDict([
     (NEUTRON_CONF, {
@@ -123,6 +126,15 @@ BASE_RESOURCE_MAP = OrderedDict([
         'services': ['neutron-openvswitch-agent'],
         'contexts': [neutron_ovs_context.OVSPluginContext()],
     }),
+    (OVS_DEFAULT, {
+        'services': ['openvswitch-switch'],
+        'contexts': [neutron_ovs_context.OVSDPDKDeviceContext()],
+    }),
+    (DPDK_INTERFACES, {
+        'services': ['dpdk'],
+        'contexts': [neutron_ovs_context.DPDKDeviceContext()],
+    }),
+
     (PHY_NIC_MTU_CONF, {
         'services': ['os-charm-phy-nic-mtu'],
         'contexts': [context.PhyNICMTUContext()],
@@ -155,6 +167,7 @@ DVR_RESOURCE_MAP = OrderedDict([
         'contexts': [context.ExternalPortContext()],
     }),
 ])
+
 TEMPLATES = 'templates/'
 INT_BRIDGE = "br-int"
 EXT_BRIDGE = "br-ex"
@@ -170,7 +183,10 @@ def install_packages():
     dkms_packages = determine_dkms_package()
     if dkms_packages:
         apt_install([headers_package()] + dkms_packages, fatal=True)
-    apt_install(filter_installed_packages(determine_packages()))
+    apt_install(filter_installed_packages(determine_packages()),
+                fatal=True)
+    if use_dpdk():
+        enable_ovs_dpdk()
 
 
 def purge_packages(pkg_list):
@@ -206,6 +222,9 @@ def determine_packages():
     if release >= 'mitaka' and 'neutron-plugin-openvswitch-agent' in pkgs:
         pkgs.remove('neutron-plugin-openvswitch-agent')
         pkgs.append('neutron-openvswitch-agent')
+
+    if use_dpdk():
+        pkgs.append('openvswitch-switch-dpdk')
 
     return pkgs
 
@@ -246,8 +265,16 @@ def resource_map():
         resource_map[NEUTRON_CONF]['services'].append(
             'neutron-openvswitch-agent'
         )
+        if not use_dpdk():
+            # NOTE; /etc/default/openvswitch only used for
+            #       DPDK configuration so drop if DPDK not
+            #       in use
+            del resource_map[OVS_DEFAULT]
+            del resource_map[DPDK_INTERFACES]
     else:
         del resource_map[OVS_CONF]
+        del resource_map[OVS_DEFAULT]
+        del resource_map[DPDK_INTERFACES]
     return resource_map
 
 
@@ -294,28 +321,52 @@ def determine_ports():
     return ports
 
 
+UPDATE_ALTERNATIVES = ['update-alternatives', '--set', 'ovs-vswitchd']
+OVS_DPDK_BIN = '/usr/lib/openvswitch-switch-dpdk/ovs-vswitchd-dpdk'
+OVS_DEFAULT_BIN = '/usr/lib/openvswitch-switch/ovs-vswitchd'
+
+
+def enable_ovs_dpdk():
+    '''Enables the DPDK variant of ovs-vswitchd and restarts it'''
+    subprocess.check_call(UPDATE_ALTERNATIVES + [OVS_DPDK_BIN])
+    if not is_unit_paused_set():
+        service_restart('openvswitch-switch')
+
+
 def configure_ovs():
     status_set('maintenance', 'Configuring ovs')
     if not service_running('openvswitch-switch'):
         full_restart()
-    add_bridge(INT_BRIDGE)
-    add_bridge(EXT_BRIDGE)
+    datapath_type = determine_datapath_type()
+    add_bridge(INT_BRIDGE, datapath_type)
+    add_bridge(EXT_BRIDGE, datapath_type)
     ext_port_ctx = None
     if use_dvr():
         ext_port_ctx = ExternalPortContext()()
     if ext_port_ctx and ext_port_ctx['ext_port']:
         add_bridge_port(EXT_BRIDGE, ext_port_ctx['ext_port'])
 
-    portmaps = DataPortContext()()
-    bridgemaps = parse_bridge_mappings(config('bridge-mappings'))
-    for provider, br in bridgemaps.iteritems():
-        add_bridge(br)
-        if not portmaps:
-            continue
+    if not use_dpdk():
+        portmaps = DataPortContext()()
+        bridgemaps = parse_bridge_mappings(config('bridge-mappings'))
+        for br in bridgemaps.itervalues():
+            add_bridge(br, datapath_type)
+            if not portmaps:
+                continue
 
-        for port, _br in portmaps.iteritems():
-            if _br == br:
-                add_bridge_port(br, port, promisc=True)
+            for port, _br in portmaps.iteritems():
+                if _br == br:
+                    add_bridge_port(br, port, promisc=True)
+    else:
+        # NOTE: when in dpdk mode, add based on pci bus order
+        #       with type 'dpdk'
+        dpdk_bridgemaps = neutron_ovs_context.resolve_dpdk_ports()
+        device_index = 0
+        for br in dpdk_bridgemaps.itervalues():
+            add_bridge(br, datapath_type)
+            add_bridge_port(br, 'dpdk{}'.format(device_index),
+                            port_type='dpdk')
+            device_index += 1
 
     # Ensure this runs so that mtu is applied to data-port interfaces if
     # provided.
@@ -332,6 +383,36 @@ def get_shared_secret():
 
 def use_dvr():
     return context.NeutronAPIContext()()['enable_dvr']
+
+
+def determine_datapath_type():
+    '''
+    Determine the ovs datapath type to use
+
+    @returns string containing the datapath type
+    '''
+    if use_dpdk():
+        return 'netdev'
+    return 'system'
+
+
+def use_dpdk():
+    '''Determine whether DPDK should be used'''
+    release = os_release('neutron-common', base='icehouse')
+    if (release >= 'mitaka' and config('enable-dpdk')):
+        return True
+    return False
+
+
+# TODO: update into charm-helpers to add port_type parameter
+def add_bridge_port(name, port, promisc=False, port_type=None):
+    ''' Add a port to the named openvswitch bridge '''
+    # log('Adding port {} to bridge {}'.format(port, name))
+    cmd = ["ovs-vsctl", "--", "--may-exist", "add-port", name, port]
+    if port_type:
+        cmd += ['--', 'set', 'Interface', port,
+                'type={}'.format(port_type)]
+    subprocess.check_call(cmd)
 
 
 def enable_nova_metadata():

@@ -30,6 +30,7 @@ TO_PATCH = [
     'determine_dkms_package',
     'headers_package',
     'status_set',
+    'use_dpdk',
 ]
 
 head_pkg = 'linux-headers-3.15.0-5-generic'
@@ -75,6 +76,7 @@ class TestNeutronOVSUtils(CharmTestCase):
         super(TestNeutronOVSUtils, self).setUp(nutils, TO_PATCH)
         self.neutron_plugin_attribute.side_effect = _mock_npa
         self.config.side_effect = self.test_config.get
+        self.use_dpdk.return_value = False
 
     def tearDown(self):
         # Reset cached cache
@@ -85,7 +87,8 @@ class TestNeutronOVSUtils(CharmTestCase):
         _determine_packages.return_value = 'randompkg'
         nutils.install_packages()
         self.apt_update.assert_called_with()
-        self.apt_install.assert_called_with(self.filter_installed_packages())
+        self.apt_install.assert_called_with(self.filter_installed_packages(),
+                                            fatal=True)
 
     @patch.object(nutils, 'determine_packages')
     def test_install_packages_dkms_needed(self, _determine_packages):
@@ -98,7 +101,7 @@ class TestNeutronOVSUtils(CharmTestCase):
         self.apt_install.assert_has_calls([
             call(['linux-headers-foobar',
                   'openvswitch-datapath-dkms'], fatal=True),
-            call(self.filter_installed_packages()),
+            call(self.filter_installed_packages(), fatal=True),
         ])
 
     @patch.object(nutils, 'use_dvr')
@@ -277,9 +280,9 @@ class TestNeutronOVSUtils(CharmTestCase):
         self.test_config.set('data-port', 'eth0')
         nutils.configure_ovs()
         self.add_bridge.assert_has_calls([
-            call('br-int'),
-            call('br-ex'),
-            call('br-data')
+            call('br-int', 'system'),
+            call('br-ex', 'system'),
+            call('br-data', 'system')
         ])
         self.assertTrue(self.add_bridge_port.called)
 
@@ -289,9 +292,9 @@ class TestNeutronOVSUtils(CharmTestCase):
         self.add_bridge_port.reset_mock()
         nutils.configure_ovs()
         self.add_bridge.assert_has_calls([
-            call('br-int'),
-            call('br-ex'),
-            call('br-data')
+            call('br-int', 'system'),
+            call('br-ex', 'system'),
+            call('br-data', 'system')
         ])
         # Not called since we have a bogus bridge in data-ports
         self.assertFalse(self.add_bridge_port.called)
@@ -328,11 +331,40 @@ class TestNeutronOVSUtils(CharmTestCase):
             DummyContext(return_value={'ext_port': 'eth0'})
         nutils.configure_ovs()
         self.add_bridge.assert_has_calls([
-            call('br-int'),
-            call('br-ex'),
-            call('br-data')
+            call('br-int', 'system'),
+            call('br-ex', 'system'),
+            call('br-data', 'system')
         ])
         self.add_bridge_port.assert_called_with('br-ex', 'eth0')
+
+    @patch.object(neutron_ovs_context, 'resolve_dpdk_ports')
+    @patch.object(nutils, 'use_dvr')
+    @patch('charmhelpers.contrib.openstack.context.config')
+    def test_configure_ovs_dpdk(self, mock_config, _use_dvr,
+                                _resolve_dpdk_ports):
+        _resolve_dpdk_ports.return_value = {
+            '0000:001c.01': 'br-phynet1',
+            '0000:001c.02': 'br-phynet2',
+            '0000:001c.03': 'br-phynet3',
+        }
+        _use_dvr.return_value = True
+        self.use_dpdk.return_value = True
+        mock_config.side_effect = self.test_config.get
+        self.config.side_effect = self.test_config.get
+        self.test_config.set('enable-dpdk', True)
+        nutils.configure_ovs()
+        self.add_bridge.assert_has_calls([
+            call('br-int', 'netdev'),
+            call('br-ex', 'netdev'),
+            call('br-phynet1', 'netdev'),
+            call('br-phynet2', 'netdev'),
+            call('br-phynet3', 'netdev'),
+        ])
+        self.add_bridge_port.assert_has_calls([
+            call('br-phynet1', 'dpdk0', port_type='dpdk'),
+            call('br-phynet2', 'dpdk1', port_type='dpdk'),
+            call('br-phynet3', 'dpdk2', port_type='dpdk'),
+        ])
 
     @patch.object(neutron_ovs_context, 'SharedSecretContext')
     def test_get_shared_secret(self, _dvr_secret_ctxt):
