@@ -1,5 +1,6 @@
 import os
 import shutil
+from itertools import chain
 
 from charmhelpers.contrib.openstack.neutron import neutron_plugin_attribute
 from copy import deepcopy
@@ -10,7 +11,10 @@ from charmhelpers.contrib.openstack.utils import (
     git_clone_and_install,
     git_src_dir,
     git_pip_venv_dir,
-    set_os_workload_status,
+    pause_unit,
+    resume_unit,
+    make_assess_status_func,
+    is_unit_paused_set,
 )
 from collections import OrderedDict
 from charmhelpers.contrib.openstack.utils import (
@@ -25,7 +29,6 @@ from charmhelpers.contrib.network.ovs import (
 from charmhelpers.core.hookenv import (
     config,
     status_set,
-    status_get,
 )
 from charmhelpers.contrib.openstack.neutron import (
     parse_bridge_mappings,
@@ -268,6 +271,29 @@ def get_topics():
     return topics
 
 
+def services():
+    """Returns a list of (unique) services associate with this charm
+    Note that we drop the os-charm-phy-nic-mtu service as it's not an actual
+    running service that we can check for.
+
+    @returns [strings] - list of service names suitable for (re)start_service()
+    """
+    s_set = set(chain(*restart_map().values()))
+    s_set.discard('os-charm-phy-nic-mtu')
+    return list(s_set)
+
+
+def determine_ports():
+    """Assemble a list of API ports for services the charm is managing
+
+    @returns [ports] - list of ports that the charm manages.
+    """
+    ports = []
+    if use_dvr():
+        ports.append(DVR_RESOURCE_MAP[EXT_PORT_CONF]["ext_port"])
+    return ports
+
+
 def configure_ovs():
     status_set('maintenance', 'Configuring ovs')
     if not service_running('openvswitch-switch'):
@@ -293,6 +319,8 @@ def configure_ovs():
 
     # Ensure this runs so that mtu is applied to data-port interfaces if
     # provided.
+    # NOTE(ajkavanagh) for pause/resume we don't gate this as it's not a
+    # running service, but rather running a few commands.
     service_restart('os-charm-phy-nic-mtu')
 
 
@@ -405,15 +433,77 @@ def git_post_install(projects_yaml):
            '/etc/init/neutron-ovs-cleanup.conf',
            neutron_ovs_cleanup_context, perms=0o644)
 
-    service_restart('neutron-plugin-openvswitch-agent')
+    if not is_unit_paused_set():
+        service_restart('neutron-plugin-openvswitch-agent')
 
 
-def check_optional_relations(configs):
-    required_interfaces = {}
+def assess_status(configs):
+    """Assess status of current unit
+    Decides what the state of the unit should be based on the current
+    configuration.
+    SIDE EFFECT: calls set_os_workload_status(...) which sets the workload
+    status of the unit.
+    Also calls status_set(...) directly if paused state isn't complete.
+    @param configs: a templating.OSConfigRenderer() object
+    @returns None - this function is executed for its side-effect
+    """
+    assess_status_func(configs)()
+
+
+def assess_status_func(configs):
+    """Helper function to create the function that will assess_status() for
+    the unit.
+    Uses charmhelpers.contrib.openstack.utils.make_assess_status_func() to
+    create the appropriate status function and then returns it.
+    Used directly by assess_status() and also for pausing and resuming
+    the unit.
+
+    Note that required_interfaces is augmented with neutron-plugin-api if the
+    nova_metadata is enabled.
+
+    NOTE(ajkavanagh) ports are not checked due to race hazards with services
+    that don't behave sychronously w.r.t their service scripts.  e.g.
+    apache2.
+    @param configs: a templating.OSConfigRenderer() object
+    @return f() -> None : a function that assesses the unit's workload status
+    """
+    required_interfaces = REQUIRED_INTERFACES.copy()
     if enable_nova_metadata():
         required_interfaces['neutron-plugin-api'] = ['neutron-plugin-api']
-    if required_interfaces:
-        set_os_workload_status(configs, required_interfaces)
-        return status_get()
-    else:
-        return 'unknown', 'No optional relations'
+    return make_assess_status_func(
+        configs, required_interfaces,
+        services=services(), ports=None)
+
+
+def pause_unit_helper(configs):
+    """Helper function to pause a unit, and then call assess_status(...) in
+    effect, so that the status is correctly updated.
+    Uses charmhelpers.contrib.openstack.utils.pause_unit() to do the work.
+    @param configs: a templating.OSConfigRenderer() object
+    @returns None - this function is executed for its side-effect
+    """
+    _pause_resume_helper(pause_unit, configs)
+
+
+def resume_unit_helper(configs):
+    """Helper function to resume a unit, and then call assess_status(...) in
+    effect, so that the status is correctly updated.
+    Uses charmhelpers.contrib.openstack.utils.resume_unit() to do the work.
+    @param configs: a templating.OSConfigRenderer() object
+    @returns None - this function is executed for its side-effect
+    """
+    _pause_resume_helper(resume_unit, configs)
+
+
+def _pause_resume_helper(f, configs):
+    """Helper function that uses the make_assess_status_func(...) from
+    charmhelpers.contrib.openstack.utils to create an assess_status(...)
+    function that can be used with the pause/resume of the unit
+    @param f: the function to be used with the assess_status(...) function
+    @returns None - this function is executed for its side-effect
+    """
+    # TODO(ajkavanagh) - ports= has been left off because of the race hazard
+    # that exists due to service_start()
+    f(assess_status_func(configs),
+      services=services(),
+      ports=None)

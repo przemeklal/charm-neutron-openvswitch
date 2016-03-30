@@ -7,6 +7,8 @@ from copy import deepcopy
 from charmhelpers.contrib.openstack.utils import (
     config_value_changed,
     git_install_requested,
+    os_requires_version,
+    pausable_restart_on_change as restart_on_change,
 )
 
 from charmhelpers.core.hookenv import (
@@ -16,15 +18,6 @@ from charmhelpers.core.hookenv import (
     log,
     relation_set,
     relation_ids,
-)
-
-from charmhelpers.core.host import (
-    restart_on_change
-)
-
-from charmhelpers.contrib.openstack.utils import (
-    os_requires_version,
-    set_os_workload_status,
 )
 
 from neutron_ovs_utils import (
@@ -42,8 +35,7 @@ from neutron_ovs_utils import (
     enable_local_dhcp,
     install_packages,
     purge_packages,
-    REQUIRED_INTERFACES,
-    check_optional_relations,
+    assess_status,
 )
 
 hooks = Hooks()
@@ -142,8 +134,7 @@ def main():
         hooks.execute(sys.argv)
     except UnregisteredHookError as e:
         log('Unknown hook {} - skipping.'.format(e))
-    set_os_workload_status(CONFIGS, REQUIRED_INTERFACES,
-                           charm_func=check_optional_relations)
+    assess_status(CONFIGS)
 
 
 if __name__ == '__main__':

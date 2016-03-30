@@ -317,3 +317,19 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
 
         self.d.configure(juju_service, set_default)
         u.log.debug('OK')
+
+    def test_910_pause_and_resume(self):
+        """The services can be paused and resumed. """
+        u.log.debug('Checking pause and resume actions...')
+        sentry_unit = self.n_ovs_sentry
+
+        assert u.status_get(sentry_unit)[0] == "active"
+
+        action_id = u.run_action(sentry_unit, "pause")
+        assert u.wait_on_action(action_id), "Pause action failed."
+        assert u.status_get(sentry_unit)[0] == "maintenance"
+
+        action_id = u.run_action(sentry_unit, "resume")
+        assert u.wait_on_action(action_id), "Resume action failed."
+        assert u.status_get(sentry_unit)[0] == "active"
+        u.log.debug('OK')

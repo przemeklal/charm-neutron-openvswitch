@@ -1,4 +1,3 @@
-
 from mock import MagicMock, patch, call
 from collections import OrderedDict
 import charmhelpers.contrib.openstack.templating as templating
@@ -436,3 +435,55 @@ class TestNeutronOVSUtils(CharmTestCase):
             call('neutron-plugin-openvswitch-agent'),
         ]
         self.assertEquals(service_restart.call_args_list, expected)
+
+    def test_assess_status(self):
+        with patch.object(nutils, 'assess_status_func') as asf:
+            callee = MagicMock()
+            asf.return_value = callee
+            nutils.assess_status('test-config')
+            asf.assert_called_once_with('test-config')
+            callee.assert_called_once_with()
+
+    @patch.object(nutils, 'REQUIRED_INTERFACES')
+    @patch.object(nutils, 'services')
+    @patch.object(nutils, 'determine_ports')
+    @patch.object(nutils, 'make_assess_status_func')
+    @patch.object(nutils, 'enable_nova_metadata')
+    def test_assess_status_func(self,
+                                enable_nova_metadata,
+                                make_assess_status_func,
+                                determine_ports,
+                                services,
+                                REQUIRED_INTERFACES):
+        services.return_value = 's1'
+        determine_ports.return_value = 'p1'
+        enable_nova_metadata.return_value = False
+        REQUIRED_INTERFACES.copy.return_value = {'Test': True}
+        nutils.assess_status_func('test-config')
+        # ports=None whilst port checks are disabled.
+        make_assess_status_func.assert_called_once_with(
+            'test-config',
+            {'Test': True},
+            services='s1',
+            ports=None)
+
+    def test_pause_unit_helper(self):
+        with patch.object(nutils, '_pause_resume_helper') as prh:
+            nutils.pause_unit_helper('random-config')
+            prh.assert_called_once_with(nutils.pause_unit, 'random-config')
+        with patch.object(nutils, '_pause_resume_helper') as prh:
+            nutils.resume_unit_helper('random-config')
+            prh.assert_called_once_with(nutils.resume_unit, 'random-config')
+
+    @patch.object(nutils, 'services')
+    @patch.object(nutils, 'determine_ports')
+    def test_pause_resume_helper(self, determine_ports, services):
+        f = MagicMock()
+        services.return_value = 's1'
+        determine_ports.return_value = 'p1'
+        with patch.object(nutils, 'assess_status_func') as asf:
+            asf.return_value = 'assessor'
+            nutils._pause_resume_helper(f, 'some-config')
+            asf.assert_called_once_with('some-config')
+            # ports=None whilst port checks are disabled.
+            f.assert_called_once_with('assessor', services='s1', ports=None)
