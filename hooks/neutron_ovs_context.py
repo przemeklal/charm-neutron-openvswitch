@@ -6,6 +6,7 @@ from charmhelpers.core.hookenv import (
     relation_ids,
     related_units,
     unit_get,
+    network_get_primary_address,
 )
 from charmhelpers.contrib.openstack.ip import resolve_address
 from charmhelpers.contrib.openstack import context
@@ -44,9 +45,22 @@ class OVSPluginContext(context.NeutronContext):
             return {}
 
         conf = config()
-        ovs_ctxt['local_ip'] = \
-            get_address_in_network(config('os-data-network'),
-                                   get_host_ip(unit_get('private-address')))
+
+        fallback = get_host_ip(unit_get('private-address'))
+        if config('os-data-network'):
+            # NOTE: prefer any existing use of config based networking
+            ovs_ctxt['local_ip'] = \
+                get_address_in_network(config('os-data-network'),
+                                       fallback)
+        else:
+            # NOTE: test out network-spaces support, then fallback
+            try:
+                ovs_ctxt['local_ip'] = get_host_ip(
+                    network_get_primary_address('data')
+                )
+            except NotImplementedError:
+                ovs_ctxt['local_ip'] = fallback
+
         neutron_api_settings = NeutronAPIContext()()
         ovs_ctxt['neutron_security_groups'] = self.neutron_security_groups
         ovs_ctxt['l2_population'] = neutron_api_settings['l2_population']

@@ -16,6 +16,8 @@ description: |
   L2 connectivity on nova-compute services.
 tags:
   - openstack
+extra-bindings:
+  data:
 provides:
   neutron-plugin:
     interface: neutron-plugin

@@ -132,3 +132,22 @@ The following is a full list of current tip repos (may not be up-to-date):
         - {name: neutron,
            repository: 'git://github.com/openstack/neutron',
            branch: master}
+
+# Network Spaces support
+
+This charm supports the use of Juju Network Spaces, allowing the charm to be bound to network space configurations managed directly by Juju.  This is only supported with Juju 2.0 and above.
+
+Open vSwitch endpoints can be configured using the 'data' extra-binding, ensuring that tunnel traffic is routed across the correct host network interfaces:
+
+    juju deploy neutron-openvswitch --bind "data=data-space"
+
+alternatively these can also be provided as part of a juju native bundle configuration:
+
+    neutron-openvswitch:
+      charm: cs:xenial/neutron-openvswitch
+      bindings:
+        data: data-space
+
+NOTE: Spaces must be configured in the underlying provider prior to attempting to use them.
+
+NOTE: Existing deployments using os-data-network configuration options will continue to function; this option is preferred over any network space binding provided if set.

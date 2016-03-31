@@ -10,6 +10,7 @@ TO_PATCH = [
     'config',
     'unit_get',
     'get_host_ip',
+    'network_get_primary_address',
 ]
 
 
@@ -29,6 +30,7 @@ class OVSPluginContextTest(CharmTestCase):
         self.test_config.set('debug', True)
         self.test_config.set('verbose', True)
         self.test_config.set('use-syslog', True)
+        self.network_get_primary_address.side_effect = NotImplementedError
 
     def tearDown(self):
         super(OVSPluginContextTest, self).tearDown()
