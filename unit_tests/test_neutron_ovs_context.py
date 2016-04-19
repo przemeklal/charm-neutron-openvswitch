@@ -13,6 +13,9 @@ TO_PATCH = [
     'network_get_primary_address',
     'glob',
     'PCINetDevices',
+    'relation_ids',
+    'relation_get',
+    'related_units',
 ]
 
 
@@ -464,3 +467,26 @@ class TestDPDKDeviceContext(CharmTestCase):
             'driver': 'uio_pci_generic'
         })
         self.config.assert_called_with('dpdk-driver')
+
+
+class TestRemoteRestartContext(CharmTestCase):
+
+    def setUp(self):
+        super(TestRemoteRestartContext, self).setUp(context,
+                                                    TO_PATCH)
+        self.config.side_effect = self.test_config.get
+
+    def test_restart_trigger_present(self):
+        self.relation_ids.return_value = ['rid1']
+        self.related_units.return_value = ['nova-compute/0']
+        self.relation_get.return_value = '8f73-f3adb96a90d8'
+        self.assertEquals(
+            context.RemoteRestartContext()(),
+            {'restart_trigger': '8f73-f3adb96a90d8'}
+        )
+
+    def test_restart_trigger_absent(self):
+        self.relation_ids.return_value = ['rid1']
+        self.related_units.return_value = ['nova-compute/0']
+        self.relation_get.return_value = None
+        self.assertEquals(context.RemoteRestartContext()(), {})
