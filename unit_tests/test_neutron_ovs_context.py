@@ -6,7 +6,6 @@ import neutron_ovs_context as context
 import charmhelpers
 
 TO_PATCH = [
-    'resolve_address',
     'config',
     'unit_get',
     'get_host_ip',
@@ -299,10 +298,8 @@ class SharedSecretContext(CharmTestCase):
                                       _NeutronAPIContext):
         _NeutronAPIContext.side_effect = fake_context({'enable_dvr': True})
         _shared_secret.return_value = 'secret_thing'
-        self.resolve_address.return_value = '10.0.0.10'
         self.assertEquals(context.SharedSecretContext()(),
-                          {'shared_secret': 'secret_thing',
-                           'local_ip': '10.0.0.10'})
+                          {'shared_secret': 'secret_thing'})
 
     @patch.object(context, 'NeutronAPIContext')
     @patch.object(context, 'get_shared_secret')
@@ -310,7 +307,6 @@ class SharedSecretContext(CharmTestCase):
                                         _NeutronAPIContext):
         _NeutronAPIContext.side_effect = fake_context({'enable_dvr': False})
         _shared_secret.return_value = 'secret_thing'
-        self.resolve_address.return_value = '10.0.0.10'
         self.assertEquals(context.SharedSecretContext()(), {})
 
 
