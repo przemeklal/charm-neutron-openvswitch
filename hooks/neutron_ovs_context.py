@@ -10,7 +10,6 @@ from charmhelpers.core.hookenv import (
     unit_get,
     network_get_primary_address,
 )
-from charmhelpers.contrib.openstack.ip import resolve_address
 from charmhelpers.contrib.openstack import context
 from charmhelpers.contrib.openstack.utils import get_host_ip
 from charmhelpers.contrib.network.ip import get_address_in_network
@@ -244,7 +243,6 @@ class SharedSecretContext(OSContextGenerator):
                 config('enable-local-dhcp-and-metadata'):
             ctxt = {
                 'shared_secret': get_shared_secret(),
-                'local_ip': resolve_address(),
             }
         else:
             ctxt = {}
