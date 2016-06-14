@@ -99,6 +99,10 @@ options:
     type: string
     default:
     description: |
+      Deprecated: Use bridge-mappings and data-port to create a network
+      which can be used for external connectivity.  You can call the network
+      external and the bridge br-ex by convention, but neither is required
+
       A space-separated list of external ports to use for routing of instance
       traffic to the external public network. Valid values are either MAC
       addresses (in which case only MAC addresses for interfaces without an IP

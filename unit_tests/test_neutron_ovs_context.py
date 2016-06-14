@@ -244,7 +244,10 @@ class L3AgentContextTest(CharmTestCase):
             'network-device-mtu': 1500,
         }
         _rget.side_effect = lambda *args, **kwargs: rdata
-        self.assertEquals(context.L3AgentContext()(), {'agent_mode': 'dvr'})
+        self.assertEquals(
+            context.L3AgentContext()(), {'agent_mode': 'dvr',
+                                         'external_configuration_new': True}
+        )
 
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_get')
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_ids')

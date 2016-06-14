@@ -178,3 +178,65 @@ By default, the charm will configure Open vSwitch/DPDK to consume a processor co
 **NOTE:** Enabling DPDK support automatically disables security groups for instances.
 
 [dpdk-nics]: http://dpdk.org/doc/nics
+
+# Port Configuration
+
+**NOTE:** External port configuration only applies when DVR mode is enabled.
+
+All network types (internal, external) are configured with bridge-mappings and
+data-port and the flat-network-providers configuration option of the
+neutron-api charm.  Once deployed, you can configure the network specifics
+using neutron net-create.
+
+If the device name is not consistent between hosts, you can specify the same
+bridge multiple times with MAC addresses instead of interface names.  The charm
+will loop through the list and configure the first matching interface.
+
+Basic configuration of a single external network, typically used as floating IP
+addresses combined with a GRE private network:
+
+    neutron-openvswitch:
+        bridge-mappings:         physnet1:br-ex
+        data-port:               br-ex:eth1
+    neutron-api:
+        flat-network-providers:  physnet1
+
+    neutron net-create --provider:network_type flat \
+        --provider:physical_network physnet1 --router:external=true \
+        external
+    neutron router-gateway-set provider external
+
+Alternative configuration with two networks, where the internal private
+network is directly connected to the gateway with public IP addresses but a
+floating IP address range is also offered.
+
+    neutron-openvswitch:
+        bridge-mappings:         physnet1:br-data external:br-ex
+        data-port:               br-data:eth1 br-ex:eth2
+    neutron-api:
+        flat-network-providers:  physnet1 external
+
+Alternative configuration with two external networks, one for public instance
+addresses and one for floating IP addresses.  Both networks are on the same
+physical network connection (but they might be on different VLANs, that is
+configured later using neutron net-create).
+
+    neutron-openvswitch:
+        bridge-mappings:         physnet1:br-data
+        data-port:               br-data:eth1
+    neutron-api:
+        flat-network-providers:  physnet1
+
+    neutron net-create --provider:network_type vlan \
+        --provider:segmentation_id 400 \
+        --provider:physical_network physnet1 --shared external
+    neutron net-create --provider:network_type vlan \
+        --provider:segmentation_id 401 \
+        --provider:physical_network physnet1 --shared --router:external=true \
+        floating
+    neutron router-gateway-set provider floating
+
+This replaces the previous system of using ext-port, which always created a bridge
+called br-ex for external networks which was used implicitly by external router
+interfaces.
+
