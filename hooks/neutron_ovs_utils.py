@@ -10,6 +10,7 @@ from charmhelpers.contrib.openstack import context, templating
 from charmhelpers.contrib.openstack.utils import (
     git_install_requested,
     git_clone_and_install,
+    git_default_repos,
     git_src_dir,
     git_pip_venv_dir,
     pause_unit,
@@ -429,6 +430,7 @@ def git_install(projects_yaml):
     status_set('maintenance', 'running git install')
     if git_install_requested():
         git_pre_install()
+        projects_yaml = git_default_repos(projects_yaml)
         git_clone_and_install(projects_yaml, core_project='neutron')
         git_post_install(projects_yaml)
 

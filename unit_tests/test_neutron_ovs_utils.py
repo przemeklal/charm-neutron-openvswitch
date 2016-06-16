@@ -373,14 +373,16 @@ class TestNeutronOVSUtils(CharmTestCase):
             DummyContext(return_value={'shared_secret': 'supersecret'})
         self.assertEqual(nutils.get_shared_secret(), 'supersecret')
 
+    @patch.object(nutils, 'git_default_repos')
     @patch.object(nutils, 'git_install_requested')
     @patch.object(nutils, 'git_clone_and_install')
     @patch.object(nutils, 'git_post_install')
     @patch.object(nutils, 'git_pre_install')
     def test_git_install(self, git_pre, git_post, git_clone_and_install,
-                         git_requested):
+                         git_requested, git_default_repos):
         projects_yaml = openstack_origin_git
         git_requested.return_value = True
+        git_default_repos.return_value = projects_yaml
         nutils.git_install(projects_yaml)
         self.assertTrue(git_pre.called)
         git_clone_and_install.assert_called_with(openstack_origin_git,
