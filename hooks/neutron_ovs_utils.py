@@ -22,11 +22,12 @@ from copy import deepcopy
 
 from charmhelpers.contrib.openstack import context, templating
 from charmhelpers.contrib.openstack.utils import (
-    git_install_requested,
     git_clone_and_install,
     git_default_repos,
-    git_src_dir,
+    git_generate_systemd_init_files,
+    git_install_requested,
     git_pip_venv_dir,
+    git_src_dir,
     pause_unit,
     resume_unit,
     make_assess_status_func,
@@ -43,6 +44,7 @@ from charmhelpers.contrib.network.ovs import (
     full_restart,
 )
 from charmhelpers.core.hookenv import (
+    charm_dir,
     config,
     status_set,
 )
@@ -59,7 +61,9 @@ from charmhelpers.core.host import (
     adduser,
     add_group,
     add_user_to_group,
+    lsb_release,
     mkdir,
+    service,
     service_restart,
     service_running,
     write_file,
@@ -89,6 +93,7 @@ BASE_GIT_PACKAGES = [
     'libxml2-dev',
     'libxslt1-dev',
     'libyaml-dev',
+    'openstack-pkg-tools',
     'openvswitch-switch',
     'python-dev',
     'python-pip',
@@ -103,6 +108,8 @@ GIT_PACKAGE_BLACKLIST = [
     'neutron-server',
     'neutron-plugin-openvswitch',
     'neutron-plugin-openvswitch-agent',
+    'neutron-openvswitch',
+    'neutron-openvswitch-agent',
     'neutron-openvswitch-agent',
 ]
 
@@ -505,31 +512,61 @@ def git_post_install(projects_yaml):
            perms=0o440)
 
     bin_dir = os.path.join(git_pip_venv_dir(projects_yaml), 'bin')
-    neutron_ovs_agent_context = {
-        'service_description': 'Neutron OpenvSwitch Plugin Agent',
-        'charm_name': 'neutron-openvswitch',
-        'process_name': 'neutron-openvswitch-agent',
-        'executable_name': os.path.join(bin_dir, 'neutron-openvswitch-agent'),
-        'cleanup_process_name': 'neutron-ovs-cleanup',
-        'plugin_config': '/etc/neutron/plugins/ml2/ml2_conf.ini',
-        'log_file': '/var/log/neutron/openvswitch-agent.log',
-    }
+    # Use systemd init units/scripts from ubuntu wily onward
+    if lsb_release()['DISTRIB_RELEASE'] >= '15.10':
+        templates_dir = os.path.join(charm_dir(), 'templates/git')
+        daemons = ['neutron-openvswitch-agent', 'neutron-ovs-cleanup']
+        for daemon in daemons:
+            neutron_ovs_context = {
+                'daemon_path': os.path.join(bin_dir, daemon),
+            }
+            filename = daemon
+            if daemon == 'neutron-openvswitch-agent':
+                if os_release('neutron-common') < 'mitaka':
+                    filename = 'neutron-plugin-openvswitch-agent'
+            template_file = 'git/{}.init.in.template'.format(filename)
+            init_in_file = '{}.init.in'.format(filename)
+            render(template_file, os.path.join(templates_dir, init_in_file),
+                   neutron_ovs_context, perms=0o644)
+        git_generate_systemd_init_files(templates_dir)
 
-    neutron_ovs_cleanup_context = {
-        'service_description': 'Neutron OpenvSwitch Cleanup',
-        'charm_name': 'neutron-openvswitch',
-        'process_name': 'neutron-ovs-cleanup',
-        'executable_name': os.path.join(bin_dir, 'neutron-ovs-cleanup'),
-        'log_file': '/var/log/neutron/ovs-cleanup.log',
-    }
+        for daemon in daemons:
+            filename = daemon
+            if daemon == 'neutron-openvswitch-agent':
+                if os_release('neutron-common') < 'mitaka':
+                    filename = 'neutron-plugin-openvswitch-agent'
+            service('enable', filename)
+    else:
+        neutron_ovs_agent_context = {
+            'service_description': 'Neutron OpenvSwitch Plugin Agent',
+            'charm_name': 'neutron-openvswitch',
+            'process_name': 'neutron-openvswitch-agent',
+            'executable_name': os.path.join(bin_dir,
+                                            'neutron-openvswitch-agent'),
+            'cleanup_process_name': 'neutron-ovs-cleanup',
+            'plugin_config': '/etc/neutron/plugins/ml2/ml2_conf.ini',
+            'log_file': '/var/log/neutron/openvswitch-agent.log',
+        }
 
-    # NOTE(coreycb): Needs systemd support
-    render('git/upstart/neutron-plugin-openvswitch-agent.upstart',
-           '/etc/init/neutron-plugin-openvswitch-agent.conf',
-           neutron_ovs_agent_context, perms=0o644)
-    render('git/upstart/neutron-ovs-cleanup.upstart',
-           '/etc/init/neutron-ovs-cleanup.conf',
-           neutron_ovs_cleanup_context, perms=0o644)
+        neutron_ovs_cleanup_context = {
+            'service_description': 'Neutron OpenvSwitch Cleanup',
+            'charm_name': 'neutron-openvswitch',
+            'process_name': 'neutron-ovs-cleanup',
+            'executable_name': os.path.join(bin_dir, 'neutron-ovs-cleanup'),
+            'log_file': '/var/log/neutron/ovs-cleanup.log',
+        }
+
+        if os_release('neutron-common') < 'mitaka':
+            render('git/upstart/neutron-plugin-openvswitch-agent.upstart',
+                   '/etc/init/neutron-plugin-openvswitch-agent.conf',
+                   neutron_ovs_agent_context, perms=0o644)
+        else:
+            render('git/upstart/neutron-plugin-openvswitch-agent.upstart',
+                   '/etc/init/neutron-openvswitch-agent.conf',
+                   neutron_ovs_agent_context, perms=0o644)
+        render('git/upstart/neutron-ovs-cleanup.upstart',
+               '/etc/init/neutron-ovs-cleanup.conf',
+               neutron_ovs_cleanup_context, perms=0o644)
 
     if not is_unit_paused_set():
         service_restart('neutron-plugin-openvswitch-agent')

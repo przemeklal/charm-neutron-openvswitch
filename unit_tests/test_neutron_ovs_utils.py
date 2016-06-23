@@ -37,8 +37,12 @@ TO_PATCH = [
     'config',
     'os_release',
     'filter_installed_packages',
+    'git_src_dir',
+    'lsb_release',
     'neutron_plugin_attribute',
     'full_restart',
+    'render',
+    'service',
     'service_restart',
     'service_running',
     'ExternalPortContext',
@@ -430,18 +434,17 @@ class TestNeutronOVSUtils(CharmTestCase):
         ]
         self.assertEquals(write_file.call_args_list, expected)
 
-    @patch.object(nutils, 'git_src_dir')
-    @patch.object(nutils, 'service_restart')
-    @patch.object(nutils, 'render')
+    @patch('os.listdir')
     @patch('os.path.join')
     @patch('os.path.exists')
     @patch('os.symlink')
     @patch('shutil.copytree')
     @patch('shutil.rmtree')
-    def test_git_post_install(self, rmtree, copytree, symlink, exists, join,
-                              render, service_restart, git_src_dir):
+    def test_git_post_install_upstart(self, rmtree, copytree, symlink, exists,
+                                      join, listdir):
         projects_yaml = openstack_origin_git
         join.return_value = 'joined-string'
+        self.lsb_release.return_value = {'DISTRIB_RELEASE': '15.04'}
         nutils.git_post_install(projects_yaml)
         expected = [
             call('joined-string', '/etc/neutron'),
@@ -479,11 +482,35 @@ class TestNeutronOVSUtils(CharmTestCase):
                  '/etc/init/neutron-ovs-cleanup.conf',
                  neutron_ovs_cleanup_context, perms=0o644),
         ]
-        self.assertEquals(render.call_args_list, expected)
+        self.assertEquals(self.render.call_args_list, expected)
         expected = [
             call('neutron-plugin-openvswitch-agent'),
         ]
-        self.assertEquals(service_restart.call_args_list, expected)
+        self.assertEquals(self.service_restart.call_args_list, expected)
+
+    @patch('os.listdir')
+    @patch('os.path.join')
+    @patch('os.path.exists')
+    @patch('os.symlink')
+    @patch('shutil.copytree')
+    @patch('shutil.rmtree')
+    def test_git_post_install_systemd(self, rmtree, copytree, symlink, exists,
+                                      join, listdir):
+        projects_yaml = openstack_origin_git
+        join.return_value = 'joined-string'
+        self.lsb_release.return_value = {'DISTRIB_RELEASE': '15.10'}
+        nutils.git_post_install(projects_yaml)
+        expected = [
+            call('git/neutron_sudoers', '/etc/sudoers.d/neutron_sudoers',
+                 {}, perms=288),
+            call('git/neutron-plugin-openvswitch-agent.init.in.template',
+                 'joined-string', {'daemon_path': 'joined-string'},
+                 perms=420),
+            call('git/neutron-ovs-cleanup.init.in.template',
+                 'joined-string', {'daemon_path': 'joined-string'},
+                 perms=420)
+        ]
+        self.assertEquals(self.render.call_args_list, expected)
 
     def test_assess_status(self):
         with patch.object(nutils, 'assess_status_func') as asf:

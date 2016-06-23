@@ -19,14 +19,8 @@ options:
       Specifies a default OpenStack release name, or a YAML dictionary
       listing the git repositories to install from.
 
-      When openstack-origin-git is specified, openstack-specific
-      packages will be installed from source rather than from the
-      the nova-compute charm's openstack-origin repository.
-
       The default Openstack release name may be one of the following, where
       the corresponding OpenStack github branch will be used:
-        * icehouse
-        * kilo
         * liberty
         * mitaka
         * master
@@ -50,10 +44,7 @@ options:
         - {name: neutron,
            repository: 'git://github.com/openstack/neutron',
            branch: master}
-
-      Note that the installed config files will be determined based on
-      the OpenStack release of the nova-compute charm's openstack-origin
-      option.
+        release: master
   rabbit-user:
     default: neutron
     type: string
