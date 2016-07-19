@@ -157,10 +157,10 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
     def _initialize_tests(self):
         """Perform final initialization before tests get run."""
         # Access the sentries for inspecting service units
-        self.compute_sentry = self.d.sentry.unit['nova-compute/0']
-        self.rabbitmq_sentry = self.d.sentry.unit['rabbitmq-server/0']
-        self.neutron_api_sentry = self.d.sentry.unit['neutron-api/0']
-        self.n_ovs_sentry = self.d.sentry.unit['neutron-openvswitch/0']
+        self.compute_sentry = self.d.sentry['nova-compute'][0]
+        self.rabbitmq_sentry = self.d.sentry['rabbitmq-server'][0]
+        self.neutron_api_sentry = self.d.sentry['neutron-api'][0]
+        self.n_ovs_sentry = self.d.sentry['neutron-openvswitch'][0]
 
     def test_100_services(self):
         """Verify the expected services are running on the corresponding

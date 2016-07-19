@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #
 # Copyright 2016 Canonical Ltd
 #
@@ -14,13 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# NeutronOVSBasicDeployment
-"""Amulet tests on a basic neutron-openvswitch deployment on trusty-mitaka."""
+"""Amulet tests on a basic neutron-openvswitch deployment on trusty-icehouse."""
 
 from basic_deployment import NeutronOVSBasicDeployment
 
 if __name__ == '__main__':
-    deployment = NeutronOVSBasicDeployment(series='trusty',
-                                           openstack='cloud:trusty-mitaka',
-                                           source='cloud:trusty-updates/mitaka')
+    deployment = NeutronOVSBasicDeployment(series='trusty')
     deployment.run_tests()

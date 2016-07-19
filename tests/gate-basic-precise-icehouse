@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #
 # Copyright 2016 Canonical Ltd
 #
@@ -15,12 +15,12 @@
 # limitations under the License.
 
 # NeutronOVSBasicDeployment
-"""Amulet tests on a basic neutron-openvswitch deployment on trusty-liberty."""
+"""Amulet tests on a basic neutron-openvswitch deployment on precise-icehouse."""
 
 from basic_deployment import NeutronOVSBasicDeployment
 
 if __name__ == '__main__':
-    deployment = NeutronOVSBasicDeployment(series='trusty',
-                                           openstack='cloud:trusty-liberty',
-                                           source='cloud:trusty-updates/liberty')
+    deployment = NeutronOVSBasicDeployment(series='precise',
+                                           openstack='cloud:precise-icehouse',
+                                           source='cloud:precise-updates/icehouse')
     deployment.run_tests()
