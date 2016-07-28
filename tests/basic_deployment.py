@@ -43,7 +43,7 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
     """Amulet tests on a basic neutron-openvswtich deployment."""
 
     def __init__(self, series, openstack=None, source=None, git=False,
-                 stable=False):
+                 stable=True):
         """Deploy the entire test environment."""
         super(NeutronOVSBasicDeployment, self).__init__(series, openstack,
                                                         source, stable)
