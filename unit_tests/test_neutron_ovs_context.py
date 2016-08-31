@@ -491,14 +491,54 @@ class TestRemoteRestartContext(CharmTestCase):
     def test_restart_trigger_present(self):
         self.relation_ids.return_value = ['rid1']
         self.related_units.return_value = ['nova-compute/0']
-        self.relation_get.return_value = '8f73-f3adb96a90d8'
+        self.relation_get.return_value = {
+            'restart-trigger': '8f73-f3adb96a90d8',
+        }
         self.assertEquals(
             context.RemoteRestartContext()(),
             {'restart_trigger': '8f73-f3adb96a90d8'}
         )
+        self.relation_ids.assert_called_with('neutron-plugin')
+
+    def test_restart_trigger_present_alt_relation(self):
+        self.relation_ids.return_value = ['rid1']
+        self.related_units.return_value = ['nova-compute/0']
+        self.relation_get.return_value = {
+            'restart-trigger': '8f73-f3adb96a90d8',
+        }
+        self.assertEquals(
+            context.RemoteRestartContext(['neutron-control'])(),
+            {'restart_trigger': '8f73-f3adb96a90d8'}
+        )
+        self.relation_ids.assert_called_with('neutron-control')
+
+    def test_restart_trigger_present_multi_relation(self):
+        self.relation_ids.return_value = ['rid1']
+        self.related_units.return_value = ['nova-compute/0']
+        ids = [
+            {'restart-trigger': '8f73'},
+            {'restart-trigger': '2ac3'}]
+        self.relation_get.side_effect = lambda rid, unit: ids.pop()
+        self.assertEquals(
+            context.RemoteRestartContext(
+                ['neutron-plugin', 'neutron-control'])(),
+            {'restart_trigger': '2ac3-8f73'}
+        )
+        self.relation_ids.assert_called_with('neutron-control')
 
     def test_restart_trigger_absent(self):
         self.relation_ids.return_value = ['rid1']
         self.related_units.return_value = ['nova-compute/0']
-        self.relation_get.return_value = None
+        self.relation_get.return_value = {}
         self.assertEquals(context.RemoteRestartContext()(), {})
+
+    def test_restart_trigger_service(self):
+        self.relation_ids.return_value = ['rid1']
+        self.related_units.return_value = ['nova-compute/0']
+        self.relation_get.return_value = {
+            'restart-trigger-neutron': 'neutron-uuid',
+        }
+        self.assertEquals(
+            context.RemoteRestartContext()(),
+            {'restart_trigger_neutron': 'neutron-uuid'}
+        )
