@@ -143,6 +143,12 @@ def zeromq_configuration_relation_changed():
     CONFIGS.write_all()
 
 
+@hooks.hook('neutron-control-relation-changed')
+@restart_on_change(restart_map(), stopstart=True)
+def restart_check():
+    CONFIGS.write_all()
+
+
 def main():
     try:
         hooks.execute(sys.argv)

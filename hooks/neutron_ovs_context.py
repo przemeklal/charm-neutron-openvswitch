@@ -268,16 +268,29 @@ class SharedSecretContext(OSContextGenerator):
 
 class RemoteRestartContext(OSContextGenerator):
 
+    def __init__(self, interfaces=None):
+        self.interfaces = interfaces or ['neutron-plugin']
+
     def __call__(self):
-        for rid in relation_ids('neutron-plugin'):
+        rids = []
+        for interface in self.interfaces:
+            rids.extend(relation_ids(interface))
+        ctxt = {}
+        for rid in rids:
             for unit in related_units(rid):
-                restart_uuid = relation_get(
-                    attribute='restart-trigger',
+                remote_data = relation_get(
                     rid=rid,
                     unit=unit)
-                if restart_uuid:
-                    return {'restart_trigger': restart_uuid}
-        return {}
+                for k, v in remote_data.items():
+                    if k.startswith('restart-trigger'):
+                        restart_key = k.replace('-', '_')
+                        try:
+                            ctxt[restart_key].append(v)
+                        except KeyError:
+                            ctxt[restart_key] = [v]
+        for restart_key in ctxt.keys():
+            ctxt[restart_key] = '-'.join(sorted(ctxt[restart_key]))
+        return ctxt
 
 
 class APIIdentityServiceContext(context.IdentityServiceContext):

@@ -137,7 +137,8 @@ BASE_RESOURCE_MAP = OrderedDict([
     (NEUTRON_CONF, {
         'services': ['neutron-plugin-openvswitch-agent'],
         'contexts': [neutron_ovs_context.OVSPluginContext(),
-                     neutron_ovs_context.RemoteRestartContext(),
+                     neutron_ovs_context.RemoteRestartContext(
+                         ['neutron-plugin', 'neutron-control']),
                      context.AMQPContext(ssl_dir=NEUTRON_CONF_DIR),
                      context.ZeroMQContext(),
                      context.NotificationDriverContext()],

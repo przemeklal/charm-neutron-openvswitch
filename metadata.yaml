@@ -22,6 +22,8 @@ provides:
   neutron-plugin:
     interface: neutron-plugin
     scope: container
+  neutron-control:
+    interface: service-control
 requires:
   amqp:
     interface: rabbitmq
@@ -30,4 +32,3 @@ requires:
   zeromq-configuration:
     interface: zeromq-configuration
     scope: container
-
