@@ -16,6 +16,11 @@ description: |
   L2 connectivity on nova-compute services.
 tags:
   - openstack
+series:
+  - xenial
+  - trusty
+  - precise
+  - yakkety
 extra-bindings:
   data:
 provides:
