@@ -32,6 +32,7 @@ from charmhelpers.contrib.openstack.utils import (
     resume_unit,
     make_assess_status_func,
     is_unit_paused_set,
+    os_application_version_set,
 )
 from collections import OrderedDict
 from charmhelpers.contrib.openstack.utils import (
@@ -114,6 +115,7 @@ GIT_PACKAGE_BLACKLIST = [
     'neutron-openvswitch-agent',
 ]
 
+VERSION_PACKAGE = 'neutron-common'
 NOVA_CONF_DIR = "/etc/nova"
 NEUTRON_DHCP_AGENT_CONF = "/etc/neutron/dhcp_agent.ini"
 NEUTRON_CONF_DIR = "/etc/neutron"
@@ -585,6 +587,7 @@ def assess_status(configs):
     @returns None - this function is executed for its side-effect
     """
     assess_status_func(configs)()
+    os_application_version_set(VERSION_PACKAGE)
 
 
 def assess_status_func(configs):

@@ -50,6 +50,7 @@ TO_PATCH = [
     'headers_package',
     'status_set',
     'use_dpdk',
+    'os_application_version_set',
 ]
 
 head_pkg = 'linux-headers-3.15.0-5-generic'
@@ -519,6 +520,9 @@ class TestNeutronOVSUtils(CharmTestCase):
             nutils.assess_status('test-config')
             asf.assert_called_once_with('test-config')
             callee.assert_called_once_with()
+            self.os_application_version_set.assert_called_with(
+                nutils.VERSION_PACKAGE
+            )
 
     @patch.object(nutils, 'REQUIRED_INTERFACES')
     @patch.object(nutils, 'services')
