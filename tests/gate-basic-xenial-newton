@@ -15,12 +15,12 @@
 # limitations under the License.
 
 # NeutronOVSBasicDeployment
-"""Amulet tests on a basic neutron-openvswitch deployment on precise-icehouse."""
+"""Amulet tests on a basic neutron-openvswitch deployment on xenial-newton."""
 
 from basic_deployment import NeutronOVSBasicDeployment
 
 if __name__ == '__main__':
-    deployment = NeutronOVSBasicDeployment(series='precise',
-                                           openstack='cloud:precise-icehouse',
-                                           source='cloud:precise-updates/icehouse')
+    deployment = NeutronOVSBasicDeployment(series='xenial',
+                                           openstack='cloud:xenial-newton',
+                                           source='cloud:xenial-updates/newton')
     deployment.run_tests()
