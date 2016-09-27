@@ -155,13 +155,14 @@ BASE_RESOURCE_MAP = OrderedDict([
     }),
     (OVS_DEFAULT, {
         'services': ['openvswitch-switch'],
-        'contexts': [neutron_ovs_context.OVSDPDKDeviceContext()],
+        'contexts': [neutron_ovs_context.OVSDPDKDeviceContext(),
+                     neutron_ovs_context.RemoteRestartContext(
+                         ['neutron-plugin', 'neutron-control'])],
     }),
     (DPDK_INTERFACES, {
         'services': ['dpdk'],
         'contexts': [neutron_ovs_context.DPDKDeviceContext()],
     }),
-
     (PHY_NIC_MTU_CONF, {
         'services': ['os-charm-phy-nic-mtu'],
         'contexts': [context.PhyNICMTUContext()],
@@ -293,14 +294,9 @@ def resource_map():
             'neutron-openvswitch-agent'
         )
         if not use_dpdk():
-            # NOTE; /etc/default/openvswitch only used for
-            #       DPDK configuration so drop if DPDK not
-            #       in use
-            del resource_map[OVS_DEFAULT]
             del resource_map[DPDK_INTERFACES]
     else:
         del resource_map[OVS_CONF]
-        del resource_map[OVS_DEFAULT]
         del resource_map[DPDK_INTERFACES]
     return resource_map
 

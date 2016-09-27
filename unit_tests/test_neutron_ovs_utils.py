@@ -205,6 +205,7 @@ class TestNeutronOVSUtils(CharmTestCase):
         _regconfs = nutils.register_configs()
         confs = ['/etc/neutron/neutron.conf',
                  '/etc/neutron/plugins/ml2/ml2_conf.ini',
+                 '/etc/default/openvswitch-switch',
                  '/etc/init/os-charm-phy-nic-mtu.conf']
         self.assertItemsEqual(_regconfs.configs, confs)
 
@@ -225,6 +226,7 @@ class TestNeutronOVSUtils(CharmTestCase):
         _regconfs = nutils.register_configs()
         confs = ['/etc/neutron/neutron.conf',
                  '/etc/neutron/plugins/ml2/openvswitch_agent.ini',
+                 '/etc/default/openvswitch-switch',
                  '/etc/init/os-charm-phy-nic-mtu.conf']
         self.assertItemsEqual(_regconfs.configs, confs)
 
@@ -280,6 +282,7 @@ class TestNeutronOVSUtils(CharmTestCase):
         expect = OrderedDict([
             (nutils.NEUTRON_CONF, ['neutron-plugin-openvswitch-agent']),
             (ML2CONF, ['neutron-plugin-openvswitch-agent']),
+            (nutils.OVS_DEFAULT, ['openvswitch-switch']),
             (nutils.PHY_NIC_MTU_CONF, ['os-charm-phy-nic-mtu'])
         ])
         self.assertEqual(expect, _restart_map)
