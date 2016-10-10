@@ -54,9 +54,10 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
         self._deploy()
 
         u.log.info('Waiting on extended status checks...')
-        exclude_services = ['mysql']
+        exclude_services = []
         self._auto_wait_for_status(exclude_services=exclude_services)
 
+        self.d.sentry.wait()
         self._initialize_tests()
 
     def _add_services(self):
@@ -69,12 +70,14 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
         # Services and relations which are present merely to satisfy required_interfaces
         # and workload status are not inspected.  Fix me.  Inspect those too.
         this_service = {'name': 'neutron-openvswitch'}
-        other_services = [{'name': 'nova-compute'},
-                          {'name': 'rabbitmq-server'},
-                          {'name': 'keystone'},  # satisfy workload stat
-                          {'name': 'mysql'},  # satisfy workload stat
-                          {'name': 'glance'},  # satisfy workload stat
-                          {'name': 'neutron-api'}]
+        other_services = [
+            {'name': 'nova-compute'},
+            {'name': 'rabbitmq-server'},
+            {'name': 'keystone'},
+            {'name': 'glance'},
+            {'name': 'neutron-api'},
+            {'name': 'percona-cluster', 'constraints': {'mem': '3072M'}},
+        ]
         super(NeutronOVSBasicDeployment, self)._add_services(this_service,
                                                              other_services)
 
@@ -88,14 +91,14 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
             'neutron-api:neutron-plugin-api',
             # Satisfy workload stat:
             'neutron-api:identity-service': 'keystone:identity-service',
-            'neutron-api:shared-db': 'mysql:shared-db',
+            'neutron-api:shared-db': 'percona-cluster:shared-db',
             'neutron-api:amqp': 'rabbitmq-server:amqp',
             'nova-compute:amqp': 'rabbitmq-server:amqp',
             'nova-compute:image-service': 'glance:image-service',
             'glance:identity-service': 'keystone:identity-service',
-            'glance:shared-db': 'mysql:shared-db',
+            'glance:shared-db': 'percona-cluster:shared-db',
             'glance:amqp': 'rabbitmq-server:amqp',
-            'keystone:shared-db': 'mysql:shared-db',
+            'keystone:shared-db': 'percona-cluster:shared-db',
         }
         super(NeutronOVSBasicDeployment, self)._add_relations(relations)
 
@@ -151,7 +154,17 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
                     'https_proxy': amulet_http_proxy,
                 }
             neutron_ovs_config['openstack-origin-git'] = yaml.dump(openstack_origin_git)
-        configs = {'neutron-openvswitch': neutron_ovs_config}
+
+        pxc_config = {
+            'dataset-size': '25%',
+            'max-connections': 1000,
+            'root-password': 'ChangeMe123',
+            'sst-password': 'ChangeMe123',
+        }
+        configs = {
+            'neutron-openvswitch': neutron_ovs_config,
+            'percona-cluster': pxc_config,
+        }
         super(NeutronOVSBasicDeployment, self)._configure_services(configs)
 
     def _initialize_tests(self):
