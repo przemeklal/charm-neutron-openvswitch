@@ -39,6 +39,7 @@ from neutron_ovs_utils import (
     DVR_PACKAGES,
     METADATA_PACKAGES,
     configure_ovs,
+    configure_sriov,
     git_install,
     get_topics,
     get_shared_secret,
@@ -72,6 +73,7 @@ def config_changed():
             git_install(config('openstack-origin-git'))
 
     configure_ovs()
+    configure_sriov()
     CONFIGS.write_all()
     for rid in relation_ids('zeromq-configuration'):
         zeromq_configuration_relation_joined(rid)

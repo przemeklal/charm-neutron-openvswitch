@@ -86,12 +86,14 @@ def mocked_realpath(link):
     return pci_responses.SYS_TREE[resolved_link]
 
 
+@patch('pci.cached')
 @patch('pci.log')
 @patch('pci.subprocess.Popen')
 @patch('pci.subprocess.check_output')
 @patch('pci.glob.glob')
 @patch('pci.os.path.islink')
-def pci_devs(_osislink, _glob, _check_output, _Popen, _log, subproc_map=None):
+def pci_devs(_osislink, _glob, _check_output, _Popen, _log,
+             _cached, subproc_map=None):
     _glob.side_effect = mocked_globs
     _osislink.side_effect = mocked_islink
     _check_output.side_effect = mocked_subprocess(

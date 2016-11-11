@@ -41,6 +41,7 @@ TO_PATCH = [
     'relation_ids',
     'relation_set',
     'configure_ovs',
+    'configure_sriov',
     'use_dvr',
     'install_packages',
     'purge_packages',
@@ -99,6 +100,7 @@ class NeutronOVSHooksTests(CharmTestCase):
         self.assertTrue(self.CONFIGS.write_all.called)
         self.assertTrue(_zmq_joined.called_with('relid'))
         self.configure_ovs.assert_called_with()
+        self.configure_sriov.assert_called_with()
 
     @patch.object(hooks, 'git_install_requested')
     @patch.object(hooks, 'config_value_changed')

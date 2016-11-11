@@ -33,6 +33,7 @@ from charmhelpers.contrib.openstack.utils import (
     make_assess_status_func,
     is_unit_paused_set,
     os_application_version_set,
+    remote_restart,
 )
 from collections import OrderedDict
 from charmhelpers.contrib.openstack.utils import (
@@ -48,6 +49,7 @@ from charmhelpers.core.hookenv import (
     charm_dir,
     config,
     status_set,
+    log,
 )
 from charmhelpers.contrib.openstack.neutron import (
     parse_bridge_mappings,
@@ -78,6 +80,9 @@ from charmhelpers.fetch import (
     apt_update,
     filter_installed_packages,
 )
+
+from pci import PCINetDevices
+
 
 # The interface is said to be satisfied if anyone of the interfaces in the
 # list has a complete context.
@@ -134,6 +139,8 @@ PHY_NIC_MTU_CONF = '/etc/init/os-charm-phy-nic-mtu.conf'
 TEMPLATES = 'templates/'
 OVS_DEFAULT = '/etc/default/openvswitch-switch'
 DPDK_INTERFACES = '/etc/dpdk/interfaces'
+NEUTRON_SRIOV_AGENT_CONF = os.path.join(NEUTRON_CONF_DIR,
+                                        'plugins/ml2/sriov_agent.ini')
 
 BASE_RESOURCE_MAP = OrderedDict([
     (NEUTRON_CONF, {
@@ -195,6 +202,12 @@ DVR_RESOURCE_MAP = OrderedDict([
         'contexts': [context.ExternalPortContext()],
     }),
 ])
+SRIOV_RESOURCE_MAP = OrderedDict([
+    (NEUTRON_SRIOV_AGENT_CONF, {
+        'services': ['neutron-sriov-agent'],
+        'contexts': [neutron_ovs_context.OVSPluginContext()],
+    }),
+])
 
 TEMPLATES = 'templates/'
 INT_BRIDGE = "br-int"
@@ -254,6 +267,9 @@ def determine_packages():
     if use_dpdk():
         pkgs.append('openvswitch-switch-dpdk')
 
+    if enable_sriov_agent():
+        pkgs.append('neutron-sriov-agent')
+
     return pkgs
 
 
@@ -296,6 +312,10 @@ def resource_map():
         )
         if not use_dpdk():
             drop_config.append(DPDK_INTERFACES)
+        if enable_sriov_agent():
+            resource_map.update(SRIOV_RESOURCE_MAP)
+            resource_map[NEUTRON_CONF]['services'].append(
+                'neutron-sriov-agent')
     else:
         drop_config.extend([OVS_CONF, DPDK_INTERFACES])
 
@@ -409,6 +429,53 @@ def configure_ovs():
     service_restart('os-charm-phy-nic-mtu')
 
 
+def configure_sriov():
+    '''Configure SR-IOV devices based on provided configuration options'''
+    charm_config = config()
+    enable_sriov = charm_config.get('enable-sriov')
+    if enable_sriov and charm_config.changed('sriov-numvfs'):
+        devices = PCINetDevices()
+        sriov_numvfs = charm_config.get('sriov-numvfs')
+
+        # automatic configuration of all SR-IOV devices
+        if sriov_numvfs == 'auto':
+            log('Configuring SR-IOV device VF functions in auto mode')
+            for device in devices.pci_devices:
+                if device and device.sriov:
+                    log("Configuring SR-IOV device"
+                        " {} with {} VF's".format(device.interface_name,
+                                                  device.sriov_totalvfs))
+                    device.set_sriov_numvfs(device.sriov_totalvfs)
+        else:
+            # Single int blanket configuration
+            try:
+                sriov_numvfs = int(sriov_numvfs)
+                log('Configuring SR-IOV device VF functions'
+                    ' with blanket setting')
+                for device in devices.pci_devices:
+                    if device and device.sriov:
+                        log("Configuring SR-IOV device"
+                            " {} with {} VF's".format(device.interface_name,
+                                                      sriov_numvfs))
+                        device.set_sriov_numvfs(sriov_numvfs)
+            except ValueError:
+                # <device>:<numvfs>[ <device>:numvfs] configuration
+                sriov_numvfs = sriov_numvfs.split()
+                for device_config in sriov_numvfs:
+                    log('Configuring SR-IOV device VF functions per interface')
+                    interface_name, numvfs = device_config.split(':')
+                    device = devices.get_device_from_interface_name(
+                        interface_name)
+                    if device and device.sriov:
+                        log("Configuring SR-IOV device"
+                            " {} with {} VF's".format(device.interface_name,
+                                                      numvfs))
+                        device.set_sriov_numvfs(int(numvfs))
+
+        # Trigger remote restart in parent application
+        remote_restart('neutron-plugin', 'nova-compute')
+
+
 def get_shared_secret():
     ctxt = neutron_ovs_context.SharedSecretContext()()
     if 'shared_secret' in ctxt:
@@ -434,6 +501,14 @@ def use_dpdk():
     '''Determine whether DPDK should be used'''
     release = os_release('neutron-common', base='icehouse')
     if (release >= 'mitaka' and config('enable-dpdk')):
+        return True
+    return False
+
+
+def enable_sriov_agent():
+    '''Determine with SR-IOV agent should be used'''
+    release = os_release('neutron-common', base='icehouse')
+    if (release >= 'mitaka' and config('enable-sriov')):
         return True
     return False
 

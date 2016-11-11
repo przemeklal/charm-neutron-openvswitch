@@ -26,7 +26,6 @@ import pci
 
 TO_PATCH = [
     'glob',
-    'log',
     'subprocess',
 ]
 NOT_JSON = "Im not json"
@@ -73,43 +72,48 @@ class PCINetDeviceTest(CharmTestCase):
             'mac_address': 'a8:9d:21:cf:93:fc',
             'pci_address': '0000:10:00.0',
             'state': 'up',
+            'sriov': False,
         }
         self.assertTrue(check_device(net, expect))
 
-    @patch('pci.PCINetDevice.get_sysnet_interfaces_and_macs')
+    @patch('pci.get_sysnet_interfaces_and_macs')
     @patch('pci.PCINetDevice.update_attributes')
-    def test_update_interface_info_eth(self, _update, _sysnet_ints):
+    def test_update_interface_info(self, _update, _sysnet_ints):
         dev = pci.PCINetDevice('0000:10:00.0')
         _sysnet_ints.return_value = [
             {
                 'interface': 'eth2',
                 'mac_address': 'a8:9d:21:cf:93:fc',
                 'pci_address': '0000:10:00.0',
-                'state': 'up'
+                'state': 'up',
+                'sriov': False,
             },
             {
                 'interface': 'eth3',
                 'mac_address': 'a8:9d:21:cf:93:fd',
                 'pci_address': '0000:10:00.1',
-                'state': 'down'
+                'state': 'down',
+                'sriov': False,
             }
         ]
-        dev.update_interface_info_eth()
+        dev.update_interface_info()
         self.assertEqual(dev.interface_name, 'eth2')
 
     @patch('os.path.islink')
     @patch('os.path.realpath')
-    @patch('pci.PCINetDevice.get_sysnet_device_state')
-    @patch('pci.PCINetDevice.get_sysnet_mac')
-    @patch('pci.PCINetDevice.get_sysnet_interface')
+    @patch('pci.is_sriov')
+    @patch('pci.get_sysnet_device_state')
+    @patch('pci.get_sysnet_mac')
+    @patch('pci.get_sysnet_interface')
     @patch('pci.PCINetDevice.update_attributes')
     def test_get_sysnet_interfaces_and_macs(self, _update, _interface, _mac,
-                                            _state, _osrealpath, _osislink):
-        dev = pci.PCINetDevice('0000:06:00.0')
+                                            _state, _sriov, _osrealpath,
+                                            _osislink):
         self.glob.glob.return_value = ['/sys/class/net/eth2']
         _interface.return_value = 'eth2'
         _mac.return_value = 'a8:9d:21:cf:93:fc'
         _state.return_value = 'up'
+        _sriov.return_value = False
         _osrealpath.return_value = ('/sys/devices/pci0000:00/0000:00:02.0/'
                                     '0000:02:00.0/0000:03:00.0/0000:04:00.0/'
                                     '0000:05:01.0/0000:07:00.0')
@@ -118,23 +122,26 @@ class PCINetDeviceTest(CharmTestCase):
             'mac_address': 'a8:9d:21:cf:93:fc',
             'pci_address': '0000:07:00.0',
             'state': 'up',
+            'sriov': False,
         }
-        self.assertEqual(dev.get_sysnet_interfaces_and_macs(), [expect])
+        self.assertEqual(pci.get_sysnet_interfaces_and_macs(), [expect])
 
     @patch('os.path.islink')
     @patch('os.path.realpath')
-    @patch('pci.PCINetDevice.get_sysnet_device_state')
-    @patch('pci.PCINetDevice.get_sysnet_mac')
-    @patch('pci.PCINetDevice.get_sysnet_interface')
+    @patch('pci.is_sriov')
+    @patch('pci.get_sysnet_device_state')
+    @patch('pci.get_sysnet_mac')
+    @patch('pci.get_sysnet_interface')
     @patch('pci.PCINetDevice.update_attributes')
     def test_get_sysnet_interfaces_and_macs_virtio(self, _update, _interface,
-                                                   _mac, _state, _osrealpath,
+                                                   _mac, _state, _sriov,
+                                                   _osrealpath,
                                                    _osislink):
-        dev = pci.PCINetDevice('0000:06:00.0')
         self.glob.glob.return_value = ['/sys/class/net/eth2']
         _interface.return_value = 'eth2'
         _mac.return_value = 'a8:9d:21:cf:93:fc'
         _state.return_value = 'up'
+        _sriov.return_value = False
         _osrealpath.return_value = ('/sys/devices/pci0000:00/0000:00:07.0/'
                                     'virtio5')
         expect = {
@@ -142,36 +149,34 @@ class PCINetDeviceTest(CharmTestCase):
             'mac_address': 'a8:9d:21:cf:93:fc',
             'pci_address': '0000:00:07.0',
             'state': 'up',
+            'sriov': False,
         }
-        self.assertEqual(dev.get_sysnet_interfaces_and_macs(), [expect])
+        self.assertEqual(pci.get_sysnet_interfaces_and_macs(), [expect])
 
     @patch('pci.PCINetDevice.update_attributes')
     def test_get_sysnet_mac(self, _update):
-        device = pci.PCINetDevice('0000:10:00.1')
         with patch_open() as (_open, _file):
             super_fh = mocked_filehandle()
             _file.readlines = MagicMock()
             _open.side_effect = super_fh._setfilename
             _file.read.side_effect = super_fh._getfilecontents_read
-            macaddr = device.get_sysnet_mac('/sys/class/net/eth3')
+            macaddr = pci.get_sysnet_mac('/sys/class/net/eth3')
         self.assertEqual(macaddr, 'a8:9d:21:cf:93:fd')
 
     @patch('pci.PCINetDevice.update_attributes')
     def test_get_sysnet_device_state(self, _update):
-        device = pci.PCINetDevice('0000:10:00.1')
         with patch_open() as (_open, _file):
             super_fh = mocked_filehandle()
             _file.readlines = MagicMock()
             _open.side_effect = super_fh._setfilename
             _file.read.side_effect = super_fh._getfilecontents_read
-            state = device.get_sysnet_device_state('/sys/class/net/eth3')
+            state = pci.get_sysnet_device_state('/sys/class/net/eth3')
         self.assertEqual(state, 'down')
 
     @patch('pci.PCINetDevice.update_attributes')
     def test_get_sysnet_interface(self, _update):
-        device = pci.PCINetDevice('0000:10:00.1')
         self.assertEqual(
-            device.get_sysnet_interface('/sys/class/net/eth3'), 'eth3')
+            pci.get_sysnet_interface('/sys/class/net/eth3'), 'eth3')
 
 
 class PCINetDevicesTest(CharmTestCase):
@@ -208,12 +213,14 @@ class PCINetDevicesTest(CharmTestCase):
                 'mac_address': 'a8:9d:21:cf:93:fc',
                 'pci_address': '0000:10:00.0',
                 'state': 'up',
+                'sriov': False,
             },
             '0000:10:00.1': {
                 'interface_name': 'eth3',
                 'mac_address': 'a8:9d:21:cf:93:fd',
                 'pci_address': '0000:10:00.1',
                 'state': 'down',
+                'sriov': False,
             },
         }
         for device in devices.pci_devices:
@@ -244,6 +251,7 @@ class PCINetDevicesTest(CharmTestCase):
                 'mac_address': 'a8:9d:21:cf:93:fd',
                 'pci_address': '0000:10:00.1',
                 'state': 'down',
+                'sriov': False,
             },
         }
         self.assertTrue(check_device(

@@ -51,6 +51,8 @@ TO_PATCH = [
     'status_set',
     'use_dpdk',
     'os_application_version_set',
+    'remote_restart',
+    'PCINetDevices',
 ]
 
 head_pkg = 'linux-headers-3.15.0-5-generic'
@@ -596,3 +598,99 @@ class TestNeutronOVSUtils(CharmTestCase):
             asf.assert_called_once_with('some-config')
             # ports=None whilst port checks are disabled.
             f.assert_called_once_with('assessor', services='s1', ports=None)
+
+    def _configure_sriov_base(self, config,
+                              changed=False):
+        self.mock_config = MagicMock()
+        self.config.side_effect = None
+        self.config.return_value = self.mock_config
+        self.mock_config.get.side_effect = lambda x: config.get(x)
+        self.mock_config.changed.return_value = changed
+
+        self.mock_eth_device = MagicMock()
+        self.mock_eth_device.sriov = False
+        self.mock_eth_device.interface_name = 'eth0'
+        self.mock_eth_device.sriov_totalvfs = 0
+
+        self.mock_sriov_device = MagicMock()
+        self.mock_sriov_device.sriov = True
+        self.mock_sriov_device.interface_name = 'ens0'
+        self.mock_sriov_device.sriov_totalvfs = 64
+
+        self.mock_sriov_device2 = MagicMock()
+        self.mock_sriov_device2.sriov = True
+        self.mock_sriov_device2.interface_name = 'ens49'
+        self.mock_sriov_device2.sriov_totalvfs = 64
+
+        self.pci_devices = {
+            'eth0': self.mock_eth_device,
+            'ens0': self.mock_sriov_device,
+            'ens49': self.mock_sriov_device2,
+        }
+
+        mock_pci_devices = MagicMock()
+        mock_pci_devices.pci_devices = [
+            self.mock_eth_device,
+            self.mock_sriov_device,
+            self.mock_sriov_device2
+        ]
+        self.PCINetDevices.return_value = mock_pci_devices
+
+        mock_pci_devices.get_device_from_interface_name.side_effect = \
+            lambda x: self.pci_devices.get(x)
+
+    def test_configure_sriov_no_changes(self):
+        _config = {
+            'enable-sriov': True,
+            'sriov-numvfs': 'auto'
+        }
+        self._configure_sriov_base(_config, False)
+
+        nutils.configure_sriov()
+
+        self.assertFalse(self.remote_restart.called)
+
+    def test_configure_sriov_auto(self):
+        _config = {
+            'enable-sriov': True,
+            'sriov-numvfs': 'auto'
+        }
+        self._configure_sriov_base(_config, True)
+
+        nutils.configure_sriov()
+
+        self.mock_sriov_device.set_sriov_numvfs.assert_called_with(
+            self.mock_sriov_device.sriov_totalvfs
+        )
+        self.mock_sriov_device2.set_sriov_numvfs.assert_called_with(
+            self.mock_sriov_device2.sriov_totalvfs
+        )
+        self.assertTrue(self.remote_restart.called)
+
+    def test_configure_sriov_numvfs(self):
+        _config = {
+            'enable-sriov': True,
+            'sriov-numvfs': '32',
+        }
+        self._configure_sriov_base(_config, True)
+
+        nutils.configure_sriov()
+
+        self.mock_sriov_device.set_sriov_numvfs.assert_called_with(32)
+        self.mock_sriov_device2.set_sriov_numvfs.assert_called_with(32)
+
+        self.assertTrue(self.remote_restart.called)
+
+    def test_configure_sriov_numvfs_per_device(self):
+        _config = {
+            'enable-sriov': True,
+            'sriov-numvfs': 'ens0:32 sriov23:64'
+        }
+        self._configure_sriov_base(_config, True)
+
+        nutils.configure_sriov()
+
+        self.mock_sriov_device.set_sriov_numvfs.assert_called_with(32)
+        self.mock_sriov_device2.set_sriov_numvfs.assert_not_called()
+
+        self.assertTrue(self.remote_restart.called)

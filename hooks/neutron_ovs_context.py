@@ -103,6 +103,12 @@ class OVSPluginContext(context.NeutronContext):
         if mappings:
             ovs_ctxt['bridge_mappings'] = ','.join(mappings.split())
 
+        sriov_mappings = config('sriov-device-mappings')
+        if sriov_mappings:
+            ovs_ctxt['sriov_device_mappings'] = (
+                ','.join(sriov_mappings.split())
+            )
+
         flat_providers = config('flat-network-providers')
         if flat_providers:
             ovs_ctxt['network_providers'] = ','.join(flat_providers.split())
