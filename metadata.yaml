@@ -18,8 +18,8 @@ tags:
   - openstack
 series:
   - xenial
+  - zesty
   - trusty
-  - precise
   - yakkety
 extra-bindings:
   data:
