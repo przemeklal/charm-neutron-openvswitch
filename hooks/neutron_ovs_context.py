@@ -114,6 +114,32 @@ class OVSPluginContext(context.NeutronContext):
         return ovs_ctxt
 
 
+class DHCPAgentContext(OSContextGenerator):
+
+    def __call__(self):
+        """Return the 'default_availability_zone' from the principal that this
+        ovs unit is attached to (as a subordinate).
+
+        :returns: {} if no relation set, or
+            {'availability_zone': availability_zone from principal relation}
+        """
+        # as ovs is a subordinate charm, it should only have one relation to
+        # its principal charm.  Thus we can take the 1st (only) element in each
+        # list.
+        rids = relation_ids('neutron-plugin')
+        if rids:
+            rid = rids[0]
+            units = related_units(rid)
+            if units:
+                availability_zone = relation_get(
+                    'default_availability_zone',
+                    rid=rid,
+                    unit=units[0])
+                if availability_zone:
+                    return {'availability_zone': availability_zone}
+        return {}
+
+
 class L3AgentContext(OSContextGenerator):
 
     def __call__(self):

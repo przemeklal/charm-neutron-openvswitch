@@ -178,7 +178,7 @@ METADATA_RESOURCE_MAP = OrderedDict([
 DHCP_RESOURCE_MAP = OrderedDict([
     (NEUTRON_DHCP_AGENT_CONF, {
         'services': ['neutron-dhcp-agent'],
-        'contexts': [],
+        'contexts': [neutron_ovs_context.DHCPAgentContext()],
     }),
 ])
 DVR_RESOURCE_MAP = OrderedDict([
