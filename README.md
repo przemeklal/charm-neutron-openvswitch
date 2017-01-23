@@ -26,7 +26,7 @@ The neutron-api and neutron-openvswitch charms must be related to the same insta
 
 # Restrictions
 
-It should only be used with OpenStack Icehouse and above and requires a seperate neutron-api service to have been deployed.
+It should only be used with OpenStack Icehouse and above and requires a separate neutron-api service to have been deployed.
 
 # Disabling security group management
 
