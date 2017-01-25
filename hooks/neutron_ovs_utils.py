@@ -271,6 +271,7 @@ def resource_map():
     Dynamically generate a map of resources that will be managed for a single
     hook execution.
     '''
+    drop_config = []
     resource_map = deepcopy(BASE_RESOURCE_MAP)
     if use_dvr():
         resource_map.update(DVR_RESOURCE_MAP)
@@ -285,7 +286,7 @@ def resource_map():
     # Remap any service names as required
     if os_release('neutron-common', base='icehouse') >= 'mitaka':
         # ml2_conf.ini -> openvswitch_agent.ini
-        del resource_map[ML2_CONF]
+        drop_config.append(ML2_CONF)
         # drop of -plugin from service name
         resource_map[NEUTRON_CONF]['services'].remove(
             'neutron-plugin-openvswitch-agent'
@@ -294,10 +295,20 @@ def resource_map():
             'neutron-openvswitch-agent'
         )
         if not use_dpdk():
-            del resource_map[DPDK_INTERFACES]
+            drop_config.append(DPDK_INTERFACES)
     else:
-        del resource_map[OVS_CONF]
-        del resource_map[DPDK_INTERFACES]
+        drop_config.extend([OVS_CONF, DPDK_INTERFACES])
+
+    # Use MAAS1.9 for MTU and external port config on xenial and above
+    if float(lsb_release()['DISTRIB_RELEASE']) >= 16.04:
+        drop_config.extend([EXT_PORT_CONF, PHY_NIC_MTU_CONF])
+
+    for _conf in drop_config:
+        try:
+            del resource_map[_conf]
+        except KeyError:
+            pass
+
     return resource_map
 
 

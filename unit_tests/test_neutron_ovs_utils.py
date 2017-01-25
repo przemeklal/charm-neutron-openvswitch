@@ -275,6 +275,32 @@ class TestNeutronOVSUtils(CharmTestCase):
         self.assertEqual(_map[nutils.NEUTRON_CONF]['services'], svcs)
 
     @patch.object(nutils, 'use_dvr')
+    def test_resource_map_mtu_trusty(self, _use_dvr):
+        _use_dvr.return_value = False
+        self.os_release.return_value = 'mitaka'
+        self.lsb_release.return_value = {'DISTRIB_RELEASE': '14.04'}
+        _map = nutils.resource_map()
+        self.assertTrue(nutils.NEUTRON_CONF in _map.keys())
+        self.assertTrue(nutils.PHY_NIC_MTU_CONF in _map.keys())
+        self.assertFalse(nutils.EXT_PORT_CONF in _map.keys())
+        _use_dvr.return_value = True
+        _map = nutils.resource_map()
+        self.assertTrue(nutils.EXT_PORT_CONF in _map.keys())
+
+    @patch.object(nutils, 'use_dvr')
+    def test_resource_map_mtu_xenial(self, _use_dvr):
+        _use_dvr.return_value = False
+        self.os_release.return_value = 'mitaka'
+        self.lsb_release.return_value = {'DISTRIB_RELEASE': '16.04'}
+        _map = nutils.resource_map()
+        self.assertTrue(nutils.NEUTRON_CONF in _map.keys())
+        self.assertFalse(nutils.PHY_NIC_MTU_CONF in _map.keys())
+        self.assertFalse(nutils.EXT_PORT_CONF in _map.keys())
+        _use_dvr.return_value = True
+        _map = nutils.resource_map()
+        self.assertFalse(nutils.EXT_PORT_CONF in _map.keys())
+
+    @patch.object(nutils, 'use_dvr')
     def test_restart_map(self, _use_dvr):
         _use_dvr.return_value = False
         _restart_map = nutils.restart_map()
