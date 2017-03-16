@@ -68,6 +68,9 @@ options:
       bridge:mac for the same bridge so as to be able to configure multiple
       units. In this case the charm will run through the provided MAC addresses
       for each bridge until it finds one it can resolve to an interface name.
+      Port can also be a linuxbridge bridge. In this case a veth pair will be
+      created, the ovs bridge and the linuxbridge bridge will be connected. It
+      can be useful to connect the ovs bridge to juju bridge.
   disable-security-groups:
     type: boolean
     default: false

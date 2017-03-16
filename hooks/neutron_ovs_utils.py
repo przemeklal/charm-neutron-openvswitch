@@ -43,6 +43,8 @@ import neutron_ovs_context
 from charmhelpers.contrib.network.ovs import (
     add_bridge,
     add_bridge_port,
+    is_linuxbridge_interface,
+    add_ovsbridge_linuxbridge,
     full_restart,
 )
 from charmhelpers.core.hookenv import (
@@ -410,7 +412,10 @@ def configure_ovs():
 
             for port, _br in portmaps.iteritems():
                 if _br == br:
-                    add_bridge_port(br, port, promisc=True)
+                    if not is_linuxbridge_interface(port):
+                        add_bridge_port(br, port, promisc=True)
+                    else:
+                        add_ovsbridge_linuxbridge(br, port)
     else:
         # NOTE: when in dpdk mode, add based on pci bus order
         #       with type 'dpdk'
