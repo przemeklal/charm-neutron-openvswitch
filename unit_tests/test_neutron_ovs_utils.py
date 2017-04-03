@@ -203,6 +203,7 @@ class TestNeutronOVSUtils(CharmTestCase):
 
         _use_dvr.return_value = False
         self.os_release.return_value = 'icehouse'
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'precise'}
         templating.OSConfigRenderer.side_effect = _mock_OSConfigRenderer
         _regconfs = nutils.register_configs()
         confs = ['/etc/neutron/neutron.conf',
@@ -224,6 +225,7 @@ class TestNeutronOVSUtils(CharmTestCase):
 
         _use_dvr.return_value = False
         self.os_release.return_value = 'mitaka'
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'trusty'}
         templating.OSConfigRenderer.side_effect = _mock_OSConfigRenderer
         _regconfs = nutils.register_configs()
         confs = ['/etc/neutron/neutron.conf',
@@ -236,6 +238,7 @@ class TestNeutronOVSUtils(CharmTestCase):
     def test_resource_map(self, _use_dvr):
         _use_dvr.return_value = False
         self.os_release.return_value = 'icehouse'
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'precise'}
         _map = nutils.resource_map()
         svcs = ['neutron-plugin-openvswitch-agent']
         confs = [nutils.NEUTRON_CONF]
@@ -246,6 +249,7 @@ class TestNeutronOVSUtils(CharmTestCase):
     def test_resource_map_mitaka(self, _use_dvr):
         _use_dvr.return_value = False
         self.os_release.return_value = 'mitaka'
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'xenial'}
         _map = nutils.resource_map()
         svcs = ['neutron-openvswitch-agent']
         confs = [nutils.NEUTRON_CONF]
@@ -256,6 +260,7 @@ class TestNeutronOVSUtils(CharmTestCase):
     def test_resource_map_dvr(self, _use_dvr):
         _use_dvr.return_value = True
         self.os_release.return_value = 'icehouse'
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'xenial'}
         _map = nutils.resource_map()
         svcs = ['neutron-plugin-openvswitch-agent', 'neutron-metadata-agent',
                 'neutron-l3-agent']
@@ -268,6 +273,8 @@ class TestNeutronOVSUtils(CharmTestCase):
     def test_resource_map_dhcp(self, _use_dvr, _enable_local_dhcp):
         _enable_local_dhcp.return_value = True
         _use_dvr.return_value = False
+        self.os_release.return_value = 'diablo'
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'lucid'}
         _map = nutils.resource_map()
         svcs = ['neutron-plugin-openvswitch-agent', 'neutron-metadata-agent',
                 'neutron-dhcp-agent']
@@ -280,7 +287,7 @@ class TestNeutronOVSUtils(CharmTestCase):
     def test_resource_map_mtu_trusty(self, _use_dvr):
         _use_dvr.return_value = False
         self.os_release.return_value = 'mitaka'
-        self.lsb_release.return_value = {'DISTRIB_RELEASE': '14.04'}
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'trusty'}
         _map = nutils.resource_map()
         self.assertTrue(nutils.NEUTRON_CONF in _map.keys())
         self.assertTrue(nutils.PHY_NIC_MTU_CONF in _map.keys())
@@ -293,7 +300,7 @@ class TestNeutronOVSUtils(CharmTestCase):
     def test_resource_map_mtu_xenial(self, _use_dvr):
         _use_dvr.return_value = False
         self.os_release.return_value = 'mitaka'
-        self.lsb_release.return_value = {'DISTRIB_RELEASE': '16.04'}
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'xenial'}
         _map = nutils.resource_map()
         self.assertTrue(nutils.NEUTRON_CONF in _map.keys())
         self.assertFalse(nutils.PHY_NIC_MTU_CONF in _map.keys())
@@ -305,6 +312,8 @@ class TestNeutronOVSUtils(CharmTestCase):
     @patch.object(nutils, 'use_dvr')
     def test_restart_map(self, _use_dvr):
         _use_dvr.return_value = False
+        self.os_release.return_value = "diablo"
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'lucid'}
         _restart_map = nutils.restart_map()
         ML2CONF = "/etc/neutron/plugins/ml2/ml2_conf.ini"
         expect = OrderedDict([
@@ -476,7 +485,8 @@ class TestNeutronOVSUtils(CharmTestCase):
                                       join, listdir):
         projects_yaml = openstack_origin_git
         join.return_value = 'joined-string'
-        self.lsb_release.return_value = {'DISTRIB_RELEASE': '15.04'}
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'vivid'}
+        self.os_release.return_value = 'diablo'
         nutils.git_post_install(projects_yaml)
         expected = [
             call('joined-string', '/etc/neutron'),
@@ -530,7 +540,8 @@ class TestNeutronOVSUtils(CharmTestCase):
                                       join, listdir):
         projects_yaml = openstack_origin_git
         join.return_value = 'joined-string'
-        self.lsb_release.return_value = {'DISTRIB_RELEASE': '15.10'}
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'wily'}
+        self.os_release.return_value = 'diablo'
         nutils.git_post_install(projects_yaml)
         expected = [
             call('git/neutron_sudoers', '/etc/sudoers.d/neutron_sudoers',

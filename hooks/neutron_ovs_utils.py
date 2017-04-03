@@ -34,6 +34,7 @@ from charmhelpers.contrib.openstack.utils import (
     is_unit_paused_set,
     os_application_version_set,
     remote_restart,
+    CompareOpenStackReleases,
 )
 from collections import OrderedDict
 from charmhelpers.contrib.openstack.utils import (
@@ -70,6 +71,7 @@ from charmhelpers.core.host import (
     service_restart,
     service_running,
     write_file,
+    CompareHostReleases,
 )
 
 from charmhelpers.core.templating import render
@@ -259,8 +261,9 @@ def determine_packages():
             if p in pkgs:
                 pkgs.remove(p)
 
-    release = os_release('neutron-common', base='icehouse')
-    if release >= 'mitaka' and 'neutron-plugin-openvswitch-agent' in pkgs:
+    cmp_release = CompareOpenStackReleases(
+        os_release('neutron-common', base='icehouse'))
+    if cmp_release >= 'mitaka' and 'neutron-plugin-openvswitch-agent' in pkgs:
         pkgs.remove('neutron-plugin-openvswitch-agent')
         pkgs.append('neutron-openvswitch-agent')
 
@@ -300,7 +303,8 @@ def resource_map():
         metadata_services = ['neutron-metadata-agent', 'neutron-dhcp-agent']
         resource_map[NEUTRON_CONF]['services'] += metadata_services
     # Remap any service names as required
-    if os_release('neutron-common', base='icehouse') >= 'mitaka':
+    _os_release = os_release('neutron-common', base='icehouse')
+    if CompareOpenStackReleases(_os_release) >= 'mitaka':
         # ml2_conf.ini -> openvswitch_agent.ini
         drop_config.append(ML2_CONF)
         # drop of -plugin from service name
@@ -320,7 +324,7 @@ def resource_map():
         drop_config.extend([OVS_CONF, DPDK_INTERFACES])
 
     # Use MAAS1.9 for MTU and external port config on xenial and above
-    if float(lsb_release()['DISTRIB_RELEASE']) >= 16.04:
+    if CompareHostReleases(lsb_release()['DISTRIB_CODENAME']) >= 'xenial':
         drop_config.extend([EXT_PORT_CONF, PHY_NIC_MTU_CONF])
 
     for _conf in drop_config:
@@ -499,18 +503,16 @@ def determine_datapath_type():
 
 def use_dpdk():
     '''Determine whether DPDK should be used'''
-    release = os_release('neutron-common', base='icehouse')
-    if (release >= 'mitaka' and config('enable-dpdk')):
-        return True
-    return False
+    cmp_release = CompareOpenStackReleases(
+        os_release('neutron-common', base='icehouse'))
+    return (cmp_release >= 'mitaka' and config('enable-dpdk'))
 
 
 def enable_sriov_agent():
     '''Determine with SR-IOV agent should be used'''
-    release = os_release('neutron-common', base='icehouse')
-    if (release >= 'mitaka' and config('enable-sriov')):
-        return True
-    return False
+    cmp_release = CompareOpenStackReleases(
+        os_release('neutron-common', base='icehouse'))
+    return (cmp_release >= 'mitaka' and config('enable-sriov'))
 
 
 # TODO: update into charm-helpers to add port_type parameter
@@ -598,8 +600,10 @@ def git_post_install(projects_yaml):
            perms=0o440)
 
     bin_dir = os.path.join(git_pip_venv_dir(projects_yaml), 'bin')
+    cmp_os_release = CompareOpenStackReleases(os_release('neutron-common'))
     # Use systemd init units/scripts from ubuntu wily onward
-    if lsb_release()['DISTRIB_RELEASE'] >= '15.10':
+    _release = lsb_release()['DISTRIB_CODENAME']
+    if CompareHostReleases(_release) >= 'wily':
         templates_dir = os.path.join(charm_dir(), 'templates/git')
         daemons = ['neutron-openvswitch-agent', 'neutron-ovs-cleanup']
         for daemon in daemons:
@@ -608,7 +612,7 @@ def git_post_install(projects_yaml):
             }
             filename = daemon
             if daemon == 'neutron-openvswitch-agent':
-                if os_release('neutron-common') < 'mitaka':
+                if cmp_os_release < 'mitaka':
                     filename = 'neutron-plugin-openvswitch-agent'
             template_file = 'git/{}.init.in.template'.format(filename)
             init_in_file = '{}.init.in'.format(filename)
@@ -619,7 +623,7 @@ def git_post_install(projects_yaml):
         for daemon in daemons:
             filename = daemon
             if daemon == 'neutron-openvswitch-agent':
-                if os_release('neutron-common') < 'mitaka':
+                if cmp_os_release < 'mitaka':
                     filename = 'neutron-plugin-openvswitch-agent'
             service('enable', filename)
     else:
@@ -642,7 +646,7 @@ def git_post_install(projects_yaml):
             'log_file': '/var/log/neutron/ovs-cleanup.log',
         }
 
-        if os_release('neutron-common') < 'mitaka':
+        if cmp_os_release < 'mitaka':
             render('git/upstart/neutron-plugin-openvswitch-agent.upstart',
                    '/etc/init/neutron-plugin-openvswitch-agent.conf',
                    neutron_ovs_agent_context, perms=0o644)
