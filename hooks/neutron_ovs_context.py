@@ -24,6 +24,10 @@ from charmhelpers.core.hookenv import (
     unit_get,
     network_get_primary_address,
 )
+from charmhelpers.core.host import (
+    CompareHostReleases,
+    lsb_release,
+)
 from charmhelpers.contrib.openstack import context
 from charmhelpers.contrib.openstack.utils import get_host_ip
 from charmhelpers.contrib.network.ip import get_address_in_network
@@ -33,6 +37,31 @@ from charmhelpers.contrib.openstack.context import (
     parse_data_port_mappings
 )
 from charmhelpers.core.unitdata import kv
+
+IPTABLES_HYBRID = 'iptables_hybrid'
+OPENVSWITCH = 'openvswitch'
+VALID_FIREWALL_DRIVERS = (IPTABLES_HYBRID, OPENVSWITCH)
+
+
+def _get_firewall_driver():
+    '''
+    Determine the firewall driver to use based on configuration,
+    OpenStack and Ubuntu releases.
+
+    @returns str: firewall driver to use for OpenvSwitch
+    '''
+    driver = config('firewall-driver') or IPTABLES_HYBRID
+    release = lsb_release()['DISTRIB_CODENAME']
+    if driver not in VALID_FIREWALL_DRIVERS:
+        return IPTABLES_HYBRID
+    if (driver == OPENVSWITCH and
+            CompareHostReleases(release) < 'xenial'):
+        # NOTE(jamespage): Switch back to iptables_hybrid for
+        #                  Ubuntu releases prior to Xenial due
+        #                  to requirements for Linux >= 4.4 and
+        #                  Open vSwitch >= 2.5
+        return IPTABLES_HYBRID
+    return driver
 
 
 class OVSPluginContext(context.NeutronContext):
@@ -116,6 +145,8 @@ class OVSPluginContext(context.NeutronContext):
         vlan_ranges = config('vlan-ranges')
         if vlan_ranges:
             ovs_ctxt['vlan_ranges'] = ','.join(vlan_ranges.split())
+
+        ovs_ctxt['firewall_driver'] = _get_firewall_driver()
 
         return ovs_ctxt
 

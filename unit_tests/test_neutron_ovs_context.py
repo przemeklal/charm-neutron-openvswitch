@@ -18,6 +18,14 @@ from mock import patch, Mock
 import neutron_ovs_context as context
 import charmhelpers
 
+_LSB_RELEASE_XENIAL = {
+    'DISTRIB_CODENAME': 'xenial',
+}
+
+_LSB_RELEASE_TRUSTY = {
+    'DISTRIB_CODENAME': 'trusty',
+}
+
 TO_PATCH = [
     'config',
     'unit_get',
@@ -28,6 +36,7 @@ TO_PATCH = [
     'relation_ids',
     'relation_get',
     'related_units',
+    'lsb_release',
 ]
 
 
@@ -48,6 +57,7 @@ class OVSPluginContextTest(CharmTestCase):
         self.test_config.set('verbose', True)
         self.test_config.set('use-syslog', True)
         self.network_get_primary_address.side_effect = NotImplementedError
+        self.lsb_release.return_value = _LSB_RELEASE_XENIAL
 
     def tearDown(self):
         super(OVSPluginContextTest, self).tearDown()
@@ -152,6 +162,7 @@ class OVSPluginContextTest(CharmTestCase):
             'config': 'neutron.randomconfig',
             'use_syslog': True,
             'enable_dpdk': False,
+            'firewall_driver': 'iptables_hybrid',
             'network_manager': 'neutron',
             'debug': True,
             'core_plugin': 'neutron.randomdriver',
@@ -219,6 +230,7 @@ class OVSPluginContextTest(CharmTestCase):
             'config': 'neutron.randomconfig',
             'use_syslog': True,
             'enable_dpdk': False,
+            'firewall_driver': 'iptables_hybrid',
             'network_manager': 'neutron',
             'debug': True,
             'core_plugin': 'neutron.randomdriver',
@@ -580,3 +592,39 @@ class TestRemoteRestartContext(CharmTestCase):
             context.RemoteRestartContext()(),
             {'restart_trigger_neutron': 'neutron-uuid'}
         )
+
+
+class TestFirewallDriver(CharmTestCase):
+
+    TO_PATCH = [
+        'config',
+        'lsb_release',
+    ]
+
+    def setUp(self):
+        super(TestFirewallDriver, self).setUp(context,
+                                              self.TO_PATCH)
+        self.config.side_effect = self.test_config.get
+
+    def test_get_firewall_driver_xenial_unset(self):
+        self.lsb_release.return_value = _LSB_RELEASE_XENIAL
+        self.assertEqual(context._get_firewall_driver(),
+                         context.IPTABLES_HYBRID)
+
+    def test_get_firewall_driver_xenial_openvswitch(self):
+        self.test_config.set('firewall-driver', 'openvswitch')
+        self.lsb_release.return_value = _LSB_RELEASE_XENIAL
+        self.assertEqual(context._get_firewall_driver(),
+                         context.OPENVSWITCH)
+
+    def test_get_firewall_driver_xenial_invalid(self):
+        self.test_config.set('firewall-driver', 'foobar')
+        self.lsb_release.return_value = _LSB_RELEASE_XENIAL
+        self.assertEqual(context._get_firewall_driver(),
+                         context.IPTABLES_HYBRID)
+
+    def test_get_firewall_driver_trusty_openvswitch(self):
+        self.test_config.set('firewall-driver', 'openvswitch')
+        self.lsb_release.return_value = _LSB_RELEASE_TRUSTY
+        self.assertEqual(context._get_firewall_driver(),
+                         context.IPTABLES_HYBRID)
