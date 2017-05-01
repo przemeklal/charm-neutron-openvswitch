@@ -255,13 +255,28 @@ class DHCPAgentContextTest(CharmTestCase):
     def tearDown(self):
         super(DHCPAgentContextTest, self).tearDown()
 
-    def test_default_availability_zone_not_provided(self):
+    @patch.object(charmhelpers.contrib.openstack.context, 'relation_get')
+    @patch.object(charmhelpers.contrib.openstack.context, 'relation_ids')
+    @patch.object(charmhelpers.contrib.openstack.context, 'related_units')
+    def test_default_availability_zone_not_provided(self, _runits, _rids,
+                                                    _rget):
+        _runits.return_value = ['neutron-api/0']
+        _rids.return_value = ['rid2']
+        rdata = {
+            'neutron-security-groups': 'True',
+            'enable-dvr': 'True',
+            'l2-population': 'True',
+            'overlay-netweork-type': 'vxlan',
+            'network-device-mtu': 1500,
+            'dns-domain': 'openstack.example.'
+        }
+        _rget.side_effect = lambda *args, **kwargs: rdata
         self.relation_ids.return_value = ['rid1']
         self.related_units.return_value = ['nova-compute/0']
         self.relation_get.return_value = None
         self.assertEqual(
             context.DHCPAgentContext()(),
-            {}
+            {'dns_domain': 'openstack.example.'}
         )
         self.relation_ids.assert_called_with('neutron-plugin')
         self.relation_get.assert_called_once_with(
@@ -269,7 +284,49 @@ class DHCPAgentContextTest(CharmTestCase):
             rid='rid1',
             unit='nova-compute/0')
 
-    def test_default_availability_zone_provided(self):
+    @patch.object(charmhelpers.contrib.openstack.context, 'relation_get')
+    @patch.object(charmhelpers.contrib.openstack.context, 'relation_ids')
+    @patch.object(charmhelpers.contrib.openstack.context, 'related_units')
+    def test_default_availability_zone_provided(self, _runits, _rids, _rget):
+        _runits.return_value = ['neutron-api/0']
+        _rids.return_value = ['rid2']
+        rdata = {
+            'neutron-security-groups': 'True',
+            'enable-dvr': 'True',
+            'l2-population': 'True',
+            'overlay-netweork-type': 'vxlan',
+            'network-device-mtu': 1500,
+            'dns-domain': 'openstack.example.'
+        }
+        _rget.side_effect = lambda *args, **kwargs: rdata
+        self.relation_ids.return_value = ['rid1']
+        self.related_units.return_value = ['nova-compute/0']
+        self.relation_get.return_value = 'nova'
+        self.assertEqual(
+            context.DHCPAgentContext()(),
+            {'availability_zone': 'nova',
+             'dns_domain': 'openstack.example.'}
+        )
+        self.relation_ids.assert_called_with('neutron-plugin')
+        self.relation_get.assert_called_once_with(
+            'default_availability_zone',
+            rid='rid1',
+            unit='nova-compute/0')
+
+    @patch.object(charmhelpers.contrib.openstack.context, 'relation_get')
+    @patch.object(charmhelpers.contrib.openstack.context, 'relation_ids')
+    @patch.object(charmhelpers.contrib.openstack.context, 'related_units')
+    def test_no_dns_domain(self, _runits, _rids, _rget):
+        _runits.return_value = ['neutron-api/0']
+        _rids.return_value = ['rid2']
+        rdata = {
+            'neutron-security-groups': 'True',
+            'enable-dvr': 'True',
+            'l2-population': 'True',
+            'overlay-netweork-type': 'vxlan',
+            'network-device-mtu': 1500,
+        }
+        _rget.side_effect = lambda *args, **kwargs: rdata
         self.relation_ids.return_value = ['rid1']
         self.related_units.return_value = ['nova-compute/0']
         self.relation_get.return_value = 'nova'
@@ -283,7 +340,20 @@ class DHCPAgentContextTest(CharmTestCase):
             rid='rid1',
             unit='nova-compute/0')
 
-    def test_dnsmasq_flags(self):
+    @patch.object(charmhelpers.contrib.openstack.context, 'relation_get')
+    @patch.object(charmhelpers.contrib.openstack.context, 'relation_ids')
+    @patch.object(charmhelpers.contrib.openstack.context, 'related_units')
+    def test_dnsmasq_flags(self, _runits, _rids, _rget):
+        _runits.return_value = ['neutron-api/0']
+        _rids.return_value = ['rid2']
+        rdata = {
+            'neutron-security-groups': 'True',
+            'enable-dvr': 'True',
+            'l2-population': 'True',
+            'overlay-netweork-type': 'vxlan',
+            'network-device-mtu': 1500,
+        }
+        _rget.side_effect = lambda *args, **kwargs: rdata
         self.relation_ids.return_value = ['rid1']
         self.related_units.return_value = ['nova-compute/0']
         self.relation_get.return_value = None
