@@ -31,6 +31,8 @@ import charmhelpers.core.hookenv as hookenv
 TO_PATCH = [
     'add_bridge',
     'add_bridge_port',
+    'add_ovsbridge_linuxbridge',
+    'is_linuxbridge_interface',
     'dpdk_add_bridge_port',
     'apt_install',
     'apt_update',
@@ -331,6 +333,7 @@ class TestNeutronOVSUtils(CharmTestCase):
     @patch('charmhelpers.contrib.openstack.context.config')
     def test_configure_ovs_ovs_data_port(self, mock_config, _use_dvr):
         _use_dvr.return_value = False
+        self.is_linuxbridge_interface.return_value = False
         mock_config.side_effect = self.test_config.get
         self.config.side_effect = self.test_config.get
         self.ExternalPortContext.return_value = \
@@ -358,6 +361,24 @@ class TestNeutronOVSUtils(CharmTestCase):
         ])
         # Not called since we have a bogus bridge in data-ports
         self.assertFalse(self.add_bridge_port.called)
+
+    @patch.object(nutils, 'use_dvr')
+    @patch('charmhelpers.contrib.openstack.context.config')
+    def test_configure_ovs_data_port_with_bridge(self, mock_config, _use_dvr):
+        _use_dvr.return_value = False
+        self.is_linuxbridge_interface.return_value = True
+        mock_config.side_effect = self.test_config.get
+        self.config.side_effect = self.test_config.get
+        self.ExternalPortContext.return_value = \
+            DummyContext(return_value=None)
+
+        # Now test with bridge:bridge format
+        self.test_config.set('bridge-mappings', 'physnet1:br-foo')
+        self.test_config.set('data-port', 'br-foo:br-juju')
+        self.add_bridge.reset_mock()
+        self.add_bridge_port.reset_mock()
+        nutils.configure_ovs()
+        self.assertTrue(self.add_ovsbridge_linuxbridge.called)
 
     @patch.object(nutils, 'use_dvr')
     @patch('charmhelpers.contrib.openstack.context.config')
