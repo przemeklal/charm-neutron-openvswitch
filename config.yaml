@@ -132,6 +132,13 @@ options:
       which do not include a neutron-gateway (do not require l3, lbaas or vpnaas
       services) and should only be used in-conjunction with flat or VLAN provider
       networks configurations.
+  dnsmasq-flags:
+    type: string
+    default:
+    description: |
+      Comma-separated list of key=value config flags with the additional
+      dhcp options for neutron dnsmasq. Note, this option is only valid when
+      enable-local-dhcp-and-metadata option is set to True.
   prevent-arp-spoofing:
     type: boolean
     default: true

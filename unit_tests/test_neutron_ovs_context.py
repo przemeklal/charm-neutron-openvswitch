@@ -271,6 +271,24 @@ class DHCPAgentContextTest(CharmTestCase):
             rid='rid1',
             unit='nova-compute/0')
 
+    def test_dnsmasq_flags(self):
+        self.relation_ids.return_value = ['rid1']
+        self.related_units.return_value = ['nova-compute/0']
+        self.relation_get.return_value = None
+        self.test_config.set('dnsmasq-flags', 'dhcp-userclass=set:ipxe,iPXE,'
+                                              'dhcp-match=set:ipxe,175,'
+                                              'server=1.2.3.4')
+        self.assertEqual(
+            context.DHCPAgentContext()(),
+            {
+                'dnsmasq_flags': {
+                    'dhcp-userclass': 'set:ipxe,iPXE',
+                    'dhcp-match': 'set:ipxe,175',
+                    'server': '1.2.3.4',
+                }
+            }
+        )
+
 
 class L3AgentContextTest(CharmTestCase):
 

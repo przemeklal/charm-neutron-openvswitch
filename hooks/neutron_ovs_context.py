@@ -26,6 +26,7 @@ from charmhelpers.core.hookenv import (
 )
 from charmhelpers.contrib.openstack import context
 from charmhelpers.contrib.openstack.utils import get_host_ip
+from charmhelpers.contrib.openstack.utils import config_flags_parser
 from charmhelpers.contrib.network.ip import get_address_in_network
 from charmhelpers.contrib.openstack.context import (
     OSContextGenerator,
@@ -133,6 +134,7 @@ class DHCPAgentContext(OSContextGenerator):
         # its principal charm.  Thus we can take the 1st (only) element in each
         # list.
         rids = relation_ids('neutron-plugin')
+        ctxt = {}
         if rids:
             rid = rids[0]
             units = related_units(rid)
@@ -142,8 +144,13 @@ class DHCPAgentContext(OSContextGenerator):
                     rid=rid,
                     unit=units[0])
                 if availability_zone:
-                    return {'availability_zone': availability_zone}
-        return {}
+                    ctxt['availability_zone'] = availability_zone
+
+        dnsmasq_flags = config('dnsmasq-flags')
+        if dnsmasq_flags:
+            ctxt['dnsmasq_flags'] = config_flags_parser(dnsmasq_flags)
+
+        return ctxt
 
 
 class L3AgentContext(OSContextGenerator):

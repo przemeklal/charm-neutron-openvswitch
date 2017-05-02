@@ -123,6 +123,7 @@ GIT_PACKAGE_BLACKLIST = [
 VERSION_PACKAGE = 'neutron-common'
 NOVA_CONF_DIR = "/etc/nova"
 NEUTRON_DHCP_AGENT_CONF = "/etc/neutron/dhcp_agent.ini"
+NEUTRON_DNSMASQ_CONF = "/etc/neutron/dnsmasq.conf"
 NEUTRON_CONF_DIR = "/etc/neutron"
 NEUTRON_CONF = '%s/neutron.conf' % NEUTRON_CONF_DIR
 NEUTRON_DEFAULT = '/etc/default/neutron-server'
@@ -184,6 +185,10 @@ METADATA_RESOURCE_MAP = OrderedDict([
 ])
 DHCP_RESOURCE_MAP = OrderedDict([
     (NEUTRON_DHCP_AGENT_CONF, {
+        'services': ['neutron-dhcp-agent'],
+        'contexts': [neutron_ovs_context.DHCPAgentContext()],
+    }),
+    (NEUTRON_DNSMASQ_CONF, {
         'services': ['neutron-dhcp-agent'],
         'contexts': [neutron_ovs_context.DHCPAgentContext()],
     }),
