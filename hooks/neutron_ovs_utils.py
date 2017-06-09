@@ -278,7 +278,10 @@ def determine_packages():
         pkgs.append('openvswitch-switch-dpdk')
 
     if enable_sriov_agent():
-        pkgs.append('neutron-sriov-agent')
+        if cmp_release >= 'mitaka':
+            pkgs.append('neutron-sriov-agent')
+        else:
+            pkgs.append('neutron-plugin-sriov-agent')
 
     return pkgs
 
@@ -323,12 +326,22 @@ def resource_map():
         )
         if not use_dpdk():
             drop_config.append(DPDK_INTERFACES)
-        if enable_sriov_agent():
-            resource_map.update(SRIOV_RESOURCE_MAP)
-            resource_map[NEUTRON_CONF]['services'].append(
-                'neutron-sriov-agent')
     else:
         drop_config.extend([OVS_CONF, DPDK_INTERFACES])
+
+    if enable_sriov_agent():
+        sriov_agent_name = 'neutron-sriov-agent'
+        sriov_resource_map = SRIOV_RESOURCE_MAP
+
+        if CompareOpenStackReleases(_os_release) < 'mitaka':
+            sriov_agent_name = 'neutron-plugin-sriov-agent'
+            # Patch resource_map for Kilo and Liberty
+            sriov_resource_map[NEUTRON_SRIOV_AGENT_CONF]['services'] = \
+                [sriov_agent_name]
+
+        resource_map.update(sriov_resource_map)
+        resource_map[NEUTRON_CONF]['services'].append(
+            sriov_agent_name)
 
     # Use MAAS1.9 for MTU and external port config on xenial and above
     if CompareHostReleases(lsb_release()['DISTRIB_CODENAME']) >= 'xenial':
@@ -522,7 +535,7 @@ def enable_sriov_agent():
     '''Determine with SR-IOV agent should be used'''
     cmp_release = CompareOpenStackReleases(
         os_release('neutron-common', base='icehouse'))
-    return (cmp_release >= 'mitaka' and config('enable-sriov'))
+    return (cmp_release >= 'kilo' and config('enable-sriov'))
 
 
 # TODO: update into charm-helpers to add port_type parameter
