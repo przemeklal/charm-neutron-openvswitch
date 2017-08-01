@@ -331,7 +331,7 @@ def resource_map():
 
     if enable_sriov_agent():
         sriov_agent_name = 'neutron-sriov-agent'
-        sriov_resource_map = SRIOV_RESOURCE_MAP
+        sriov_resource_map = deepcopy(SRIOV_RESOURCE_MAP)
 
         if CompareOpenStackReleases(_os_release) < 'mitaka':
             sriov_agent_name = 'neutron-plugin-sriov-agent'
