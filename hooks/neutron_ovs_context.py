@@ -118,6 +118,8 @@ class OVSPluginContext(context.NeutronContext):
         ovs_ctxt['neutron_security_groups'] = self.neutron_security_groups
         ovs_ctxt['l2_population'] = neutron_api_settings['l2_population']
         ovs_ctxt['distributed_routing'] = neutron_api_settings['enable_dvr']
+        ovs_ctxt['extension_drivers'] = neutron_api_settings[
+            'extension_drivers']
         ovs_ctxt['overlay_network_type'] = \
             neutron_api_settings['overlay_network_type']
         ovs_ctxt['polling_interval'] = neutron_api_settings['polling_interval']
