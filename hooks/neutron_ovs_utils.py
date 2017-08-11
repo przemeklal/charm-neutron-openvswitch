@@ -62,6 +62,7 @@ from charmhelpers.contrib.openstack.neutron import (
 from charmhelpers.contrib.openstack.context import (
     ExternalPortContext,
     DataPortContext,
+    WorkerConfigContext,
 )
 from charmhelpers.core.host import (
     adduser,
@@ -184,7 +185,8 @@ METADATA_RESOURCE_MAP = OrderedDict([
     (NEUTRON_METADATA_AGENT_CONF, {
         'services': ['neutron-metadata-agent'],
         'contexts': [neutron_ovs_context.SharedSecretContext(),
-                     neutron_ovs_context.APIIdentityServiceContext()],
+                     neutron_ovs_context.APIIdentityServiceContext(),
+                     WorkerConfigContext()],
     }),
 ])
 DHCP_RESOURCE_MAP = OrderedDict([

@@ -207,6 +207,15 @@ options:
       .
       Multiple devices can be configured by providing multi values delimited by
       spaces.
+  worker-multiplier:
+    type: float
+    default:
+    description: |
+      The CPU core multiplier to use when configuring worker processes for
+      this services e.g. metadata-agent. By default, the number of workers for
+      each daemon is set to twice the number of CPU cores a service unit has.
+      When deployed in a LXD container, this default value will be capped to 4
+      workers unless this configuration option is set.
   # Network config (by default all access is over 'private-address')
   os-data-network:
     type: string
