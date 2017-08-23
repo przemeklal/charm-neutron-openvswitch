@@ -207,6 +207,10 @@ options:
       .
       Multiple devices can be configured by providing multi values delimited by
       spaces.
+      .
+      NOTE: Changing this value will disrupt networking on all SR-IOV capable
+      interfaces for blanket configuration or listed interfaces when per-device
+      configuration is used.
   worker-multiplier:
     type: float
     default:

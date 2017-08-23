@@ -243,6 +243,7 @@ class OVSPluginContextTest(CharmTestCase):
             'overlay_network_type': 'gre',
             'polling_interval': 2,
             'rpc_response_timeout': 60,
+            'sriov_vfs_blanket': 'auto',
             'report_interval': 30,
             'bridge_mappings': 'physnet1:br-data',
             'vlan_ranges': 'physnet1:1000:2000',

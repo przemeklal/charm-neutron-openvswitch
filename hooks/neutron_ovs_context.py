@@ -143,6 +143,20 @@ class OVSPluginContext(context.NeutronContext):
                 ','.join(sriov_mappings.split())
             )
 
+        enable_sriov = config('enable-sriov')
+        if enable_sriov:
+            ovs_ctxt['enable_sriov'] = True
+
+        sriov_numvfs = config('sriov-numvfs')
+        if sriov_numvfs:
+            try:
+                if sriov_numvfs != 'auto':
+                    int(sriov_numvfs)
+            except ValueError:
+                ovs_ctxt['sriov_vfs_list'] = sriov_numvfs
+            else:
+                ovs_ctxt['sriov_vfs_blanket'] = sriov_numvfs
+
         flat_providers = config('flat-network-providers')
         if flat_providers:
             ovs_ctxt['network_providers'] = ','.join(flat_providers.split())

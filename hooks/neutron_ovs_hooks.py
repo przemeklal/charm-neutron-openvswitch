@@ -73,8 +73,10 @@ def config_changed():
             git_install(config('openstack-origin-git'))
 
     configure_ovs()
-    configure_sriov()
     CONFIGS.write_all()
+    # NOTE(fnordahl): configure_sriov must be run after CONFIGS.write_all()
+    # to allow us to enable boot time execution of init script
+    configure_sriov()
     for rid in relation_ids('zeromq-configuration'):
         zeromq_configuration_relation_joined(rid)
     for rid in relation_ids('neutron-plugin'):
