@@ -142,6 +142,10 @@ options:
       .
       Only supported in OpenStack Liberty or newer, which has the required
       minimum version of Open vSwitch.
+      .
+      NOTE: this feature is deprecated and removed in Openstack >= Ocata. As of
+      that point the only way to disable protection will be via the port
+      security extension (see LP 1691080 for info).
   enable-dpdk:
     type: boolean
     default: false

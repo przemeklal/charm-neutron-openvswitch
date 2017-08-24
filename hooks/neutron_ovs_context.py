@@ -18,6 +18,8 @@ import uuid
 from pci import PCINetDevices
 from charmhelpers.core.hookenv import (
     config,
+    log,
+    WARNING,
     relation_get,
     relation_ids,
     related_units,
@@ -29,8 +31,12 @@ from charmhelpers.core.host import (
     lsb_release,
 )
 from charmhelpers.contrib.openstack import context
-from charmhelpers.contrib.openstack.utils import get_host_ip
-from charmhelpers.contrib.openstack.utils import config_flags_parser
+from charmhelpers.contrib.openstack.utils import (
+    config_flags_parser,
+    get_host_ip,
+    os_release,
+    CompareOpenStackReleases,
+)
 from charmhelpers.contrib.network.ip import get_address_in_network
 from charmhelpers.contrib.openstack.context import (
     OSContextGenerator,
@@ -123,6 +129,14 @@ class OVSPluginContext(context.NeutronContext):
         ovs_ctxt['use_syslog'] = conf['use-syslog']
         ovs_ctxt['verbose'] = conf['verbose']
         ovs_ctxt['debug'] = conf['debug']
+
+        cmp_release = CompareOpenStackReleases(
+            os_release('neutron-common', base='icehouse'))
+        if conf['prevent-arp-spoofing'] and cmp_release >= 'ocata':
+            log("prevent-arp-spoofing is True yet this feature is deprecated "
+                "and no longer has any effect in your version of Openstack",
+                WARNING)
+
         ovs_ctxt['prevent_arp_spoofing'] = conf['prevent-arp-spoofing']
         ovs_ctxt['enable_dpdk'] = conf['enable-dpdk']
 
