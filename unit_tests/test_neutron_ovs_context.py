@@ -96,6 +96,8 @@ class OVSPluginContextTest(CharmTestCase):
             {'em1': 'br-d2'}
         )
 
+    @patch.object(charmhelpers.contrib.openstack.utils,
+                  'get_os_codename_package')
     @patch.object(charmhelpers.contrib.openstack.context, 'config',
                   lambda *args: None)
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_get')
@@ -112,7 +114,8 @@ class OVSPluginContextTest(CharmTestCase):
     @patch.object(charmhelpers.contrib.openstack.context, 'unit_private_ip')
     def test_neutroncc_context_api_rel(self, _unit_priv_ip, _npa, _ens_pkgs,
                                        _save_ff, _https, _is_clus, _unit_get,
-                                       _config, _runits, _rids, _rget):
+                                       _config, _runits, _rids, _rget,
+                                       _get_os_cdnm_pkg):
         def mock_npa(plugin, section, manager):
             if section == "driver":
                 return "neutron.randomdriver"
@@ -134,6 +137,7 @@ class OVSPluginContextTest(CharmTestCase):
 
             return config
 
+        _get_os_cdnm_pkg.return_value = 'ocata'
         self.maxDiff = None
         self.config.side_effect = mock_config
         _npa.side_effect = mock_npa
@@ -180,6 +184,8 @@ class OVSPluginContextTest(CharmTestCase):
         }
         self.assertEquals(expect, napi_ctxt())
 
+    @patch.object(charmhelpers.contrib.openstack.utils,
+                  'get_os_codename_package')
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_get')
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_ids')
     @patch.object(charmhelpers.contrib.openstack.context, 'related_units')
@@ -198,13 +204,15 @@ class OVSPluginContextTest(CharmTestCase):
                                                         _https, _is_clus,
                                                         _unit_get,
                                                         _config, _runits,
-                                                        _rids, _rget):
+                                                        _rids, _rget,
+                                                        _get_os_cdnm_pkg):
         def mock_npa(plugin, section, manager):
             if section == "driver":
                 return "neutron.randomdriver"
             if section == "config":
                 return "neutron.randomconfig"
 
+        _get_os_cdnm_pkg.return_value = 'ocata'
         _npa.side_effect = mock_npa
         _config.return_value = 'ovs'
         _unit_get.return_value = '127.0.0.13'

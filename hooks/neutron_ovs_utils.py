@@ -35,11 +35,9 @@ from charmhelpers.contrib.openstack.utils import (
     os_application_version_set,
     remote_restart,
     CompareOpenStackReleases,
-)
-from collections import OrderedDict
-from charmhelpers.contrib.openstack.utils import (
     os_release,
 )
+from collections import OrderedDict
 import neutron_ovs_context
 from charmhelpers.contrib.network.ovs import (
     add_bridge,
