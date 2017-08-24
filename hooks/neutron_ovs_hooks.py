@@ -38,6 +38,7 @@ from neutron_ovs_utils import (
     DHCP_PACKAGES,
     DVR_PACKAGES,
     METADATA_PACKAGES,
+    OVS_DEFAULT,
     configure_ovs,
     configure_sriov,
     git_install,
@@ -61,6 +62,27 @@ CONFIGS = register_configs()
 def install():
     install_packages()
     git_install(config('openstack-origin-git'))
+
+
+# NOTE(wolsen): Do NOT add restart_on_change decorator without consideration
+# for the implications of modifications to the /etc/default/openvswitch-switch.
+@hooks.hook('upgrade-charm')
+def upgrade_charm():
+    # In the 16.10 release of the charms, the code changed from managing the
+    # /etc/default/openvswitch-switch file only when dpdk was enabled to always
+    # managing this file. Thus, an upgrade of the charm from a release prior
+    # to 16.10 or higher will always cause the contents of the file to change
+    # and will trigger a restart of the openvswitch-switch service, which in
+    # turn causes a temporary network outage. To prevent this outage, determine
+    # if the /etc/default/openvswitch-switch file needs to be migrated and if
+    # so, migrate the file but do NOT restart the openvswitch-switch service.
+    # See bug LP #1712444
+    with open(OVS_DEFAULT, 'r') as f:
+        # The 'Service restart triggered ...' line was added to the OVS_DEFAULT
+        # template in the 16.10 version of the charm to allow restarts so we
+        # use this as the key to see if the file needs migrating.
+        if 'Service restart triggered' not in f.read():
+            CONFIGS.write(OVS_DEFAULT)
 
 
 @hooks.hook('neutron-plugin-relation-changed')
