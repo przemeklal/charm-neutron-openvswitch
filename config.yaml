@@ -133,6 +133,13 @@ options:
       Comma-separated list of key=value config flags with the additional dhcp
       options for neutron dnsmasq. Note, this option is only valid when
       enable-local-dhcp-and-metadata option is set to True.
+  dns-servers:
+    type: string
+    default:
+    description: |
+      A comma-separated list of DNS servers which will be used by dnsmasq as
+      forwarders. This option only applies when the enable-local-dhcp-and-metadata
+      options is set to True.
   prevent-arp-spoofing:
     type: boolean
     default: true

@@ -291,7 +291,8 @@ class DHCPAgentContextTest(CharmTestCase):
         self.relation_get.return_value = None
         self.assertEqual(
             context.DHCPAgentContext()(),
-            {'dns_domain': 'openstack.example.'}
+            {'dns_domain': 'openstack.example.',
+             'dns_servers': None}
         )
         self.relation_ids.assert_called_with('neutron-plugin')
         self.relation_get.assert_called_once_with(
@@ -314,13 +315,15 @@ class DHCPAgentContextTest(CharmTestCase):
             'dns-domain': 'openstack.example.'
         }
         _rget.side_effect = lambda *args, **kwargs: rdata
+        self.test_config.set('dns-servers', '8.8.8.8,4.4.4.4')
         self.relation_ids.return_value = ['rid1']
         self.related_units.return_value = ['nova-compute/0']
         self.relation_get.return_value = 'nova'
         self.assertEqual(
             context.DHCPAgentContext()(),
             {'availability_zone': 'nova',
-             'dns_domain': 'openstack.example.'}
+             'dns_domain': 'openstack.example.',
+             'dns_servers': '8.8.8.8,4.4.4.4'}
         )
         self.relation_ids.assert_called_with('neutron-plugin')
         self.relation_get.assert_called_once_with(
@@ -342,12 +345,14 @@ class DHCPAgentContextTest(CharmTestCase):
             'network-device-mtu': 1500,
         }
         _rget.side_effect = lambda *args, **kwargs: rdata
+        self.test_config.set('dns-servers', '8.8.8.8')
         self.relation_ids.return_value = ['rid1']
         self.related_units.return_value = ['nova-compute/0']
         self.relation_get.return_value = 'nova'
         self.assertEqual(
             context.DHCPAgentContext()(),
-            {'availability_zone': 'nova'}
+            {'availability_zone': 'nova',
+             'dns_servers': '8.8.8.8'}
         )
         self.relation_ids.assert_called_with('neutron-plugin')
         self.relation_get.assert_called_once_with(
@@ -382,7 +387,8 @@ class DHCPAgentContextTest(CharmTestCase):
                     'dhcp-userclass': 'set:ipxe,iPXE',
                     'dhcp-match': 'set:ipxe,175',
                     'server': '1.2.3.4',
-                }
+                },
+                'dns_servers': None,
             }
         )
 

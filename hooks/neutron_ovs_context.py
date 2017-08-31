@@ -213,6 +213,7 @@ class DHCPAgentContext(OSContextGenerator):
         dnsmasq_flags = config('dnsmasq-flags')
         if dnsmasq_flags:
             ctxt['dnsmasq_flags'] = config_flags_parser(dnsmasq_flags)
+        ctxt['dns_servers'] = config('dns-servers')
 
         neutron_api_settings = NeutronAPIContext()()
         if neutron_api_settings.get('dns_domain'):
