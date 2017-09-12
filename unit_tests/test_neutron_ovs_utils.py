@@ -565,12 +565,12 @@ class TestNeutronOVSUtils(CharmTestCase):
             call('/var/log/neutron', owner='neutron',
                  group='neutron', perms=0755, force=False),
         ]
-        self.assertEquals(mkdir.call_args_list, expected)
+        self.assertEqual(mkdir.call_args_list, expected)
         expected = [
             call('/var/log/neutron/server.log', '', owner='neutron',
                  group='neutron', perms=0600),
         ]
-        self.assertEquals(write_file.call_args_list, expected)
+        self.assertEqual(write_file.call_args_list, expected)
 
     @patch('os.listdir')
     @patch('os.path.join')
@@ -621,11 +621,11 @@ class TestNeutronOVSUtils(CharmTestCase):
                  '/etc/init/neutron-ovs-cleanup.conf',
                  neutron_ovs_cleanup_context, perms=0o644),
         ]
-        self.assertEquals(self.render.call_args_list, expected)
+        self.assertEqual(self.render.call_args_list, expected)
         expected = [
             call('neutron-plugin-openvswitch-agent'),
         ]
-        self.assertEquals(self.service_restart.call_args_list, expected)
+        self.assertEqual(self.service_restart.call_args_list, expected)
 
     @patch('os.listdir')
     @patch('os.path.join')
@@ -650,7 +650,7 @@ class TestNeutronOVSUtils(CharmTestCase):
                  'joined-string', {'daemon_path': 'joined-string'},
                  perms=420)
         ]
-        self.assertEquals(self.render.call_args_list, expected)
+        self.assertEqual(self.render.call_args_list, expected)
 
     def test_assess_status(self):
         with patch.object(nutils, 'assess_status_func') as asf:

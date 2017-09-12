@@ -69,7 +69,7 @@ class OVSPluginContextTest(CharmTestCase):
         self.test_config.set('data-port', 'br-data:em1')
         config.side_effect = self.test_config.get
         mock_resolve_ports.side_effect = lambda ports: ports
-        self.assertEquals(
+        self.assertEqual(
             charmhelpers.contrib.openstack.context.DataPortContext()(),
             {'em1': 'br-data'}
         )
@@ -91,7 +91,7 @@ class OVSPluginContextTest(CharmTestCase):
         config.side_effect = self.test_config.get
         list_nics.return_value = machine_machs.keys()
         get_nic_hwaddr.side_effect = lambda nic: machine_machs[nic]
-        self.assertEquals(
+        self.assertEqual(
             charmhelpers.contrib.openstack.context.DataPortContext()(),
             {'em1': 'br-d2'}
         )
@@ -182,7 +182,7 @@ class OVSPluginContextTest(CharmTestCase):
             'vlan_ranges': 'physnet1:1000:1500,physnet2:2000:2500',
             'prevent_arp_spoofing': False,
         }
-        self.assertEquals(expect, napi_ctxt())
+        self.assertEqual(expect, napi_ctxt())
 
     @patch.object(charmhelpers.contrib.openstack.utils,
                   'get_os_codename_package')
@@ -258,7 +258,7 @@ class OVSPluginContextTest(CharmTestCase):
             'prevent_arp_spoofing': True,
         }
         self.maxDiff = None
-        self.assertEquals(expect, napi_ctxt())
+        self.assertEqual(expect, napi_ctxt())
 
 
 class DHCPAgentContextTest(CharmTestCase):
@@ -416,7 +416,7 @@ class L3AgentContextTest(CharmTestCase):
             'network-device-mtu': 1500,
         }
         _rget.side_effect = lambda *args, **kwargs: rdata
-        self.assertEquals(
+        self.assertEqual(
             context.L3AgentContext()(), {'agent_mode': 'dvr',
                                          'external_configuration_new': True}
         )
@@ -435,7 +435,7 @@ class L3AgentContextTest(CharmTestCase):
             'network-device-mtu': 1500,
         }
         _rget.side_effect = lambda *args, **kwargs: rdata
-        self.assertEquals(context.L3AgentContext()(), {'agent_mode': 'legacy'})
+        self.assertEqual(context.L3AgentContext()(), {'agent_mode': 'legacy'})
 
 
 class SharedSecretContext(CharmTestCase):
@@ -451,8 +451,8 @@ class SharedSecretContext(CharmTestCase):
         _path.exists.return_value = False
         _uuid4.return_value = 'secret_thing'
         with patch_open() as (_open, _file):
-            self.assertEquals(context.get_shared_secret(),
-                              'secret_thing')
+            self.assertEqual(context.get_shared_secret(),
+                             'secret_thing')
             _open.assert_called_with(
                 context.SHARED_SECRET.format('quantum'), 'w')
             _file.write.assert_called_with('secret_thing')
@@ -462,8 +462,8 @@ class SharedSecretContext(CharmTestCase):
         _path.exists.return_value = True
         with patch_open() as (_open, _file):
             _file.read.return_value = 'secret_thing\n'
-            self.assertEquals(context.get_shared_secret(),
-                              'secret_thing')
+            self.assertEqual(context.get_shared_secret(),
+                             'secret_thing')
             _open.assert_called_with(
                 context.SHARED_SECRET.format('quantum'), 'r')
 
@@ -473,8 +473,8 @@ class SharedSecretContext(CharmTestCase):
                                       _NeutronAPIContext):
         _NeutronAPIContext.side_effect = fake_context({'enable_dvr': True})
         _shared_secret.return_value = 'secret_thing'
-        self.assertEquals(context.SharedSecretContext()(),
-                          {'shared_secret': 'secret_thing'})
+        self.assertEqual(context.SharedSecretContext()(),
+                         {'shared_secret': 'secret_thing'})
 
     @patch.object(context, 'NeutronAPIContext')
     @patch.object(context, 'get_shared_secret')
@@ -482,7 +482,7 @@ class SharedSecretContext(CharmTestCase):
                                         _NeutronAPIContext):
         _NeutronAPIContext.side_effect = fake_context({'enable_dvr': False})
         _shared_secret.return_value = 'secret_thing'
-        self.assertEquals(context.SharedSecretContext()(), {})
+        self.assertEqual(context.SharedSecretContext()(), {})
 
 
 class MockPCIDevice(object):
@@ -653,7 +653,7 @@ class TestRemoteRestartContext(CharmTestCase):
         self.relation_get.return_value = {
             'restart-trigger': '8f73-f3adb96a90d8',
         }
-        self.assertEquals(
+        self.assertEqual(
             context.RemoteRestartContext()(),
             {'restart_trigger': '8f73-f3adb96a90d8'}
         )
@@ -665,7 +665,7 @@ class TestRemoteRestartContext(CharmTestCase):
         self.relation_get.return_value = {
             'restart-trigger': '8f73-f3adb96a90d8',
         }
-        self.assertEquals(
+        self.assertEqual(
             context.RemoteRestartContext(['neutron-control'])(),
             {'restart_trigger': '8f73-f3adb96a90d8'}
         )
@@ -678,7 +678,7 @@ class TestRemoteRestartContext(CharmTestCase):
             {'restart-trigger': '8f73'},
             {'restart-trigger': '2ac3'}]
         self.relation_get.side_effect = lambda rid, unit: ids.pop()
-        self.assertEquals(
+        self.assertEqual(
             context.RemoteRestartContext(
                 ['neutron-plugin', 'neutron-control'])(),
             {'restart_trigger': '2ac3-8f73'}
@@ -689,7 +689,7 @@ class TestRemoteRestartContext(CharmTestCase):
         self.relation_ids.return_value = ['rid1']
         self.related_units.return_value = ['nova-compute/0']
         self.relation_get.return_value = {}
-        self.assertEquals(context.RemoteRestartContext()(), {})
+        self.assertEqual(context.RemoteRestartContext()(), {})
 
     def test_restart_trigger_service(self):
         self.relation_ids.return_value = ['rid1']
@@ -697,7 +697,7 @@ class TestRemoteRestartContext(CharmTestCase):
         self.relation_get.return_value = {
             'restart-trigger-neutron': 'neutron-uuid',
         }
-        self.assertEquals(
+        self.assertEqual(
             context.RemoteRestartContext()(),
             {'restart_trigger_neutron': 'neutron-uuid'}
         )
