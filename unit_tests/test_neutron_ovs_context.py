@@ -149,6 +149,7 @@ class OVSPluginContextTest(CharmTestCase):
         rdata = {
             'neutron-security-groups': 'True',
             'l2-population': 'True',
+            'enable-qos': 'True',
             'network-device-mtu': 1500,
             'overlay-network-type': 'gre',
             'enable-dvr': 'True',
@@ -160,6 +161,7 @@ class OVSPluginContextTest(CharmTestCase):
             'neutron_security_groups': True,
             'distributed_routing': True,
             'verbose': True,
+            'extension_drivers': 'qos',
             'local_ip': '127.0.0.15',
             'network_device_mtu': 1500,
             'veth_mtu': 1500,
@@ -224,6 +226,7 @@ class OVSPluginContextTest(CharmTestCase):
         rdata = {
             'neutron-security-groups': 'True',
             'l2-population': 'True',
+            'enable-qos': 'True',
             'network-device-mtu': 1500,
             'overlay-network-type': 'gre',
         }
@@ -235,6 +238,7 @@ class OVSPluginContextTest(CharmTestCase):
             'neutron_alchemy_flags': {},
             'neutron_security_groups': False,
             'verbose': True,
+            'extension_drivers': 'qos',
             'local_ip': '127.0.0.15',
             'veth_mtu': 1500,
             'network_device_mtu': 1500,
