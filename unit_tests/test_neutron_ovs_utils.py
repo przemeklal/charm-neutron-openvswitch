@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import hashlib
+
 from mock import MagicMock, patch, call
 from collections import OrderedDict
 import charmhelpers.contrib.openstack.templating as templating
@@ -58,6 +60,10 @@ TO_PATCH = [
     'enable_ipfix',
     'disable_ipfix',
     'ovs_has_late_dpdk_init',
+    'parse_data_port_mappings',
+    'user_exists',
+    'group_exists',
+    'init_is_systemd',
 ]
 
 head_pkg = 'linux-headers-3.15.0-5-generic'
@@ -476,18 +482,31 @@ class TestNeutronOVSUtils(CharmTestCase):
     def _run_configure_ovs_dpdk(self, mock_config, _use_dvr,
                                 _resolve_dpdk_bridges, _resolve_dpdk_bonds,
                                 _late_init, _test_bonds):
-        _resolve_dpdk_bridges.return_value = OrderedDict([
-            ('0000:001c.01', 'br-phynet1'),
-            ('0000:001c.02', 'br-phynet2'),
-            ('0000:001c.03', 'br-phynet3'),
-        ])
+        def _resolve_port_name(pci_address, device_index, late_init):
+            if late_init:
+                return 'dpdk-{}'.format(
+                    hashlib.sha1(pci_address.encode('UTF-8')).hexdigest()[:7]
+                )
+            else:
+                return 'dpdk{}'.format(device_index)
         if _test_bonds:
+            _resolve_dpdk_bridges.return_value = OrderedDict()
             _resolve_dpdk_bonds.return_value = OrderedDict([
                 ('0000:001c.01', 'bond0'),
                 ('0000:001c.02', 'bond1'),
                 ('0000:001c.03', 'bond2'),
             ])
+            self.parse_data_port_mappings.return_value = OrderedDict([
+                ('bond0', 'br-phynet1'),
+                ('bond1', 'br-phynet2'),
+                ('bond2', 'br-phynet3'),
+            ])
         else:
+            _resolve_dpdk_bridges.return_value = OrderedDict([
+                ('0000:001c.01', 'br-phynet1'),
+                ('0000:001c.02', 'br-phynet2'),
+                ('0000:001c.03', 'br-phynet3'),
+            ])
             _resolve_dpdk_bonds.return_value = OrderedDict()
         _use_dvr.return_value = True
         self.use_dpdk.return_value = True
@@ -506,9 +525,15 @@ class TestNeutronOVSUtils(CharmTestCase):
         )
         if _test_bonds:
             self.dpdk_add_bridge_bond.assert_has_calls([
-                call('br-phynet1', 'bond0', ['dpdk0'], ['0000:001c.01']),
-                call('br-phynet2', 'bond1', ['dpdk1'], ['0000:001c.02']),
-                call('br-phynet3', 'bond2', ['dpdk2'], ['0000:001c.03'])],
+                call('br-phynet1', 'bond0',
+                     {_resolve_port_name('0000:001c.01',
+                                         0, _late_init): '0000:001c.01'}),
+                call('br-phynet2', 'bond1',
+                     {_resolve_port_name('0000:001c.02',
+                                         1, _late_init): '0000:001c.02'}),
+                call('br-phynet3', 'bond2',
+                     {_resolve_port_name('0000:001c.03',
+                                         2, _late_init): '0000:001c.03'})],
                 any_order=True
             )
             self.dpdk_set_bond_config.assert_has_calls([
@@ -528,9 +553,18 @@ class TestNeutronOVSUtils(CharmTestCase):
             )
         else:
             self.dpdk_add_bridge_port.assert_has_calls([
-                call('br-phynet1', 'dpdk0', '0000:001c.01'),
-                call('br-phynet2', 'dpdk1', '0000:001c.02'),
-                call('br-phynet3', 'dpdk2', '0000:001c.03')],
+                call('br-phynet1',
+                     _resolve_port_name('0000:001c.01',
+                                        0, _late_init),
+                     '0000:001c.01'),
+                call('br-phynet2',
+                     _resolve_port_name('0000:001c.02',
+                                        1, _late_init),
+                     '0000:001c.02'),
+                call('br-phynet3',
+                     _resolve_port_name('0000:001c.03',
+                                        2, _late_init),
+                     '0000:001c.03')],
                 any_order=True
             )
 
@@ -751,6 +785,28 @@ class TestNeutronOVSUtils(CharmTestCase):
 
         self.assertTrue(self.remote_restart.called)
 
+    @patch.object(nutils, 'subprocess')
+    @patch.object(nutils, 'shutil')
+    def test_install_tmpfilesd_lxd(self, mock_shutil, mock_subprocess):
+        self.init_is_systemd.return_value = True
+        self.group_exists.return_value = False
+        self.user_exists.return_value = False
+        nutils.install_tmpfilesd()
+        mock_shutil.copy.assert_not_called()
+        mock_subprocess.check_call.assert_not_called()
+
+    @patch.object(nutils, 'subprocess')
+    @patch.object(nutils, 'shutil')
+    def test_install_tmpfilesd_libvirt(self, mock_shutil, mock_subprocess):
+        self.init_is_systemd.return_value = True
+        self.group_exists.return_value = True
+        self.user_exists.return_value = True
+        nutils.install_tmpfilesd()
+        mock_shutil.copy.assert_called_once()
+        mock_subprocess.check_call.assert_called_once_with(
+            ['systemd-tmpfiles', '--create']
+        )
+
 
 class TestDPDKBridgeBondMap(CharmTestCase):
 
@@ -766,15 +822,18 @@ class TestDPDKBridgeBondMap(CharmTestCase):
         ctx.add_port("br1", "bond2", "port3", "00:00:00:00:00:03")
         ctx.add_port("br1", "bond2", "port4", "00:00:00:00:00:04")
 
-        expected = [('br1',
-                     {'bond1':
-                      (['port1', 'port2'],
-                       ['00:00:00:00:00:01', '00:00:00:00:00:02']),
-                      'bond2':
-                          (['port3', 'port4'],
-                           ['00:00:00:00:00:03', '00:00:00:00:00:04'])
-                      })
-                    ]
+        expected = [(
+            'br1', {
+                'bond1': {
+                    'port1': '00:00:00:00:00:01',
+                    'port2': '00:00:00:00:00:02'
+                },
+                'bond2': {
+                    'port3': '00:00:00:00:00:03',
+                    'port4': '00:00:00:00:00:04',
+                },
+            },
+        )]
 
         self.assertEqual(ctx.items(), expected)
 
