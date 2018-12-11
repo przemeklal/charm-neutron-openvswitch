@@ -132,13 +132,15 @@ class TestNeutronOVSUtils(CharmTestCase):
             call(self.filter_installed_packages(), fatal=True),
         ])
 
+    @patch.object(nutils, 'use_l3ha')
     @patch.object(nutils, 'use_dvr')
     @patch.object(charmhelpers.contrib.openstack.neutron, 'os_release')
     @patch.object(charmhelpers.contrib.openstack.neutron, 'headers_package')
     def test_determine_packages(self, _head_pkgs, _os_rel,
-                                _use_dvr):
+                                _use_dvr, _use_l3ha):
         self.test_config.set('enable-local-dhcp-and-metadata', False)
         _use_dvr.return_value = False
+        _use_l3ha.return_value = False
         _os_rel.return_value = 'icehouse'
         self.os_release.return_value = 'icehouse'
         _head_pkgs.return_value = head_pkg
@@ -149,13 +151,15 @@ class TestNeutronOVSUtils(CharmTestCase):
         ]
         self.assertEqual(pkg_list, expect)
 
+    @patch.object(nutils, 'use_l3ha')
     @patch.object(nutils, 'use_dvr')
     @patch.object(charmhelpers.contrib.openstack.neutron, 'os_release')
     @patch.object(charmhelpers.contrib.openstack.neutron, 'headers_package')
     def test_determine_packages_mitaka(self, _head_pkgs, _os_rel,
-                                       _use_dvr):
+                                       _use_dvr, _use_l3ha):
         self.test_config.set('enable-local-dhcp-and-metadata', False)
         _use_dvr.return_value = False
+        _use_l3ha.return_value = False
         _os_rel.return_value = 'mitaka'
         self.os_release.return_value = 'mitaka'
         _head_pkgs.return_value = head_pkg
@@ -166,13 +170,15 @@ class TestNeutronOVSUtils(CharmTestCase):
         ]
         self.assertEqual(pkg_list, expect)
 
+    @patch.object(nutils, 'use_l3ha')
     @patch.object(nutils, 'use_dvr')
     @patch.object(charmhelpers.contrib.openstack.neutron, 'os_release')
     @patch.object(charmhelpers.contrib.openstack.neutron, 'headers_package')
     def test_determine_packages_metadata(self, _head_pkgs, _os_rel,
-                                         _use_dvr):
+                                         _use_dvr, _use_l3ha):
         self.test_config.set('enable-local-dhcp-and-metadata', True)
         _use_dvr.return_value = False
+        _use_l3ha.return_value = False
         _os_rel.return_value = 'icehouse'
         self.os_release.return_value = 'icehouse'
         _head_pkgs.return_value = head_pkg
@@ -185,11 +191,14 @@ class TestNeutronOVSUtils(CharmTestCase):
         ]
         self.assertEqual(pkg_list, expect)
 
+    @patch.object(nutils, 'use_l3ha')
     @patch.object(nutils, 'use_dvr')
     @patch.object(charmhelpers.contrib.openstack.neutron, 'os_release')
     @patch.object(charmhelpers.contrib.openstack.neutron, 'headers_package')
-    def test_determine_packages_dvr(self, _head_pkgs, _os_rel, _use_dvr):
+    def test_determine_packages_dvr(self, _head_pkgs, _os_rel, _use_dvr,
+                                    _use_l3ha):
         _use_dvr.return_value = True
+        _use_l3ha.return_value = False
         _os_rel.return_value = 'icehouse'
         self.os_release.return_value = 'icehouse'
         _head_pkgs.return_value = head_pkg
@@ -201,11 +210,14 @@ class TestNeutronOVSUtils(CharmTestCase):
         ]
         self.assertEqual(pkg_list, expect)
 
+    @patch.object(nutils, 'use_l3ha')
     @patch.object(nutils, 'use_dvr')
     @patch.object(charmhelpers.contrib.openstack.neutron, 'os_release')
     @patch.object(charmhelpers.contrib.openstack.neutron, 'headers_package')
-    def test_determine_packages_dvr_rocky(self, _head_pkgs, _os_rel, _use_dvr):
+    def test_determine_packages_dvr_rocky(self, _head_pkgs, _os_rel, _use_dvr,
+                                          _use_l3ha):
         _use_dvr.return_value = True
+        _use_l3ha.return_value = False
         _os_rel.return_value = 'rocky'
         self.os_release.return_value = 'rocky'
         _head_pkgs.return_value = head_pkg
@@ -219,14 +231,77 @@ class TestNeutronOVSUtils(CharmTestCase):
         ]
         self.assertEqual(pkg_list, expect)
 
+    @patch.object(nutils, 'use_l3ha')
+    @patch.object(nutils, 'use_dvr')
+    @patch.object(charmhelpers.contrib.openstack.neutron, 'os_release')
+    @patch.object(charmhelpers.contrib.openstack.neutron, 'headers_package')
+    def test_determine_packages_newton_dvr_l3ha(self, _head_pkgs, _os_rel,
+                                                _use_dvr, _use_l3ha):
+        self.test_config.set('enable-local-dhcp-and-metadata', False)
+        _use_dvr.return_value = True
+        _use_l3ha.return_value = True
+        _os_rel.return_value = 'newton'
+        self.os_release.return_value = 'newton'
+        _head_pkgs.return_value = head_pkg
+        pkg_list = nutils.determine_packages()
+        expect = [
+            head_pkg,
+            'neutron-l3-agent',
+            'keepalived',
+            'neutron-openvswitch-agent',
+        ]
+        self.assertEqual(pkg_list, expect)
+
+    @patch.object(nutils, 'use_l3ha')
+    @patch.object(nutils, 'use_dvr')
+    @patch.object(charmhelpers.contrib.openstack.neutron, 'os_release')
+    @patch.object(charmhelpers.contrib.openstack.neutron, 'headers_package')
+    def test_determine_packages_newton_dvr_no_l3ha(self, _head_pkgs, _os_rel,
+                                                   _use_dvr, _use_l3ha):
+        self.test_config.set('enable-local-dhcp-and-metadata', False)
+        _use_dvr.return_value = True
+        _use_l3ha.return_value = False
+        _os_rel.return_value = 'newton'
+        self.os_release.return_value = 'newton'
+        _head_pkgs.return_value = head_pkg
+        pkg_list = nutils.determine_packages()
+        expect = [
+            head_pkg,
+            'neutron-l3-agent',
+            'neutron-openvswitch-agent',
+        ]
+        self.assertEqual(pkg_list, expect)
+
+    @patch.object(nutils, 'use_l3ha')
+    @patch.object(nutils, 'use_dvr')
+    @patch.object(charmhelpers.contrib.openstack.neutron, 'os_release')
+    @patch.object(charmhelpers.contrib.openstack.neutron, 'headers_package')
+    def test_determine_packages_mitaka_dvr_l3ha(self, _head_pkgs, _os_rel,
+                                                _use_dvr, _use_l3ha):
+        self.test_config.set('enable-local-dhcp-and-metadata', False)
+        _use_dvr.return_value = True
+        _use_l3ha.return_value = True
+        _os_rel.return_value = 'mitaka'
+        self.os_release.return_value = 'mitaka'
+        _head_pkgs.return_value = head_pkg
+        pkg_list = nutils.determine_packages()
+        expect = [
+            head_pkg,
+            'neutron-l3-agent',
+            'neutron-openvswitch-agent',
+        ]
+        self.assertEqual(pkg_list, expect)
+
+    @patch.object(nutils, 'use_l3ha')
     @patch.object(nutils, 'use_dvr')
     @patch.object(charmhelpers.contrib.openstack.neutron, 'os_release')
     @patch.object(charmhelpers.contrib.openstack.neutron, 'headers_package')
     def test_determine_pkgs_sriov(self, _head_pkgs, _os_rel,
-                                  _use_dvr):
+                                  _use_dvr, _use_l3ha):
         self.test_config.set('enable-local-dhcp-and-metadata', False)
         self.test_config.set('enable-sriov', True)
         _use_dvr.return_value = False
+        _use_l3ha.return_value = False
         _os_rel.return_value = 'kilo'
         self.os_release.return_value = 'kilo'
         _head_pkgs.return_value = head_pkg
@@ -238,14 +313,16 @@ class TestNeutronOVSUtils(CharmTestCase):
         ]
         self.assertEqual(pkg_list, expect)
 
+    @patch.object(nutils, 'use_l3ha')
     @patch.object(nutils, 'use_dvr')
     @patch.object(charmhelpers.contrib.openstack.neutron, 'os_release')
     @patch.object(charmhelpers.contrib.openstack.neutron, 'headers_package')
     def test_determine_pkgs_sriov_mitaka(self, _head_pkgs, _os_rel,
-                                         _use_dvr):
+                                         _use_dvr, _use_l3ha):
         self.test_config.set('enable-local-dhcp-and-metadata', False)
         self.test_config.set('enable-sriov', True)
         _use_dvr.return_value = False
+        _use_l3ha.return_value = False
         _os_rel.return_value = 'mitaka'
         self.os_release.return_value = 'mitaka'
         _head_pkgs.return_value = head_pkg
@@ -407,10 +484,12 @@ class TestNeutronOVSUtils(CharmTestCase):
         _map = nutils.resource_map()
         self.assertFalse(nutils.EXT_PORT_CONF in _map.keys())
 
+    @patch.object(nutils, 'use_l3ha')
     @patch.object(nutils, 'use_dpdk')
     @patch.object(nutils, 'use_dvr')
-    def test_restart_map(self, mock_use_dvr, mock_use_dpdk):
+    def test_restart_map(self, mock_use_dvr, mock_use_dpdk, mock_use_l3ha):
         mock_use_dvr.return_value = False
+        mock_use_l3ha.return_value = False
         mock_use_dpdk.return_value = False
         self.os_release.return_value = "mitaka"
         self.lsb_release.return_value = {'DISTRIB_CODENAME': 'xenial'}

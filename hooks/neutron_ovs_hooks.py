@@ -24,6 +24,8 @@ from charmhelpers.contrib.openstack.utils import (
     series_upgrade_prepare,
     series_upgrade_complete,
     is_unit_paused_set,
+    CompareOpenStackReleases,
+    os_release,
 )
 
 from charmhelpers.core.hookenv import (
@@ -38,6 +40,7 @@ from charmhelpers.core.hookenv import (
 from neutron_ovs_utils import (
     DHCP_PACKAGES,
     DVR_PACKAGES,
+    L3HA_PACKAGES,
     METADATA_PACKAGES,
     OVS_DEFAULT,
     configure_ovs,
@@ -46,9 +49,11 @@ from neutron_ovs_utils import (
     register_configs,
     restart_map,
     use_dvr,
+    use_l3ha,
     enable_nova_metadata,
     enable_local_dhcp,
     install_packages,
+    install_l3ha_packages,
     purge_packages,
     assess_status,
     install_tmpfilesd,
@@ -126,10 +131,23 @@ def config_changed():
 @hooks.hook('neutron-plugin-api-relation-changed')
 @restart_on_change(restart_map())
 def neutron_plugin_api_changed():
+    packages_to_purge = []
     if use_dvr():
         install_packages()
+        # per 17.08 release notes L3HA + DVR is a Newton+ feature
+        _os_release = os_release('neutron-common', base='icehouse')
+        if (use_l3ha() and
+           CompareOpenStackReleases(_os_release) >= 'newton'):
+            install_l3ha_packages()
+        else:
+            packages_to_purge.extend(L3HA_PACKAGES)
     else:
-        purge_packages(DVR_PACKAGES)
+        packages_to_purge = deepcopy(DVR_PACKAGES)
+        packages_to_purge.extend(L3HA_PACKAGES)
+
+    if packages_to_purge:
+        purge_packages(packages_to_purge)
+
     configure_ovs()
     CONFIGS.write_all()
     # If dvr setting has changed, need to pass that on

@@ -442,6 +442,26 @@ class L3AgentContextTest(CharmTestCase):
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_get')
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_ids')
     @patch.object(charmhelpers.contrib.openstack.context, 'related_units')
+    def test_dvr_enabled_dvr_snat_enabled(self, _runits, _rids, _rget):
+        self.test_config.set('use-dvr-snat', True)
+        _runits.return_value = ['unit1']
+        _rids.return_value = ['rid2']
+        rdata = {
+            'neutron-security-groups': 'True',
+            'enable-dvr': 'True',
+            'l2-population': 'True',
+            'overlay-network-type': 'vxlan',
+            'network-device-mtu': 1500,
+        }
+        _rget.side_effect = lambda *args, **kwargs: rdata
+        self.assertEqual(
+            context.L3AgentContext()(), {'agent_mode': 'dvr_snat',
+                                         'external_configuration_new': True}
+        )
+
+    @patch.object(charmhelpers.contrib.openstack.context, 'relation_get')
+    @patch.object(charmhelpers.contrib.openstack.context, 'relation_ids')
+    @patch.object(charmhelpers.contrib.openstack.context, 'related_units')
     def test_dvr_disabled(self, _runits, _rids, _rget):
         _runits.return_value = ['unit1']
         _rids.return_value = ['rid2']
