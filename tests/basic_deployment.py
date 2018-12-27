@@ -37,7 +37,7 @@ u = OpenStackAmuletUtils(DEBUG)
 
 
 class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
-    """Amulet tests on a basic neutron-openvswtich deployment."""
+    """Amulet tests on a basic neutron-openvswitch deployment."""
 
     def __init__(self, series, openstack=None, source=None,
                  stable=False):
