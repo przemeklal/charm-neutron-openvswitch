@@ -109,6 +109,8 @@ NEUTRON_METADATA_AGENT_CONF = "/etc/neutron/metadata_agent.ini"
 DVR_PACKAGES = ['neutron-l3-agent']
 DHCP_PACKAGES = ['neutron-dhcp-agent']
 METADATA_PACKAGES = ['neutron-metadata-agent']
+# conntrack is a dependency of neutron-l3-agent and hence is not added
+L3HA_PACKAGES = ['keepalived']
 
 PY3_PACKAGES = [
     'python3-neutron',
@@ -254,6 +256,11 @@ def install_packages():
         enable_ovs_dpdk()
 
 
+def install_l3ha_packages():
+    apt_update()
+    apt_install(L3HA_PACKAGES, fatal=True)
+
+
 def purge_packages(pkg_list):
     purge_pkgs = []
     required_packages = determine_packages()
@@ -276,6 +283,11 @@ def determine_packages():
     if use_dvr():
         pkgs.extend(DVR_PACKAGES)
         py3_pkgs.append('python3-neutron-fwaas')
+        _os_release = os_release('neutron-common', base='icehouse')
+        # per 17.08 release notes L3HA + DVR is a Newton+ feature
+        if (use_l3ha() and
+           CompareOpenStackReleases(_os_release) >= 'newton'):
+            pkgs.extend(L3HA_PACKAGES)
     if enable_local_dhcp():
         pkgs.extend(DHCP_PACKAGES)
         pkgs.extend(METADATA_PACKAGES)
@@ -679,7 +691,11 @@ def get_shared_secret():
 
 
 def use_dvr():
-    return context.NeutronAPIContext()()['enable_dvr']
+    return context.NeutronAPIContext()().get('enable_dvr', False)
+
+
+def use_l3ha():
+    return context.NeutronAPIContext()().get('enable_l3ha', False)
 
 
 def determine_datapath_type():

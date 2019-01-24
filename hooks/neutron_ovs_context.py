@@ -280,7 +280,9 @@ class L3AgentContext(OSContextGenerator):
         neutron_api_settings = NeutronAPIContext()()
         ctxt = {}
         if neutron_api_settings['enable_dvr']:
-            ctxt['agent_mode'] = 'dvr'
+            use_dvr_snat = config('use-dvr-snat')
+            agent_mode = 'dvr_snat' if use_dvr_snat else 'dvr'
+            ctxt['agent_mode'] = agent_mode
             if not config('ext-port'):
                 ctxt['external_configuration_new'] = True
         else:
