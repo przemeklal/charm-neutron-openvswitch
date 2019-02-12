@@ -11,4 +11,4 @@ include:
     - contrib.storage.linux
     - payload
     - contrib.network.ip
-    - contrib.python.packages
+    - contrib.python
