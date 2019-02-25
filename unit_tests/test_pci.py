@@ -220,6 +220,14 @@ class PCINetDeviceTest(CharmTestCase):
         mock__set_sriov_numvfs.assert_has_calls([
             call(0), call(4)])
 
+    @patch('pci.PCINetDevice._set_sriov_numvfs')
+    def test_set_sriov_numvfs_avoid_call(self, mock__set_sriov_numvfs):
+        dev = pci.PCINetDevice('0000:10:00.0')
+        dev.sriov = True
+        dev.sriov_numvfs = 4
+        dev.set_sriov_numvfs(4)
+        self.assertFalse(mock__set_sriov_numvfs.called)
+
 
 class PCINetDevicesTest(CharmTestCase):
 

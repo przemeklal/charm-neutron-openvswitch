@@ -190,7 +190,7 @@ class PCINetDevice(object):
 
         @param numvfs: integer to set the current number of VF's to
         """
-        if self.sriov:
+        if self.sriov and numvfs != self.sriov_numvfs:
             # NOTE(fnordahl): run-time change of numvfs is disallowed
             # without resetting to 0 first.
             self._set_sriov_numvfs(0)

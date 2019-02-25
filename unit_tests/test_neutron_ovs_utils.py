@@ -795,13 +795,11 @@ class TestNeutronOVSUtils(CharmTestCase):
             # ports=None whilst port checks are disabled.
             f.assert_called_once_with('assessor', services='s1', ports=None)
 
-    def _configure_sriov_base(self, config,
-                              changed=False):
+    def _configure_sriov_base(self, config):
         self.mock_config = MagicMock()
         self.config.side_effect = None
         self.config.return_value = self.mock_config
         self.mock_config.get.side_effect = lambda x: config.get(x)
-        self.mock_config.changed.return_value = changed
 
         self.mock_eth_device = MagicMock()
         self.mock_eth_device.sriov = False
@@ -836,26 +834,13 @@ class TestNeutronOVSUtils(CharmTestCase):
             lambda x: self.pci_devices.get(x)
 
     @patch('os.chmod')
-    def test_configure_sriov_no_changes(self, _os_chmod):
-        self.os_release.return_value = 'kilo'
-        _config = {
-            'enable-sriov': True,
-            'sriov-numvfs': 'auto'
-        }
-        self._configure_sriov_base(_config, False)
-
-        nutils.configure_sriov()
-
-        self.assertFalse(self.remote_restart.called)
-
-    @patch('os.chmod')
     def test_configure_sriov_auto(self, _os_chmod):
         self.os_release.return_value = 'mitaka'
         _config = {
             'enable-sriov': True,
             'sriov-numvfs': 'auto'
         }
-        self._configure_sriov_base(_config, True)
+        self._configure_sriov_base(_config)
 
         nutils.configure_sriov()
 
@@ -874,7 +859,7 @@ class TestNeutronOVSUtils(CharmTestCase):
             'enable-sriov': True,
             'sriov-numvfs': '32',
         }
-        self._configure_sriov_base(_config, True)
+        self._configure_sriov_base(_config)
 
         nutils.configure_sriov()
 
@@ -890,12 +875,30 @@ class TestNeutronOVSUtils(CharmTestCase):
             'enable-sriov': True,
             'sriov-numvfs': 'ens0:32 sriov23:64'
         }
-        self._configure_sriov_base(_config, True)
+        self._configure_sriov_base(_config)
 
         nutils.configure_sriov()
 
         self.mock_sriov_device.set_sriov_numvfs.assert_called_with(32)
         self.mock_sriov_device2.set_sriov_numvfs.assert_not_called()
+
+        self.assertTrue(self.remote_restart.called)
+
+    @patch('os.chmod')
+    def test_configure_sriov_auto_avoid_recall(self, _os_chmod):
+        self.os_release.return_value = 'mitaka'
+        _config = {
+            'enable-sriov': True,
+            'sriov-numvfs': 'auto'
+        }
+        self._configure_sriov_base(_config)
+
+        nutils.configure_sriov()
+
+        self.mock_sriov_device2.sriov_numvfs = 64
+        self.mock_sriov_device2.set_sriov_numvfs.assert_called_with(
+            self.mock_sriov_device2.sriov_totalvfs)
+        self.mock_sriov_device2._set_sriov_numvfs.assert_not_called()
 
         self.assertTrue(self.remote_restart.called)
 
