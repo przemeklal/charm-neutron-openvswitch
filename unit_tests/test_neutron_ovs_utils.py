@@ -496,13 +496,13 @@ class TestNeutronOVSUtils(CharmTestCase):
         ML2CONF = "/etc/neutron/plugins/ml2/openvswitch_agent.ini"
         _restart_map = nutils.restart_map()
         expect = OrderedDict([
-            (ML2CONF, ['neutron-openvswitch-agent']),
             (nutils.NEUTRON_CONF, ['neutron-openvswitch-agent']),
+            (ML2CONF, ['neutron-openvswitch-agent']),
         ])
-        self.assertEqual(expect, OrderedDict(_restart_map))
         for item in _restart_map:
             self.assertTrue(item in _restart_map)
             self.assertTrue(expect[item] == _restart_map[item])
+        self.assertEqual(len(_restart_map.keys()), 2)
 
     @patch.object(nutils, 'use_dvr')
     @patch('charmhelpers.contrib.openstack.context.config')

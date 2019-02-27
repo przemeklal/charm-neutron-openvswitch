@@ -32,6 +32,7 @@ utils.register_configs = _reg
 utils.restart_map = _map
 
 TO_PATCH = [
+    'create_sysctl',
     'config',
     'CONFIGS',
     'get_shared_secret',
@@ -110,6 +111,16 @@ class NeutronOVSHooksTests(CharmTestCase):
         self.install_packages.assert_called_with()
         self.assertTrue(self.CONFIGS.write_all.called)
         self.configure_ovs.assert_called_with()
+
+    def test_config_changed_sysctl_overrides(self):
+        self.test_config.set(
+            'sysctl',
+            '{foo : bar}'
+        )
+        self._call_hook('config-changed')
+        self.create_sysctl.assert_called_with(
+            '{foo : bar}',
+            '/etc/sysctl.d/50-openvswitch.conf')
 
     @patch.object(hooks, 'neutron_plugin_joined')
     def test_config_changed_rocky_upgrade(self, _plugin_joined):
