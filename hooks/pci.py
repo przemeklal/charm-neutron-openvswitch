@@ -155,6 +155,8 @@ class PCINetDevice(object):
         self.mac_address = None
         self.state = None
         self.sriov = False
+        self.sriov_totalvfs = None
+        self.sriov_numvfs = None
         self.update_attributes()
 
     def update_attributes(self):
@@ -186,6 +188,7 @@ class PCINetDevice(object):
                                    'device', 'sriov_numvfs')
             with open(sdevice, 'w') as sh:
                 sh.write(str(numvfs))
+            self.update_attributes()
 
 
 class PCINetDevices(object):
