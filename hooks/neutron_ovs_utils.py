@@ -622,9 +622,6 @@ def configure_sriov():
                     log("Configuring SR-IOV device"
                         " {} with {} VF's".format(device.interface_name,
                                                   device.sriov_totalvfs))
-                    # NOTE(fnordahl): run-time change of numvfs is disallowed
-                    # without resetting to 0 first.
-                    device.set_sriov_numvfs(0)
                     device.set_sriov_numvfs(device.sriov_totalvfs)
         else:
             # Single int blanket configuration
@@ -643,9 +640,6 @@ def configure_sriov():
                                                    device.sriov_totalvfs))
                         log("Configuring SR-IOV device {} with {} "
                             "VFs".format(device.interface_name, numvfs))
-                        # NOTE(fnordahl): run-time change of numvfs is
-                        # disallowed without resetting to 0 first.
-                        device.set_sriov_numvfs(0)
                         device.set_sriov_numvfs(numvfs)
             except ValueError:
                 # <device>:<numvfs>[ <device>:numvfs] configuration
@@ -666,9 +660,6 @@ def configure_sriov():
                             numvfs = device.sriov_totalvfs
                         log("Configuring SR-IOV device {} with {} "
                             "VF's".format(device.interface_name, numvfs))
-                        # NOTE(fnordahl): run-time change of numvfs is
-                        # disallowed without resetting to 0 first.
-                        device.set_sriov_numvfs(0)
                         device.set_sriov_numvfs(int(numvfs))
 
         # Trigger remote restart in parent application
