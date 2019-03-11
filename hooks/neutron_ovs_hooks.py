@@ -146,8 +146,9 @@ def neutron_plugin_api_changed():
         if (use_l3ha() and
            CompareOpenStackReleases(_os_release) >= 'newton'):
             install_l3ha_packages()
-        else:
-            packages_to_purge.extend(L3HA_PACKAGES)
+
+        # NOTE(hopem): don't uninstall keepalived if not using l3ha since that
+        # results in neutron-l3-agent also being uninstalled (see LP 1819499).
     else:
         packages_to_purge = deepcopy(DVR_PACKAGES)
         packages_to_purge.extend(L3HA_PACKAGES)

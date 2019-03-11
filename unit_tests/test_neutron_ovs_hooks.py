@@ -219,7 +219,7 @@ class NeutronOVSHooksTests(CharmTestCase):
         self.configure_ovs.assert_called_with()
         self.assertTrue(self.CONFIGS.write_all.called)
         _plugin_joined.assert_called_with(relation_id='rid')
-        self.purge_packages.assert_called_with(['keepalived'])
+        self.purge_packages.assert_not_called()
 
     @patch.object(hooks, 'os_release')
     @patch.object(hooks, 'neutron_plugin_joined')
