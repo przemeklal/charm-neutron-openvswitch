@@ -60,10 +60,10 @@ head_pkg = 'linux-headers-3.15.0-5-generic'
 openstack_origin_git = \
     """repositories:
          - {name: requirements,
-            repository: 'git://git.openstack.org/openstack/requirements',
+            repository: 'https://git.openstack.org/openstack/requirements',
             branch: stable/juno}
          - {name: neutron,
-            repository: 'git://git.openstack.org/openstack/neutron',
+            repository: 'https://git.openstack.org/openstack/neutron',
             branch: stable/juno}"""
 
 
