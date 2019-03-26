@@ -39,6 +39,10 @@ from charmhelpers.core.hookenv import (
 
 from charmhelpers.core.sysctl import create as create_sysctl
 
+from charmhelpers.core.host import (
+    is_container,
+)
+
 from neutron_ovs_utils import (
     DHCP_PACKAGES,
     DVR_PACKAGES,
@@ -120,7 +124,7 @@ def config_changed():
         request_nova_compute_restart = True
 
     sysctl_settings = config('sysctl')
-    if sysctl_settings:
+    if not is_container() and sysctl_settings:
         create_sysctl(sysctl_settings,
                       '/etc/sysctl.d/50-openvswitch.conf')
 

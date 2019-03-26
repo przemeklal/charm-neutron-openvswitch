@@ -51,6 +51,7 @@ TO_PATCH = [
     'install_tmpfilesd',
     'purge_packages',
     'determine_purge_packages',
+    'is_container',
 ]
 NEUTRON_CONF_DIR = "/etc/neutron"
 
@@ -63,6 +64,7 @@ class NeutronOVSHooksTests(CharmTestCase):
         super(NeutronOVSHooksTests, self).setUp(hooks, TO_PATCH)
 
         self.config.side_effect = self.test_config.get
+        self.is_container.return_value = False
         hooks.hooks._config_save = False
 
     def _call_hook(self, hookname):
@@ -121,6 +123,15 @@ class NeutronOVSHooksTests(CharmTestCase):
         self.create_sysctl.assert_called_with(
             '{foo : bar}',
             '/etc/sysctl.d/50-openvswitch.conf')
+
+    def test_config_changed_sysctl_container(self):
+        self.test_config.set(
+            'sysctl',
+            '{foo : bar}'
+        )
+        self.is_container.return_value = True
+        self._call_hook('config-changed')
+        self.create_sysctl.assert_not_called()
 
     @patch.object(hooks, 'neutron_plugin_joined')
     def test_config_changed_rocky_upgrade(self, _plugin_joined):
