@@ -726,6 +726,12 @@ class TestNeutronOVSUtils(CharmTestCase):
                                             _late_init=True,
                                             _test_bonds=True)
 
+    @patch.object(nutils, 'subprocess')
+    def test_dpdk_set_mtu_request(self, mock_subprocess):
+        nutils.dpdk_set_mtu_request("dpdk1", 9000)
+        mock_subprocess.check_call.assert_called_once_with(
+            ['ovs-vsctl', 'set', 'Interface', 'dpdk1', 'mtu_request=9000'])
+
     @patch.object(nutils, 'use_dvr')
     @patch('charmhelpers.contrib.openstack.context.config')
     def test_configure_ovs_enable_ipfix(self, mock_config, mock_use_dvr):
