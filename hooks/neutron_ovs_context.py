@@ -303,6 +303,7 @@ class L3AgentContext(OSContextGenerator):
             use_dvr_snat = config('use-dvr-snat')
             agent_mode = 'dvr_snat' if use_dvr_snat else 'dvr'
             ctxt['agent_mode'] = agent_mode
+            ctxt['use_l3ha'] = neutron_api_settings.get('enable_l3ha', False)
             if not config('ext-port'):
                 ctxt['external_configuration_new'] = True
         else:

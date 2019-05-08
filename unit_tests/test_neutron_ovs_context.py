@@ -437,6 +437,34 @@ class L3AgentContextTest(CharmTestCase):
         self.assertEqual(
             context.L3AgentContext()(), {
                 'agent_mode': 'dvr',
+                'use_l3ha': False,
+                'external_configuration_new': True,
+                'enable_nfg_logging': False,
+                'nfg_log_burst_limit': 25,
+                'nfg_log_output_base': None,
+                'nfg_log_rate_limit': None,
+            }
+        )
+
+    @patch.object(charmhelpers.contrib.openstack.context, 'relation_get')
+    @patch.object(charmhelpers.contrib.openstack.context, 'relation_ids')
+    @patch.object(charmhelpers.contrib.openstack.context, 'related_units')
+    def test_dvr_enabled_l3ha_enabled(self, _runits, _rids, _rget):
+        _runits.return_value = ['unit1']
+        _rids.return_value = ['rid2']
+        rdata = {
+            'neutron-security-groups': 'True',
+            'enable-dvr': 'True',
+            'l2-population': 'True',
+            'overlay-network-type': 'vxlan',
+            'network-device-mtu': 1500,
+            'enable-l3ha': 'True',
+        }
+        _rget.side_effect = lambda *args, **kwargs: rdata
+        self.assertEqual(
+            context.L3AgentContext()(), {
+                'agent_mode': 'dvr',
+                'use_l3ha': True,
                 'external_configuration_new': True,
                 'enable_nfg_logging': False,
                 'nfg_log_burst_limit': 25,
@@ -460,6 +488,7 @@ class L3AgentContextTest(CharmTestCase):
             'overlay-network-type': 'vxlan',
             'network-device-mtu': 1500,
             'enable-nfg-logging': 'True',
+            'use_l3ha': False,
         }
         _rget.side_effect = lambda *args, **kwargs: rdata
         _validate_nfg_log_path.side_effect = lambda x: x
@@ -475,6 +504,7 @@ class L3AgentContextTest(CharmTestCase):
                 'nfg_log_burst_limit': 30,
                 'nfg_log_output_base': '/var/log/neutron/firewall.log',
                 'nfg_log_rate_limit': 200,
+                'use_l3ha': False,
             }
         )
 
@@ -508,6 +538,7 @@ class L3AgentContextTest(CharmTestCase):
                 'nfg_log_burst_limit': 25,
                 'nfg_log_output_base': '/var/log/neutron/firewall.log',
                 'nfg_log_rate_limit': 100,
+                'use_l3ha': False,
             }
         )
 
@@ -529,6 +560,7 @@ class L3AgentContextTest(CharmTestCase):
         self.assertEqual(
             context.L3AgentContext()(), {
                 'agent_mode': 'dvr_snat',
+                'use_l3ha': False,
                 'external_configuration_new': True,
                 'enable_nfg_logging': False,
                 'nfg_log_burst_limit': 25,
