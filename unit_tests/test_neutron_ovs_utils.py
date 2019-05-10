@@ -513,6 +513,7 @@ class TestNeutronOVSUtils(CharmTestCase):
         self.is_linuxbridge_interface.return_value = False
         mock_config.side_effect = self.test_config.get
         self.config.side_effect = self.test_config.get
+        _nics.return_value = ['eth0']
         self.ExternalPortContext.return_value = \
             DummyContext(return_value=None)
         # Test back-compatibility i.e. port but no bridge (so br-data is
@@ -555,6 +556,7 @@ class TestNeutronOVSUtils(CharmTestCase):
         # Now test with bridge:bridge format
         self.test_config.set('bridge-mappings', 'physnet1:br-foo')
         self.test_config.set('data-port', 'br-foo:br-juju')
+        _nics.return_value = ['br-juju']
         self.add_bridge.reset_mock()
         self.add_bridge_port.reset_mock()
         nutils.configure_ovs()
