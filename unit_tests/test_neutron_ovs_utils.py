@@ -38,6 +38,7 @@ TO_PATCH = [
     'dpdk_add_bridge_port',
     'dpdk_add_bridge_bond',
     'dpdk_set_bond_config',
+    'dpdk_set_mtu_request',
     'apt_install',
     'apt_update',
     'config',
@@ -686,51 +687,65 @@ class TestNeutronOVSUtils(CharmTestCase):
                      '0000:001c.03')],
                 any_order=True
             )
+            self.dpdk_set_mtu_request.assert_has_calls([
+                call(_resolve_port_name('0000:001c.01',
+                                        0, _late_init), 1500),
+                call(_resolve_port_name('0000:001c.02',
+                                        1, _late_init), 1500),
+                call(_resolve_port_name('0000:001c.03',
+                                        2, _late_init), 1500)],
+                any_order=True)
 
+    @patch.object(neutron_ovs_context, 'NeutronAPIContext')
     @patch.object(neutron_ovs_context, 'resolve_dpdk_bonds')
     @patch.object(neutron_ovs_context, 'resolve_dpdk_bridges')
     @patch.object(nutils, 'use_dvr')
     @patch('charmhelpers.contrib.openstack.context.config')
     def test_configure_ovs_dpdk(self, mock_config, _use_dvr,
                                 _resolve_dpdk_bridges,
-                                _resolve_dpdk_bonds):
+                                _resolve_dpdk_bonds,
+                                _NeutronAPIContext):
+        _NeutronAPIContext.return_value = DummyContext(
+            return_value={'global_physnet_mtu': 1500})
         return self._run_configure_ovs_dpdk(mock_config, _use_dvr,
                                             _resolve_dpdk_bridges,
                                             _resolve_dpdk_bonds,
                                             _late_init=False,
                                             _test_bonds=False)
 
+    @patch.object(neutron_ovs_context, 'NeutronAPIContext')
     @patch.object(neutron_ovs_context, 'resolve_dpdk_bonds')
     @patch.object(neutron_ovs_context, 'resolve_dpdk_bridges')
     @patch.object(nutils, 'use_dvr')
     @patch('charmhelpers.contrib.openstack.context.config')
     def test_configure_ovs_dpdk_late_init(self, mock_config, _use_dvr,
                                           _resolve_dpdk_bridges,
-                                          _resolve_dpdk_bonds):
+                                          _resolve_dpdk_bonds,
+                                          _NeutronAPIContext):
+        _NeutronAPIContext.return_value = DummyContext(
+            return_value={'global_physnet_mtu': 1500})
         return self._run_configure_ovs_dpdk(mock_config, _use_dvr,
                                             _resolve_dpdk_bridges,
                                             _resolve_dpdk_bonds,
                                             _late_init=True,
                                             _test_bonds=False)
 
+    @patch.object(neutron_ovs_context, 'NeutronAPIContext')
     @patch.object(neutron_ovs_context, 'resolve_dpdk_bonds')
     @patch.object(neutron_ovs_context, 'resolve_dpdk_bridges')
     @patch.object(nutils, 'use_dvr')
     @patch('charmhelpers.contrib.openstack.context.config')
     def test_configure_ovs_dpdk_late_init_bonds(self, mock_config, _use_dvr,
                                                 _resolve_dpdk_bridges,
-                                                _resolve_dpdk_bonds):
+                                                _resolve_dpdk_bonds,
+                                                _NeutronAPIContext):
+        _NeutronAPIContext.return_value = DummyContext(
+            return_value={'global_physnet_mtu': 1500})
         return self._run_configure_ovs_dpdk(mock_config, _use_dvr,
                                             _resolve_dpdk_bridges,
                                             _resolve_dpdk_bonds,
                                             _late_init=True,
                                             _test_bonds=True)
-
-    @patch.object(nutils, 'subprocess')
-    def test_dpdk_set_mtu_request(self, mock_subprocess):
-        nutils.dpdk_set_mtu_request("dpdk1", 9000)
-        mock_subprocess.check_call.assert_called_once_with(
-            ['ovs-vsctl', 'set', 'Interface', 'dpdk1', 'mtu_request=9000'])
 
     @patch.object(nutils, 'use_dvr')
     @patch('charmhelpers.contrib.openstack.context.config')
@@ -987,3 +1002,15 @@ class TestDPDKBondsConfig(CharmTestCase):
                           'lacp': 'off',
                           'lacp-time': 'fast'
                           })
+
+
+class TestMTURequest(CharmTestCase):
+
+    def setUp(self):
+        super(TestMTURequest, self).setUp(nutils, [])
+
+    @patch.object(nutils, 'subprocess')
+    def test_dpdk_set_mtu_request(self, mock_subprocess):
+        nutils.dpdk_set_mtu_request("dpdk1", 9000)
+        mock_subprocess.check_call.assert_called_once_with(
+            ['ovs-vsctl', 'set', 'Interface', 'dpdk1', 'mtu_request=9000'])
