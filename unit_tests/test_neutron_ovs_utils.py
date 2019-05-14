@@ -504,9 +504,11 @@ class TestNeutronOVSUtils(CharmTestCase):
             self.assertTrue(expect[item] == _restart_map[item])
         self.assertEqual(len(_restart_map.keys()), 2)
 
+    @patch('charmhelpers.contrib.openstack.context.list_nics',
+           return_value=['eth0'])
     @patch.object(nutils, 'use_dvr')
     @patch('charmhelpers.contrib.openstack.context.config')
-    def test_configure_ovs_ovs_data_port(self, mock_config, _use_dvr):
+    def test_configure_ovs_ovs_data_port(self, mock_config, _use_dvr, _nics):
         _use_dvr.return_value = False
         self.is_linuxbridge_interface.return_value = False
         mock_config.side_effect = self.test_config.get
@@ -537,9 +539,12 @@ class TestNeutronOVSUtils(CharmTestCase):
         # Not called since we have a bogus bridge in data-ports
         self.assertFalse(self.add_bridge_port.called)
 
+    @patch('charmhelpers.contrib.openstack.context.list_nics',
+           return_value=['eth0', 'br-juju'])
     @patch.object(nutils, 'use_dvr')
     @patch('charmhelpers.contrib.openstack.context.config')
-    def test_configure_ovs_data_port_with_bridge(self, mock_config, _use_dvr):
+    def test_configure_ovs_data_port_with_bridge(
+            self, mock_config, _use_dvr, _nics):
         _use_dvr.return_value = False
         self.is_linuxbridge_interface.return_value = True
         mock_config.side_effect = self.test_config.get
