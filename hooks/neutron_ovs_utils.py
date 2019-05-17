@@ -768,6 +768,12 @@ def dpdk_set_bond_config(bond_name, config):
     subprocess.check_call(cmd)
 
 
+def dpdk_set_mtu_request(port, mtu):
+    cmd = ["ovs-vsctl", "set", "Interface", port,
+           "mtu_request={}".format(mtu)]
+    subprocess.check_call(cmd)
+
+
 def enable_nova_metadata():
     return use_dvr() or enable_local_dhcp()
 
