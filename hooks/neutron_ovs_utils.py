@@ -531,6 +531,8 @@ def configure_ovs():
                     else:
                         add_ovsbridge_linuxbridge(br, port)
     else:
+        global_mtu = (
+            neutron_ovs_context.NeutronAPIContext()()['global_physnet_mtu'])
         # NOTE: when in dpdk mode, add based on pci bus order
         #       with type 'dpdk'
         bridgemaps = neutron_ovs_context.resolve_dpdk_bridges()
@@ -546,6 +548,10 @@ def configure_ovs():
 
             dpdk_add_bridge_port(br, portname,
                                  pci_address)
+            # TODO(sahid): We should also take into account the
+            # "physical-network-mtus" in case different MTUs are
+            # configured based on physical networks.
+            dpdk_set_mtu_request(portname, global_mtu)
             device_index += 1
 
         if modern_ovs:
