@@ -881,6 +881,24 @@ class TestNeutronOVSUtils(CharmTestCase):
         self.assertTrue(self.remote_restart.called)
 
     @patch('os.chmod')
+    def test_configure_sriov_auto_mapping(self, _os_chmod):
+        self.os_release.return_value = 'mitaka'
+        _config = {
+            'enable-sriov': True,
+            'sriov-numvfs': 'auto',
+            'sriov-device-mappings': 'net1:ens49'
+        }
+        self._configure_sriov_base(_config)
+
+        nutils.configure_sriov()
+
+        self.assertFalse(self.mock_sriov_device.set_sriov_numvfs.called)
+        self.mock_sriov_device2.set_sriov_numvfs.assert_called_with(
+            self.mock_sriov_device2.sriov_totalvfs
+        )
+        self.assertTrue(self.remote_restart.called)
+
+    @patch('os.chmod')
     def test_configure_sriov_numvfs(self, _os_chmod):
         self.os_release.return_value = 'mitaka'
         _config = {

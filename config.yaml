@@ -212,9 +212,11 @@ options:
     default: auto
     description: |
       Number of VF's to configure each PF with; by default, each SR-IOV PF will
-      be configured with the maximum number of VF's it can support. Either use
-      a single integer to apply the same VF configuration to all detected
-      SR-IOV devices or use a per-device configuration in the following format
+      be configured with the maximum number of VF's it can support. In the case
+      sriov-device-mappings is set, only the devices in the mapping are configured.
+      Either use a single integer to apply the same VF configuration to all
+      detected SR-IOV devices or use a per-device configuration in the following
+      format
       .
         <device>:<numvfs>
       .

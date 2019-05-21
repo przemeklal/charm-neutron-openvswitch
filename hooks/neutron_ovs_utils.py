@@ -599,6 +599,17 @@ def configure_ovs():
     service_restart('os-charm-phy-nic-mtu')
 
 
+def _get_interfaces_from_mappings(sriov_mappings):
+    """Returns list of interfaces based on sriov-device-mappings"""
+    interfaces = []
+    if sriov_mappings:
+        # <net>:<interface>[ <net>:<interface>] configuration
+        for token in sriov_mappings.split():
+            _, interface = token.split(':')
+            interfaces.append(interface)
+    return interfaces
+
+
 def configure_sriov():
     '''Configure SR-IOV devices based on provided configuration options
 
@@ -621,13 +632,19 @@ def configure_sriov():
 
     # automatic configuration of all SR-IOV devices
     if sriov_numvfs == 'auto':
+        interfaces = _get_interfaces_from_mappings(
+            charm_config.get('sriov-device-mappings'))
         log('Configuring SR-IOV device VF functions in auto mode')
         for device in devices.pci_devices:
             if device and device.sriov:
-                log("Configuring SR-IOV device"
-                    " {} with {} VF's".format(device.interface_name,
-                                              device.sriov_totalvfs))
-                device.set_sriov_numvfs(device.sriov_totalvfs)
+                if interfaces and device.interface_name not in interfaces:
+                    log("Excluding configuration of SR-IOV device {}.".format(
+                        device.interface_name))
+                else:
+                    log("Configuring SR-IOV device"
+                        " {} with {} VF's".format(device.interface_name,
+                                                  device.sriov_totalvfs))
+                    device.set_sriov_numvfs(device.sriov_totalvfs)
     else:
         # Single int blanket configuration
         try:
