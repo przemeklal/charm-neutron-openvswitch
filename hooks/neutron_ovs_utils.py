@@ -48,6 +48,7 @@ from charmhelpers.core.hookenv import (
     config,
     status_set,
     log,
+    DEBUG,
 )
 from charmhelpers.contrib.openstack.neutron import (
     parse_bridge_mappings,
@@ -550,13 +551,17 @@ def configure_ovs():
                     else:
                         add_ovsbridge_linuxbridge(br, port)
     else:
+        log('Configuring bridges with DPDK', level=DEBUG)
         global_mtu = (
             neutron_ovs_context.NeutronAPIContext()()['global_physnet_mtu'])
         # NOTE: when in dpdk mode, add based on pci bus order
         #       with type 'dpdk'
         bridgemaps = neutron_ovs_context.resolve_dpdk_bridges()
+        log('bridgemaps: {}'.format(bridgemaps), level=DEBUG)
         device_index = 0
         for pci_address, br in bridgemaps.items():
+            log('Adding DPDK bridge: {}:{}'.format(br, datapath_type),
+                level=DEBUG)
             add_bridge(br, datapath_type)
             if modern_ovs:
                 portname = 'dpdk-{}'.format(
@@ -565,6 +570,9 @@ def configure_ovs():
             else:
                 portname = 'dpdk{}'.format(device_index)
 
+            log('Adding DPDK port: {}:{}:{}'.format(br, portname,
+                                                    pci_address),
+                level=DEBUG)
             dpdk_add_bridge_port(br, portname,
                                  pci_address)
             # TODO(sahid): We should also take into account the
@@ -574,11 +582,18 @@ def configure_ovs():
             device_index += 1
 
         if modern_ovs:
+            log('Configuring bridges with modern_ovs/DPDK',
+                level=DEBUG)
             bondmaps = neutron_ovs_context.resolve_dpdk_bonds()
+            log('bondmaps: {}'.format(bondmaps), level=DEBUG)
             bridge_bond_map = DPDKBridgeBondMap()
             portmap = parse_data_port_mappings(config('data-port'))
+            log('portmap: {}'.format(portmap), level=DEBUG)
             for pci_address, bond in bondmaps.items():
                 if bond in portmap:
+                    log('Adding DPDK bridge: {}:{}'.format(portmap[bond],
+                                                           datapath_type),
+                        level=DEBUG)
                     add_bridge(portmap[bond], datapath_type)
                     portname = 'dpdk-{}'.format(
                         hashlib.sha1(pci_address.encode('UTF-8'))
@@ -587,13 +602,22 @@ def configure_ovs():
                     bridge_bond_map.add_port(portmap[bond], bond,
                                              portname, pci_address)
 
+            log('bridge_bond_map: {}'.format(bridge_bond_map),
+                level=DEBUG)
             bond_configs = DPDKBondsConfig()
             for br, bonds in bridge_bond_map.items():
                 for bond, port_map in bonds.items():
+                    log('Adding DPDK bond: {}:{}:{}'.format(br, bond,
+                                                            port_map),
+                        level=DEBUG)
                     dpdk_add_bridge_bond(br, bond, port_map)
                     dpdk_set_interfaces_mtu(
                         global_mtu,
                         port_map.keys())
+                    log('Configuring DPDK bond: {}:{}'.format(
+                        bond,
+                        bond_configs.get_bond_config(bond)),
+                        level=DEBUG)
                     dpdk_set_bond_config(
                         bond,
                         bond_configs.get_bond_config(bond)
