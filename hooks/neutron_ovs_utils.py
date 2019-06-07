@@ -108,7 +108,9 @@ EXT_PORT_CONF = '/etc/init/ext-port.conf'
 NEUTRON_METADATA_AGENT_CONF = "/etc/neutron/metadata_agent.ini"
 DVR_PACKAGES = ['neutron-l3-agent']
 DHCP_PACKAGES = ['neutron-dhcp-agent']
-METADATA_PACKAGES = ['neutron-metadata-agent']
+# haproxy is required for isolated provider networks
+# ns-metadata-proxy LP#1831935
+METADATA_PACKAGES = ['neutron-metadata-agent', 'haproxy']
 # conntrack is a dependency of neutron-l3-agent and hence is not added
 L3HA_PACKAGES = ['keepalived']
 

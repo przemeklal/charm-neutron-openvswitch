@@ -188,6 +188,7 @@ class TestNeutronOVSUtils(CharmTestCase):
             'neutron-plugin-openvswitch-agent',
             'neutron-dhcp-agent',
             'neutron-metadata-agent',
+            'haproxy',
         ]
         self.assertEqual(pkg_list, expect)
 

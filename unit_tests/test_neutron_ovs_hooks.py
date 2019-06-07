@@ -216,7 +216,8 @@ class NeutronOVSHooksTests(CharmTestCase):
             **rel_data
         )
         self.purge_packages.assert_called_with(['neutron-dhcp-agent',
-                                                'neutron-metadata-agent'])
+                                                'neutron-metadata-agent',
+                                                'haproxy'])
         self.assertFalse(self.install_packages.called)
 
     @patch.object(hooks, 'os_release')
