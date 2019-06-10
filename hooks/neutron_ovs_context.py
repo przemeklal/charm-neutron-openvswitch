@@ -47,6 +47,9 @@ IPTABLES_HYBRID = 'iptables_hybrid'
 OPENVSWITCH = 'openvswitch'
 VALID_FIREWALL_DRIVERS = (IPTABLES_HYBRID, OPENVSWITCH)
 
+NFG_LOG_RATE_LIMIT_MIN = 100
+NFG_LOG_BURST_LIMIT_MIN = 25
+
 
 def _get_firewall_driver(ovs_ctxt):
     '''
@@ -101,6 +104,33 @@ def get_nsg_log_path(desired_nsg_log_path):
         return None
 
     return desired_nsg_log_path
+
+
+def validate_nfg_log_path(desired_nfg_log_path):
+    if not desired_nfg_log_path:
+        # None means "we need to use syslog" - no need
+        # to check anything on filesystem
+        return None
+
+    dst_dir, _ = os.path.split(desired_nfg_log_path)
+    path_exists = os.path.exists(dst_dir)
+    if not path_exists:
+        log(
+            "Desired NFG log directory {} not exists! "
+            "falling back to syslog".format(dst_dir),
+            "WARN"
+        )
+        return None
+
+    if path_exists and os.path.isdir(desired_nfg_log_path):
+        log(
+            "Desired NFG log path {} should be file, not directory! "
+            "falling back to syslog".format(desired_nfg_log_path),
+            "WARN"
+        )
+        return None
+
+    return desired_nfg_log_path
 
 
 class OVSPluginContext(context.NeutronContext):
@@ -277,6 +307,30 @@ class L3AgentContext(OSContextGenerator):
                 ctxt['external_configuration_new'] = True
         else:
             ctxt['agent_mode'] = 'legacy'
+
+        ctxt['enable_nfg_logging'] = (
+            neutron_api_settings['enable_nfg_logging']
+        )
+
+        ctxt['nfg_log_output_base'] = validate_nfg_log_path(
+            config('firewall-group-log-output-base')
+        )
+        ctxt['nfg_log_rate_limit'] = config(
+            'firewall-group-log-rate-limit'
+        )
+        if ctxt['nfg_log_rate_limit'] is not None:
+            ctxt['nfg_log_rate_limit'] = max(
+                ctxt['nfg_log_rate_limit'],
+                NFG_LOG_RATE_LIMIT_MIN
+            )
+        ctxt['nfg_log_burst_limit'] = config(
+            'firewall-group-log-burst-limit'
+        )
+        if ctxt['nfg_log_burst_limit'] is not None:
+            ctxt['nfg_log_burst_limit'] = max(
+                ctxt['nfg_log_burst_limit'],
+                NFG_LOG_BURST_LIMIT_MIN
+            )
 
         return ctxt
 

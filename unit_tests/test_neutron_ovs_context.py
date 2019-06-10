@@ -435,8 +435,80 @@ class L3AgentContextTest(CharmTestCase):
         }
         _rget.side_effect = lambda *args, **kwargs: rdata
         self.assertEqual(
-            context.L3AgentContext()(), {'agent_mode': 'dvr',
-                                         'external_configuration_new': True}
+            context.L3AgentContext()(), {
+                'agent_mode': 'dvr',
+                'external_configuration_new': True,
+                'enable_nfg_logging': False,
+                'nfg_log_burst_limit': 25,
+                'nfg_log_output_base': None,
+                'nfg_log_rate_limit': None,
+            }
+        )
+
+    @patch.object(context, 'validate_nfg_log_path')
+    @patch.object(charmhelpers.contrib.openstack.context, 'relation_get')
+    @patch.object(charmhelpers.contrib.openstack.context, 'relation_ids')
+    @patch.object(charmhelpers.contrib.openstack.context, 'related_units')
+    def test_dvr_nfg_enabled(self, _runits, _rids, _rget,
+                             _validate_nfg_log_path):
+        _runits.return_value = ['unit1']
+        _rids.return_value = ['rid2']
+        rdata = {
+            'neutron-security-groups': 'True',
+            'enable-dvr': 'True',
+            'l2-population': 'True',
+            'overlay-network-type': 'vxlan',
+            'network-device-mtu': 1500,
+            'enable-nfg-logging': 'True',
+        }
+        _rget.side_effect = lambda *args, **kwargs: rdata
+        _validate_nfg_log_path.side_effect = lambda x: x
+        self.test_config.set('firewall-group-log-output-base',
+                             '/var/log/neutron/firewall.log')
+        self.test_config.set('firewall-group-log-rate-limit', 200)
+        self.test_config.set('firewall-group-log-burst-limit', 30)
+        self.assertEqual(
+            context.L3AgentContext()(), {
+                'agent_mode': 'dvr',
+                'external_configuration_new': True,
+                'enable_nfg_logging': True,
+                'nfg_log_burst_limit': 30,
+                'nfg_log_output_base': '/var/log/neutron/firewall.log',
+                'nfg_log_rate_limit': 200,
+            }
+        )
+
+    @patch.object(context, 'validate_nfg_log_path')
+    @patch.object(charmhelpers.contrib.openstack.context, 'relation_get')
+    @patch.object(charmhelpers.contrib.openstack.context, 'relation_ids')
+    @patch.object(charmhelpers.contrib.openstack.context, 'related_units')
+    def test_dvr_nfg_enabled_mins(self, _runits, _rids, _rget,
+                                  _validate_nfg_log_path):
+        _runits.return_value = ['unit1']
+        _rids.return_value = ['rid2']
+        rdata = {
+            'neutron-security-groups': 'True',
+            'enable-dvr': 'True',
+            'l2-population': 'True',
+            'overlay-network-type': 'vxlan',
+            'network-device-mtu': 1500,
+            'enable-nfg-logging': 'True',
+        }
+        _rget.side_effect = lambda *args, **kwargs: rdata
+        _validate_nfg_log_path.side_effect = lambda x: x
+        self.test_config.set('firewall-group-log-output-base',
+                             '/var/log/neutron/firewall.log')
+        self.test_config.set('firewall-group-log-rate-limit', 90)
+        self.test_config.set('firewall-group-log-burst-limit', 20)
+        self.assertEqual(
+            context.L3AgentContext()(), {
+                'agent_mode': 'dvr',
+                'external_configuration_new': True,
+                'enable_nfg_logging': True,
+                'nfg_log_burst_limit': 25,
+                'nfg_log_output_base': '/var/log/neutron/firewall.log',
+                'nfg_log_rate_limit': 100,
+            }
         )
 
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_get')
@@ -455,8 +527,14 @@ class L3AgentContextTest(CharmTestCase):
         }
         _rget.side_effect = lambda *args, **kwargs: rdata
         self.assertEqual(
-            context.L3AgentContext()(), {'agent_mode': 'dvr_snat',
-                                         'external_configuration_new': True}
+            context.L3AgentContext()(), {
+                'agent_mode': 'dvr_snat',
+                'external_configuration_new': True,
+                'enable_nfg_logging': False,
+                'nfg_log_burst_limit': 25,
+                'nfg_log_output_base': None,
+                'nfg_log_rate_limit': None,
+            }
         )
 
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_get')
@@ -473,7 +551,13 @@ class L3AgentContextTest(CharmTestCase):
             'network-device-mtu': 1500,
         }
         _rget.side_effect = lambda *args, **kwargs: rdata
-        self.assertEqual(context.L3AgentContext()(), {'agent_mode': 'legacy'})
+        self.assertEqual(context.L3AgentContext()(), {
+            'agent_mode': 'legacy',
+            'enable_nfg_logging': False,
+            'nfg_log_burst_limit': 25,
+            'nfg_log_output_base': None,
+            'nfg_log_rate_limit': None,
+        })
 
 
 class SharedSecretContext(CharmTestCase):

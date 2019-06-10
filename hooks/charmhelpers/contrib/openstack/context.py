@@ -521,6 +521,86 @@ class IdentityCredentialsContext(IdentityServiceContext):
         return {}
 
 
+class NovaVendorMetadataContext(OSContextGenerator):
+    """Context used for configuring nova vendor metadata on nova.conf file."""
+
+    def __init__(self, os_release_pkg, interfaces=None):
+        """Initialize the NovaVendorMetadataContext object.
+
+        :param os_release_pkg: the package name to extract the OpenStack
+            release codename from.
+        :type os_release_pkg: str
+        :param interfaces: list of string values to be used as the Context's
+            relation interfaces.
+        :type interfaces: List[str]
+        """
+        self.os_release_pkg = os_release_pkg
+        if interfaces is not None:
+            self.interfaces = interfaces
+
+    def __call__(self):
+        cmp_os_release = CompareOpenStackReleases(
+            os_release(self.os_release_pkg))
+        ctxt = {'vendor_data': False}
+
+        vdata_providers = []
+        vdata = config('vendor-data')
+        vdata_url = config('vendor-data-url')
+
+        if vdata:
+            try:
+                # validate the JSON. If invalid, we do not set anything here
+                json.loads(vdata)
+            except (TypeError, ValueError) as e:
+                log('Error decoding vendor-data. {}'.format(e), level=ERROR)
+            else:
+                ctxt['vendor_data'] = True
+                # Mitaka does not support DynamicJSON
+                # so vendordata_providers is not needed
+                if cmp_os_release > 'mitaka':
+                    vdata_providers.append('StaticJSON')
+
+        if vdata_url:
+            if cmp_os_release > 'mitaka':
+                ctxt['vendor_data_url'] = vdata_url
+                vdata_providers.append('DynamicJSON')
+            else:
+                log('Dynamic vendor data unsupported'
+                    ' for {}.'.format(cmp_os_release), level=ERROR)
+        if vdata_providers:
+            ctxt['vendordata_providers'] = ','.join(vdata_providers)
+
+        return ctxt
+
+
+class NovaVendorMetadataJSONContext(OSContextGenerator):
+    """Context used for writing nova vendor metadata json file."""
+
+    def __init__(self, os_release_pkg):
+        """Initialize the NovaVendorMetadataJSONContext object.
+
+        :param os_release_pkg: the package name to extract the OpenStack
+            release codename from.
+        :type os_release_pkg: str
+        """
+        self.os_release_pkg = os_release_pkg
+
+    def __call__(self):
+        ctxt = {'vendor_data_json': '{}'}
+
+        vdata = config('vendor-data')
+        if vdata:
+            try:
+                # validate the JSON. If invalid, we return empty.
+                json.loads(vdata)
+            except (TypeError, ValueError) as e:
+                log('Error decoding vendor-data. {}'.format(e), level=ERROR)
+            else:
+                ctxt['vendor_data_json'] = vdata
+
+        return ctxt
+
+
 class AMQPContext(OSContextGenerator):
 
     def __init__(self, ssl_dir=None, rel_name='amqp', relation_prefix=None,
@@ -647,6 +727,10 @@ class AMQPContext(OSContextGenerator):
         if notification_format:
             ctxt['notification_format'] = notification_format
 
+        send_notifications_to_logs = conf.get('send-notifications-to-logs', None)
+        if send_notifications_to_logs:
+            ctxt['send_notifications_to_logs'] = send_notifications_to_logs
+
         if not self.complete:
             return {}
 
@@ -697,6 +781,25 @@ class CephContext(OSContextGenerator):
 
         ensure_packages(['ceph-common'])
         return ctxt
+
+    def context_complete(self, ctxt):
+        """Overridden here to ensure the context is actually complete.
+
+        We set `key` and `auth` to None here, by default, to ensure
+        that the context will always evaluate to incomplete until the
+        Ceph relation has actually sent these details; otherwise,
+        there is a potential race condition between the relation
+        appearing and the first unit actually setting this data on the
+        relation.
+
+        :param ctxt: The current context members
+        :type ctxt: Dict[str, ANY]
+        :returns: True if the context is complete
+        :rtype: bool
+        """
+        if 'auth' not in ctxt or 'key' not in ctxt:
+            return False
+        return super(CephContext, self).context_complete(ctxt)
 
 
 class HAProxyContext(OSContextGenerator):
@@ -1605,6 +1708,10 @@ class NeutronAPIContext(OSContextGenerator):
             },
             'enable_nsg_logging': {
                 'rel_key': 'enable-nsg-logging',
+                'default': False,
+            },
+            'enable_nfg_logging': {
+                'rel_key': 'enable-nfg-logging',
                 'default': False,
             },
             'global_physnet_mtu': {
