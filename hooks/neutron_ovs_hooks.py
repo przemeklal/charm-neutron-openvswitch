@@ -177,7 +177,9 @@ def neutron_plugin_joined(relation_id=None, request_restart=False):
         #       in use as this will remove the l3 agent
         #       see https://pad.lv/1515008
         if not use_dvr():
-            pkgs.extend(METADATA_PACKAGES)
+            # NOTE(fnordahl) do not remove ``haproxy``, the principal charm may
+            # have use for it. LP: #1832739
+            pkgs.extend(set(METADATA_PACKAGES)-set(['haproxy']))
         purge_packages(pkgs)
     secret = get_shared_secret() if enable_nova_metadata() else None
     rel_data = {
