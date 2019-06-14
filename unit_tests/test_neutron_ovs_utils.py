@@ -862,8 +862,9 @@ class TestNeutronOVSUtils(CharmTestCase):
         mock_pci_devices.get_device_from_interface_name.side_effect = \
             lambda x: self.pci_devices.get(x)
 
+    @patch('shutil.copy')
     @patch('os.chmod')
-    def test_configure_sriov_auto(self, _os_chmod):
+    def test_configure_sriov_auto(self, _os_chmod, _sh_copy):
         self.os_release.return_value = 'mitaka'
         _config = {
             'enable-sriov': True,
@@ -881,8 +882,9 @@ class TestNeutronOVSUtils(CharmTestCase):
         )
         self.assertTrue(self.remote_restart.called)
 
+    @patch('shutil.copy')
     @patch('os.chmod')
-    def test_configure_sriov_auto_mapping(self, _os_chmod):
+    def test_configure_sriov_auto_mapping(self, _os_chmod, _sh_copy):
         self.os_release.return_value = 'mitaka'
         _config = {
             'enable-sriov': True,
@@ -899,8 +901,9 @@ class TestNeutronOVSUtils(CharmTestCase):
         )
         self.assertTrue(self.remote_restart.called)
 
+    @patch('shutil.copy')
     @patch('os.chmod')
-    def test_configure_sriov_numvfs(self, _os_chmod):
+    def test_configure_sriov_numvfs(self, _os_chmod, _sh_copy):
         self.os_release.return_value = 'mitaka'
         _config = {
             'enable-sriov': True,
@@ -915,8 +918,9 @@ class TestNeutronOVSUtils(CharmTestCase):
 
         self.assertTrue(self.remote_restart.called)
 
+    @patch('shutil.copy')
     @patch('os.chmod')
-    def test_configure_sriov_numvfs_per_device(self, _os_chmod):
+    def test_configure_sriov_numvfs_per_device(self, _os_chmod, _sh_copy):
         self.os_release.return_value = 'kilo'
         _config = {
             'enable-sriov': True,
@@ -931,8 +935,9 @@ class TestNeutronOVSUtils(CharmTestCase):
 
         self.assertTrue(self.remote_restart.called)
 
+    @patch('shutil.copy')
     @patch('os.chmod')
-    def test_configure_sriov_auto_avoid_recall(self, _os_chmod):
+    def test_configure_sriov_auto_avoid_recall(self, _os_chmod, _sh_copy):
         self.os_release.return_value = 'mitaka'
         _config = {
             'enable-sriov': True,

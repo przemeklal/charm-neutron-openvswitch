@@ -75,6 +75,7 @@ class NeutronOVSHooksTests(CharmTestCase):
         self._call_hook('install')
         self.install_packages.assert_called_with()
 
+    @patch('neutron_ovs_hooks.enable_sriov', MagicMock(return_value=False))
     @patch.object(hooks, 'restart_map')
     @patch.object(hooks, 'restart_on_change')
     def test_migrate_ovs_default_file(self, mock_restart, mock_restart_map):

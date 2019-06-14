@@ -13,7 +13,7 @@ WantedBy=network-online.target
 [Service]
 Type=oneshot
 EnvironmentFile=-/etc/default/networking-sriov
-ExecStart=/etc/init.d/neutron-openvswitch-networking-sriov.sh systemd-start
-ExecStop=/etc/init.d/neutron-openvswitch-networking-sriov.sh systemd-stop
+ExecStart=/usr/local/bin/neutron-openvswitch-networking-sriov.sh systemd-start
+ExecStop=/usr/local/bin/neutron-openvswitch-networking-sriov.sh systemd-stop
 RemainAfterExit=true
 TimeoutStartSec=5min

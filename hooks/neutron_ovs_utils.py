@@ -129,9 +129,12 @@ OVS_DEFAULT = '/etc/default/openvswitch-switch'
 DPDK_INTERFACES = '/etc/dpdk/interfaces'
 NEUTRON_SRIOV_AGENT_CONF = os.path.join(NEUTRON_CONF_DIR,
                                         'plugins/ml2/sriov_agent.ini')
-NEUTRON_SRIOV_INIT_SCRIPT = os.path.join('/etc/init.d',
+NEUTRON_SRIOV_INIT_SCRIPT = os.path.join('/usr/local/bin',
                                          'neutron-openvswitch-'
                                          'networking-sriov.sh')
+NEUTRON_SRIOV_INIT_PY_SCRIPT = os.path.join('/usr/local/bin',
+                                            'neutron_openvswitch_'
+                                            'networking_sriov.py')
 NEUTRON_SRIOV_INIT_DEFAULT = os.path.join('/etc/default',
                                           'neutron-openvswitch-'
                                           'networking-sriov')
@@ -216,14 +219,6 @@ SRIOV_RESOURCE_MAP = OrderedDict([
         'services': [],
         'contexts': [neutron_ovs_context.OVSPluginContext()],
     }),
-    (NEUTRON_SRIOV_INIT_SCRIPT, {
-        'services': [],
-        'contexts': [],
-    }),
-    (NEUTRON_SRIOV_SYSTEMD_UNIT, {
-        'services': [],
-        'contexts': [],
-    }),
     (NEUTRON_SRIOV_UPSTART_CONF, {
         'services': [],
         'contexts': [],
@@ -288,7 +283,7 @@ def determine_packages():
         _os_release = os_release('neutron-common', base='icehouse')
         # per 17.08 release notes L3HA + DVR is a Newton+ feature
         if (use_l3ha() and
-           CompareOpenStackReleases(_os_release) >= 'newton'):
+                CompareOpenStackReleases(_os_release) >= 'newton'):
             pkgs.extend(L3HA_PACKAGES)
     if enable_local_dhcp():
         pkgs.extend(DHCP_PACKAGES)
@@ -502,6 +497,16 @@ def install_tmpfilesd():
         subprocess.check_call(['systemd-tmpfiles', '--create'])
 
 
+def install_sriov_systemd_files():
+    '''Install SR-IOV systemd files'''
+    shutil.copy('files/neutron_openvswitch_networking_sriov.py',
+                '/usr/local/bin')
+    shutil.copy('files/neutron-openvswitch-networking-sriov.sh',
+                '/usr/local/bin')
+    shutil.copy('files/neutron-openvswitch-networking-sriov.service',
+                '/lib/systemd/system')
+
+
 def configure_ovs():
     status_set('maintenance', 'Configuring ovs')
     if not service_running('openvswitch-switch'):
@@ -624,9 +629,8 @@ def configure_sriov():
     if not enable_sriov():
         return
 
-    # make sure init script has correct mode and that boot time execution
-    # is enabled
-    os.chmod(NEUTRON_SRIOV_INIT_SCRIPT, 0o755)
+    install_sriov_systemd_files()
+    # make sure that boot time execution is enabled
     service('enable', 'neutron-openvswitch-networking-sriov')
 
     devices = PCINetDevices()
