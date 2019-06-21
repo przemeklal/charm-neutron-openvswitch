@@ -39,6 +39,7 @@ TO_PATCH = [
     'dpdk_add_bridge_bond',
     'dpdk_set_bond_config',
     'dpdk_set_mtu_request',
+    'dpdk_set_interfaces_mtu',
     'apt_install',
     'apt_update',
     'config',
@@ -674,6 +675,11 @@ class TestNeutronOVSUtils(CharmTestCase):
                       'lacp-time': 'fast'})],
                 any_order=True
             )
+            self.dpdk_set_interfaces_mtu.assert_has_calls([
+                call(1500, {'dpdk-ac48d24': None}.keys()),
+                call(1500, {'dpdk-82c1c9e': None}.keys()),
+                call(1500, {'dpdk-aebdb4d': None}.keys())],
+                any_order=True)
         else:
             self.dpdk_add_bridge_port.assert_has_calls([
                 call('br-phynet1',
@@ -1035,3 +1041,11 @@ class TestMTURequest(CharmTestCase):
         nutils.dpdk_set_mtu_request("dpdk1", 9000)
         mock_subprocess.check_call.assert_called_once_with(
             ['ovs-vsctl', 'set', 'Interface', 'dpdk1', 'mtu_request=9000'])
+
+    @patch.object(nutils, 'dpdk_set_mtu_request')
+    def test_dpdk_set_interfaces_mtu(self, mock_dpdk_set_mtu_request):
+        nutils.dpdk_set_interfaces_mtu('1234', ['nic1', 'nic2'])
+        expected_calls = [
+            call('nic1', '1234'),
+            call('nic2', '1234')]
+        mock_dpdk_set_mtu_request.assert_has_calls(expected_calls)
