@@ -420,13 +420,41 @@ class OVSDPDKDeviceContext(OSContextGenerator):
         else:
             return str(sm_size)
 
-    def device_whitelist(self):
-        '''Formatted list of devices to whitelist for dpdk'''
-        _flag = '-w {device}'
+    def devices(self):
+        '''List of PCI devices for use by DPDK'''
+        pci_devices = resolve_dpdk_bridges()
+        pci_devices.update(resolve_dpdk_bonds())
+        return pci_devices
+
+    def _formatted_whitelist(self, flag):
+        '''Flag formatted list of devices to whitelist
+
+        :param flag: flag format to use
+        :type flag: str
+        :rtype: str
+        '''
         whitelist = []
-        for device in resolve_dpdk_bridges():
-            whitelist.append(_flag.format(device=device))
+        for device in self.devices():
+            whitelist.append(flag.format(device=device))
         return ' '.join(whitelist)
+
+    def device_whitelist(self):
+        '''
+        Formatted list of devices to whitelist for dpdk
+        using the old style '-w' flag
+
+        :rtype: str
+        '''
+        return self._formatted_whitelist('-w {device}')
+
+    def pci_whitelist(self):
+        '''
+        Formatted list of devices to whitelist for dpdk
+        using the new style '--pci-whitelist' flag
+
+        :rtype: str
+        '''
+        return self._formatted_whitelist('--pci-whitelist {device}')
 
     def __call__(self):
         ctxt = {}

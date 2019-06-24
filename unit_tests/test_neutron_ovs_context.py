@@ -623,10 +623,10 @@ class TestOVSDPDKDeviceContext(CharmTestCase):
 
     def test_device_whitelist(self):
         '''Test device whitelist generation'''
-        self.resolve_dpdk_bridges.return_value = [
-            '0000:00:1c.0',
-            '0000:00:1d.0'
-        ]
+        self.resolve_dpdk_bridges.return_value = {
+            '0000:00:1c.0': 'br-data',
+            '0000:00:1d.0': 'br-data',
+        }
         self.assertEqual(self.test_context.device_whitelist(),
                          '-w 0000:00:1c.0 -w 0000:00:1d.0')
 
@@ -657,15 +657,16 @@ class TestOVSDPDKDeviceContext(CharmTestCase):
 
     def test_context_no_devices(self):
         '''Ensure that DPDK is disable when no devices detected'''
-        self.resolve_dpdk_bridges.return_value = []
+        self.resolve_dpdk_bridges.return_value = {}
         self.assertEqual(self.test_context(), {})
 
     def test_context_devices(self):
         '''Ensure DPDK is enabled when devices are detected'''
-        self.resolve_dpdk_bridges.return_value = [
-            '0000:00:1c.0',
-            '0000:00:1d.0'
-        ]
+        self.resolve_dpdk_bridges.return_value = {
+            '0000:00:1c.0': 'br-data',
+            '0000:00:1d.0': 'br-data',
+        }
+        self.resolve_dpdk_bonds.return_value = {}
         self.numa_node_cores.return_value = NUMA_CORES_SINGLE
         self.glob.glob.return_value = ['a']
         self.assertEqual(self.test_context(), {
