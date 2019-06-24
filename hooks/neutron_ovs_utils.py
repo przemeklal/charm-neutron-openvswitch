@@ -473,12 +473,20 @@ def enable_ovs_dpdk():
     if ovs_has_late_dpdk_init():
         dpdk_context = neutron_ovs_context.OVSDPDKDeviceContext()
         other_config = OrderedDict([
-            ('pmd-cpu-mask', dpdk_context.cpu_mask()),
+            ('dpdk-lcore-mask', dpdk_context.cpu_mask()),
             ('dpdk-socket-mem', dpdk_context.socket_memory()),
-            ('dpdk-extra',
-             '--vhost-owner libvirt-qemu:kvm --vhost-perm 0660'),
             ('dpdk-init', 'true'),
         ])
+        if not ovs_vhostuser_client():
+            other_config['dpdk-extra'] = (
+                '--vhost-owner libvirt-qemu:kvm --vhost-perm 0660 ' +
+                dpdk_context.pci_whitelist()
+            )
+        else:
+            other_config['dpdk-extra'] = (
+                dpdk_context.pci_whitelist()
+            )
+        other_config['dpdk-init'] = 'true'
         for column, value in other_config.items():
             values_changed.append(
                 set_Open_vSwitch_column_value(
@@ -736,6 +744,17 @@ def ovs_has_late_dpdk_init():
     import apt_pkg
     ovs_version = get_upstream_version("openvswitch-switch")
     return apt_pkg.version_compare(ovs_version, '2.6.0') >= 0
+
+
+def ovs_vhostuser_client():
+    '''
+    Determine whether OVS will act as a client on the vhostuser socket
+
+    @returns boolean indicating whether OVS will act as a client
+    '''
+    import apt_pkg
+    ovs_version = get_upstream_version("openvswitch-switch")
+    return apt_pkg.version_compare(ovs_version, '2.9.0') >= 0
 
 
 def enable_sriov():

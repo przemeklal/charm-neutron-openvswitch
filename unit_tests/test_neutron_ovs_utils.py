@@ -62,6 +62,7 @@ TO_PATCH = [
     'enable_ipfix',
     'disable_ipfix',
     'ovs_has_late_dpdk_init',
+    'ovs_vhostuser_client',
     'parse_data_port_mappings',
     'user_exists',
     'group_exists',
@@ -104,6 +105,7 @@ class TestNeutronOVSUtils(CharmTestCase):
         self.config.side_effect = self.test_config.get
         self.use_dpdk.return_value = False
         self.ovs_has_late_dpdk_init.return_value = False
+        self.ovs_vhostuser_client.return_value = False
 
     def tearDown(self):
         # Reset cached cache
@@ -604,7 +606,8 @@ class TestNeutronOVSUtils(CharmTestCase):
 
     def _run_configure_ovs_dpdk(self, mock_config, _use_dvr,
                                 _resolve_dpdk_bridges, _resolve_dpdk_bonds,
-                                _late_init, _test_bonds):
+                                _late_init, _test_bonds,
+                                _ovs_vhostuser_client=False):
         def _resolve_port_name(pci_address, device_index, late_init):
             if late_init:
                 return 'dpdk-{}'.format(
@@ -634,6 +637,7 @@ class TestNeutronOVSUtils(CharmTestCase):
         _use_dvr.return_value = True
         self.use_dpdk.return_value = True
         self.ovs_has_late_dpdk_init.return_value = _late_init
+        self.ovs_vhostuser_client.return_value = _ovs_vhostuser_client
         mock_config.side_effect = self.test_config.get
         self.config.side_effect = self.test_config.get
         self.test_config.set('enable-dpdk', True)
@@ -970,6 +974,72 @@ class TestNeutronOVSUtils(CharmTestCase):
         mock_subprocess.check_call.assert_called_once_with(
             ['systemd-tmpfiles', '--create']
         )
+
+    @patch.object(nutils, 'is_unit_paused_set')
+    @patch.object(nutils.subprocess, 'check_call')
+    @patch.object(neutron_ovs_context, 'OVSDPDKDeviceContext')
+    @patch.object(nutils, 'set_Open_vSwitch_column_value')
+    def test_enable_ovs_dpdk(self,
+                             _set_Open_vSwitch_column_value,
+                             _OVSDPDKDeviceContext,
+                             _check_call,
+                             _is_unit_paused_set):
+        mock_context = MagicMock()
+        mock_context.cpu_mask.return_value = '0x03'
+        mock_context.socket_memory.return_value = '4096,4096'
+        mock_context.pci_whitelist.return_value = \
+            '--pci-whitelist 00:0300:01'
+        _OVSDPDKDeviceContext.return_value = mock_context
+        _set_Open_vSwitch_column_value.return_value = True
+        self.ovs_has_late_dpdk_init.return_value = True
+        self.ovs_vhostuser_client.return_value = False
+        _is_unit_paused_set.return_value = False
+        nutils.enable_ovs_dpdk()
+        _set_Open_vSwitch_column_value.assert_has_calls([
+            call('other_config:dpdk-lcore-mask', '0x03'),
+            call('other_config:dpdk-socket-mem', '4096,4096'),
+            call('other_config:dpdk-init', 'true'),
+            call('other_config:dpdk-extra',
+                 '--vhost-owner libvirt-qemu:kvm --vhost-perm 0660 '
+                 '--pci-whitelist 00:0300:01')
+        ])
+        _check_call.assert_called_once_with(
+            nutils.UPDATE_ALTERNATIVES + [nutils.OVS_DPDK_BIN]
+        )
+        self.service_restart.assert_called_with('openvswitch-switch')
+
+    @patch.object(nutils, 'is_unit_paused_set')
+    @patch.object(nutils.subprocess, 'check_call')
+    @patch.object(neutron_ovs_context, 'OVSDPDKDeviceContext')
+    @patch.object(nutils, 'set_Open_vSwitch_column_value')
+    def test_enable_ovs_dpdk_vhostuser_client(
+            self,
+            _set_Open_vSwitch_column_value,
+            _OVSDPDKDeviceContext,
+            _check_call,
+            _is_unit_paused_set):
+        mock_context = MagicMock()
+        mock_context.cpu_mask.return_value = '0x03'
+        mock_context.socket_memory.return_value = '4096,4096'
+        mock_context.pci_whitelist.return_value = \
+            '--pci-whitelist 00:0300:01'
+        _OVSDPDKDeviceContext.return_value = mock_context
+        _set_Open_vSwitch_column_value.return_value = True
+        self.ovs_has_late_dpdk_init.return_value = True
+        self.ovs_vhostuser_client.return_value = True
+        _is_unit_paused_set.return_value = False
+        nutils.enable_ovs_dpdk()
+        _set_Open_vSwitch_column_value.assert_has_calls([
+            call('other_config:dpdk-lcore-mask', '0x03'),
+            call('other_config:dpdk-socket-mem', '4096,4096'),
+            call('other_config:dpdk-init', 'true'),
+            call('other_config:dpdk-extra',
+                 '--pci-whitelist 00:0300:01')
+        ])
+        _check_call.assert_called_once_with(
+            nutils.UPDATE_ALTERNATIVES + [nutils.OVS_DPDK_BIN]
+        )
+        self.service_restart.assert_called_with('openvswitch-switch')
 
 
 class TestDPDKBridgeBondMap(CharmTestCase):
