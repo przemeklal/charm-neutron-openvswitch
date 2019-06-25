@@ -211,6 +211,7 @@ class TestNeutronOVSUtils(CharmTestCase):
             head_pkg,
             'neutron-plugin-openvswitch-agent',
             'neutron-l3-agent',
+            'libnetfilter-log1',
         ]
         self.assertEqual(pkg_list, expect)
 
@@ -229,8 +230,10 @@ class TestNeutronOVSUtils(CharmTestCase):
         expect = [
             head_pkg,
             'neutron-l3-agent',
+            'libnetfilter-log1',
             'neutron-openvswitch-agent',
             'python3-neutron',
+            'python3-zmq',
             'python3-neutron-fwaas',
         ]
         self.assertEqual(pkg_list, expect)
@@ -251,6 +254,7 @@ class TestNeutronOVSUtils(CharmTestCase):
         expect = [
             head_pkg,
             'neutron-l3-agent',
+            'libnetfilter-log1',
             'keepalived',
             'neutron-openvswitch-agent',
         ]
@@ -272,6 +276,7 @@ class TestNeutronOVSUtils(CharmTestCase):
         expect = [
             head_pkg,
             'neutron-l3-agent',
+            'libnetfilter-log1',
             'neutron-openvswitch-agent',
         ]
         self.assertEqual(pkg_list, expect)
@@ -292,6 +297,7 @@ class TestNeutronOVSUtils(CharmTestCase):
         expect = [
             head_pkg,
             'neutron-l3-agent',
+            'libnetfilter-log1',
             'neutron-openvswitch-agent',
         ]
         self.assertEqual(pkg_list, expect)

@@ -169,6 +169,7 @@ class NeutronOVSHooksTests(CharmTestCase):
         self.assertTrue(self.CONFIGS.write_all.called)
         _plugin_joined.assert_called_with(relation_id='rid')
         self.purge_packages.assert_called_with(['neutron-l3-agent',
+                                                'libnetfilter-log1',
                                                 'keepalived'])
 
     def test_neutron_plugin_joined_dvr_dhcp(self):

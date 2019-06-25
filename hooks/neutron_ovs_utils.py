@@ -106,7 +106,10 @@ ML2_CONF = '%s/plugins/ml2/ml2_conf.ini' % NEUTRON_CONF_DIR
 OVS_CONF = '%s/plugins/ml2/openvswitch_agent.ini' % NEUTRON_CONF_DIR
 EXT_PORT_CONF = '/etc/init/ext-port.conf'
 NEUTRON_METADATA_AGENT_CONF = "/etc/neutron/metadata_agent.ini"
-DVR_PACKAGES = ['neutron-l3-agent']
+DVR_PACKAGES = [
+    'neutron-l3-agent',
+    'libnetfilter-log1',
+]
 DHCP_PACKAGES = ['neutron-dhcp-agent']
 # haproxy is required for isolated provider networks
 # ns-metadata-proxy LP#1831935
@@ -116,6 +119,7 @@ L3HA_PACKAGES = ['keepalived']
 
 PY3_PACKAGES = [
     'python3-neutron',
+    'python3-zmq',  # fwaas_v2_log
 ]
 
 PURGE_PACKAGES = [
