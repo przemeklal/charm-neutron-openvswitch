@@ -586,6 +586,9 @@ def configure_ovs():
             for br, bonds in bridge_bond_map.items():
                 for bond, port_map in bonds.items():
                     dpdk_add_bridge_bond(br, bond, port_map)
+                    dpdk_set_interfaces_mtu(
+                        global_mtu,
+                        port_map.keys())
                     dpdk_set_bond_config(
                         bond,
                         bond_configs.get_bond_config(bond)
@@ -820,6 +823,18 @@ def dpdk_set_mtu_request(port, mtu):
     cmd = ["ovs-vsctl", "set", "Interface", port,
            "mtu_request={}".format(mtu)]
     subprocess.check_call(cmd)
+
+
+def dpdk_set_interfaces_mtu(mtu, ports):
+    """Set MTU on dpdk ports.
+
+    :param mtu: Name of unit to match
+    :type mtu: str
+    :param ports: List of ports
+    :type ports: []
+    """
+    for port in ports:
+        dpdk_set_mtu_request(port, mtu)
 
 
 def enable_nova_metadata():
