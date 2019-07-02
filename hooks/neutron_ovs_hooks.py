@@ -66,6 +66,8 @@ from neutron_ovs_utils import (
     pause_unit_helper,
     resume_unit_helper,
     determine_purge_packages,
+    install_sriov_systemd_files,
+    enable_sriov,
 )
 
 hooks = Hooks()
@@ -100,6 +102,10 @@ def upgrade_charm():
             # migrating.
             if 'Service restart triggered' not in f.read():
                 CONFIGS.write(OVS_DEFAULT)
+    # Ensure that the SR-IOV systemd files are copied if a charm-upgrade
+    # happens
+    if enable_sriov():
+        install_sriov_systemd_files()
 
 
 @hooks.hook('neutron-plugin-relation-changed')
@@ -148,7 +154,7 @@ def neutron_plugin_api_changed():
         # per 17.08 release notes L3HA + DVR is a Newton+ feature
         _os_release = os_release('neutron-common', base='icehouse')
         if (use_l3ha() and
-           CompareOpenStackReleases(_os_release) >= 'newton'):
+                CompareOpenStackReleases(_os_release) >= 'newton'):
             install_l3ha_packages()
 
         # NOTE(hopem): don't uninstall keepalived if not using l3ha since that

@@ -20,7 +20,7 @@ VFS_BLANKET=auto
 
 # List of <device>:<numvfs> tuples for configuration of specific NICs
 #
-#VFS_LIST=ens3p0:16 ens4p0:16
+#VFS_LIST="ens3p0:16 ens4p0:16"
 {% if sriov_vfs_list -%}
 VFS_LIST="{{ sriov_vfs_list }}"
 {% endif -%}
