@@ -72,7 +72,7 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
             {'name': 'keystone'},
             {'name': 'glance'},
             {'name': 'neutron-api'},
-            {'name': 'percona-cluster', 'constraints': {'mem': '3072M'}},
+            self.get_percona_service_entry(),
         ]
         super(NeutronOVSBasicDeployment, self)._add_services(this_service,
                                                              other_services)
