@@ -233,6 +233,12 @@ def post_series_upgrade():
         resume_unit_helper, CONFIGS)
 
 
+@hooks.hook('update-status')
+def dummy_update_status():
+    """Dummy function to silence missing hook log entry"""
+    pass
+
+
 def main():
     try:
         hooks.execute(sys.argv)
