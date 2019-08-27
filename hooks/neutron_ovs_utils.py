@@ -70,6 +70,10 @@ from charmhelpers.core.host import (
     init_is_systemd,
     group_exists,
     user_exists,
+    is_container,
+)
+from charmhelpers.core.kernel import (
+    modprobe,
 )
 
 from charmhelpers.fetch import (
@@ -256,6 +260,20 @@ def install_packages():
                     fatal=True)
     if use_dpdk():
         enable_ovs_dpdk()
+
+    # NOTE(tpsilva): if we're using openvswitch driver, we need to explicitly
+    #                load the nf_conntrack_ipv4/6 module, since it won't be
+    #                loaded automatically in some cases. LP#1834213
+    if not is_container() and config('firewall-driver') == 'openvswitch':
+        try:
+            modprobe('nf_conntrack_ipv4', True)
+            modprobe('nf_conntrack_ipv6', True)
+        except subprocess.CalledProcessError:
+            # Newer kernel versions (4.19+) don't have two modules for that, so
+            # only load nf_conntrack
+            log("This kernel does not have nf_conntrack_ipv4/6. "
+                "Loading nf_conntrack only.")
+            modprobe('nf_conntrack', True)
 
 
 def install_l3ha_packages():
