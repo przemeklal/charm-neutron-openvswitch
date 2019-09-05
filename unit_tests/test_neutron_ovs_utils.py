@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import hashlib
+import subprocess
 
 from mock import MagicMock, patch, call
 from collections import OrderedDict
@@ -68,6 +69,8 @@ TO_PATCH = [
     'user_exists',
     'group_exists',
     'init_is_systemd',
+    'modprobe',
+    'is_container',
 ]
 
 head_pkg = 'linux-headers-3.15.0-5-generic'
@@ -120,6 +123,46 @@ class TestNeutronOVSUtils(CharmTestCase):
         self.apt_update.assert_called_with()
         self.apt_install.assert_called_with(self.filter_installed_packages(),
                                             fatal=True)
+        self.modprobe.assert_not_called()
+
+    @patch.object(nutils, 'determine_packages')
+    def test_install_packages_container(self, _determine_packages):
+        self.os_release.return_value = 'mitaka'
+        self.is_container.return_value = True
+        _determine_packages.return_value = 'randompkg'
+        nutils.install_packages()
+        self.apt_update.assert_called_with()
+        self.apt_install.assert_called_with(self.filter_installed_packages(),
+                                            fatal=True)
+        self.modprobe.assert_not_called()
+
+    @patch.object(nutils, 'determine_packages')
+    def test_install_packages_ovs_firewall(self, _determine_packages):
+        self.os_release.return_value = 'mitaka'
+        _determine_packages.return_value = 'randompkg'
+        self.is_container.return_value = False
+        self.test_config.set('firewall-driver', 'openvswitch')
+        nutils.install_packages()
+        self.apt_update.assert_called_with()
+        self.apt_install.assert_called_with(self.filter_installed_packages(),
+                                            fatal=True)
+        self.modprobe.assert_has_calls([call('nf_conntrack_ipv4', True),
+                                        call('nf_conntrack_ipv6', True)])
+
+    @patch.object(nutils, 'determine_packages')
+    def test_install_packages_ovs_fw_newer_kernel(self, _determine_packages):
+        self.os_release.return_value = 'mitaka'
+        _determine_packages.return_value = 'randompkg'
+        self.is_container.return_value = False
+        self.test_config.set('firewall-driver', 'openvswitch')
+        self.modprobe.side_effect = [subprocess.CalledProcessError(0, ""),
+                                     None]
+        nutils.install_packages()
+        self.apt_update.assert_called_with()
+        self.apt_install.assert_called_with(self.filter_installed_packages(),
+                                            fatal=True)
+        self.modprobe.assert_has_calls([call('nf_conntrack_ipv4', True),
+                                        call('nf_conntrack', True)])
 
     @patch.object(nutils, 'determine_packages')
     def test_install_packages_dkms_needed(self, _determine_packages):
