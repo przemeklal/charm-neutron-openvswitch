@@ -770,11 +770,13 @@ def get_shared_secret():
 
 
 def use_dvr():
-    return context.NeutronAPIContext()().get('enable_dvr', False)
+    return not is_container() and context.NeutronAPIContext()().get(
+        'enable_dvr', False)
 
 
 def use_l3ha():
-    return context.NeutronAPIContext()().get('enable_l3ha', False)
+    return not is_container() and context.NeutronAPIContext()().get(
+        'enable_l3ha', False)
 
 
 def determine_datapath_type():
@@ -887,11 +889,11 @@ def dpdk_set_interfaces_mtu(mtu, ports):
 
 
 def enable_nova_metadata():
-    return use_dvr() or enable_local_dhcp()
+    return not is_container() and (use_dvr() or enable_local_dhcp())
 
 
 def enable_local_dhcp():
-    return config('enable-local-dhcp-and-metadata')
+    return not is_container() and config('enable-local-dhcp-and-metadata')
 
 
 def assess_status(configs):

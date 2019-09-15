@@ -223,6 +223,7 @@ class TestNeutronOVSUtils(CharmTestCase):
     @patch.object(charmhelpers.contrib.openstack.neutron, 'headers_package')
     def test_determine_packages_metadata(self, _head_pkgs, _os_rel,
                                          _use_dvr, _use_l3ha):
+        self.is_container.return_value = False
         self.test_config.set('enable-local-dhcp-and-metadata', True)
         _use_dvr.return_value = False
         _use_l3ha.return_value = False
@@ -1100,6 +1101,42 @@ class TestNeutronOVSUtils(CharmTestCase):
             nutils.UPDATE_ALTERNATIVES + [nutils.OVS_DPDK_BIN]
         )
         self.service_restart.assert_called_with('openvswitch-switch')
+
+    @patch.object(nutils.context, 'NeutronAPIContext')
+    @patch.object(nutils, 'is_container')
+    def test_use_dvr(self, _is_container, _NeutronAPIContext):
+        _is_container.return_value = False
+        _NeutronAPIContext()().get.return_value = True
+        self.assertEquals(nutils.use_dvr(), True)
+        _is_container.return_value = True
+        self.assertEquals(nutils.use_dvr(), False)
+
+    @patch.object(nutils.context, 'NeutronAPIContext')
+    @patch.object(nutils, 'is_container')
+    def test_use_l3ha(self, _is_container, _NeutronAPIContext):
+        _is_container.return_value = False
+        _NeutronAPIContext()().get.return_value = True
+        self.assertEquals(nutils.use_l3ha(), True)
+        _is_container.return_value = True
+        self.assertEquals(nutils.use_l3ha(), False)
+
+    @patch.object(nutils.context, 'NeutronAPIContext')
+    @patch.object(nutils, 'is_container')
+    def test_enable_nova_metadata(self, _is_container, _NeutronAPIContext):
+        _is_container.return_value = False
+        _NeutronAPIContext()().get.return_value = True
+        self.assertEquals(nutils.enable_nova_metadata(), True)
+        _is_container.return_value = True
+        self.assertEquals(nutils.enable_nova_metadata(), False)
+
+    @patch.object(nutils, 'config')
+    @patch.object(nutils, 'is_container')
+    def test_enable_local_dhcp(self, _is_container, _config):
+        _is_container.return_value = False
+        _config.return_value = True
+        self.assertEquals(nutils.enable_local_dhcp(), True)
+        _is_container.return_value = True
+        self.assertEquals(nutils.enable_local_dhcp(), False)
 
 
 class TestDPDKBridgeBondMap(CharmTestCase):

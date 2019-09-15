@@ -106,7 +106,13 @@ The charm will automatically detect which PCI devices are on each unit of the ap
 
 # Port Configuration
 
-**NOTE:** External port configuration only applies when DVR mode is enabled.
+> **Note**: External port configuration only applies when DVR mode is enabled.
+  This may not work when `neutron-openvswitch` is deployed in a LXD container.
+  If your deployment requires mixed placement of `neutron-openvswitch` units,
+  add multiple application instances with different names to your model to
+  allow for separate configuration. You can view examples of this configuration
+  in the [Octavia Charm](https://jaas.ai/octavia) functional test gate
+  [bundles](https://opendev.org/openstack/charm-octavia/src/branch/master/src/tests/bundles).
 
 All network types (internal, external) are configured with bridge-mappings and
 data-port and the flat-network-providers configuration option of the

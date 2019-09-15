@@ -120,6 +120,9 @@ options:
       deployments which do not include a neutron-gateway (do not require l3,
       lbaas or vpnaas services) and should only be used in-conjunction with
       flat or VLAN provider networks configurations.
+
+      NOTE: This configuration option will be ignored when deployed in a LXD
+      container.
   dnsmasq-flags:
     type: string
     default:
@@ -127,6 +130,9 @@ options:
       Comma-separated list of key=value config flags with the additional dhcp
       options for neutron dnsmasq. Note, this option is only valid when
       enable-local-dhcp-and-metadata option is set to True.
+
+      NOTE: This configuration option will be ignored when deployed in a LXD
+      container.
   instance-mtu:
     type: int
     default:
@@ -135,6 +141,9 @@ options:
       within the cloud. This is useful in deployments where its not
       possible to increase MTU on switches and physical servers to
       accommodate the packet overhead of using GRE tunnels.
+
+      NOTE: This configuration option will be ignored when deployed in a LXD
+      container.
   dns-servers:
     type: string
     default:
@@ -142,6 +151,9 @@ options:
       A comma-separated list of DNS servers which will be used by dnsmasq as
       forwarders. This option only applies when the enable-local-dhcp-and-metadata
       options is set to True.
+
+      NOTE: This configuration option will be ignored when deployed in a LXD
+      container.
   prevent-arp-spoofing:
     type: boolean
     default: true
@@ -297,6 +309,9 @@ options:
       be scheduled without a requirement for a dedicated network node to host
       centralized SNAT. This is especially important if only floating IPs are
       used in the network design and SNAT traffic is minimal or non-existent.
+
+      NOTE: This configuration option will be ignored when deployed in a LXD
+      container.
   sysctl:
     type: string
     default: |
