@@ -71,9 +71,14 @@ class NeutronOVSHooksTests(CharmTestCase):
         hooks.hooks.execute([
             'hooks/{}'.format(hookname)])
 
-    def test_install_hook(self):
+    @patch.object(hooks, 'kv')
+    def test_install_hook(self, _kv):
+        fake_dict = MagicMock()
+        _kv.return_value = fake_dict
         self._call_hook('install')
         self.install_packages.assert_called_with()
+        _kv.assert_called_once_with()
+        fake_dict.set.assert_called_once_with('install_version', 1910)
 
     @patch('neutron_ovs_hooks.enable_sriov', MagicMock(return_value=False))
     @patch.object(hooks, 'restart_map')

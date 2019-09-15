@@ -15,6 +15,7 @@
 import collections
 import glob
 import os
+import socket
 import uuid
 from pci import PCINetDevices
 from charmhelpers.core.hookenv import (
@@ -35,7 +36,10 @@ from charmhelpers.contrib.openstack.utils import (
     config_flags_parser,
     get_host_ip,
 )
-from charmhelpers.contrib.network.ip import get_address_in_network
+from charmhelpers.contrib.network.ip import (
+    get_address_in_network,
+    get_relation_ip,
+)
 from charmhelpers.contrib.openstack.context import (
     OSContextGenerator,
     NeutronAPIContext,
@@ -583,4 +587,29 @@ class APIIdentityServiceContext(context.IdentityServiceContext):
                 ctxt['region'] = rdata.get('region')
                 if ctxt['region']:
                     return ctxt
+        return ctxt
+
+
+class HostIPContext(context.OSContextGenerator):
+    def __call__(self):
+        ctxt = {}
+        # Use the address used in the neutron-plugin subordinate relation
+        host_ip = get_relation_ip('neutron-plugin')
+
+        # the contents of the Neutron ``host`` configuration option is
+        # referenced throughout a OpenStack deployment, an example being
+        # Neutron port bindings.  It's value should not change after a
+        # individual units initial deployment.
+        #
+        # We do want to migrate to using FQDNs so we enable this for new
+        # installations.
+        db = kv()
+        if db.get('install_version', 0) >= 1910 and host_ip:
+            fqdn = socket.getfqdn(host_ip)
+            if '.' in fqdn:
+                # only populate the value if getfqdn() is able to find an
+                # actual FQDN for this host.  If not, we revert back to
+                # not setting the configuration option and use Neutron's
+                # default behaviour.
+                ctxt['host'] = fqdn
         return ctxt

@@ -941,3 +941,25 @@ class TestFirewallDriver(CharmTestCase):
         self.lsb_release.return_value = _LSB_RELEASE_XENIAL
         self.assertEqual(context._get_firewall_driver(ctxt),
                          context.IPTABLES_HYBRID)
+
+
+class TestHostIPContext(CharmTestCase):
+
+    def setUp(self):
+        super(TestHostIPContext, self).setUp(context, TO_PATCH)
+        self.config.side_effect = self.test_config.get
+
+    @patch.object(context.socket, 'getfqdn')
+    @patch.object(context, 'kv')
+    @patch.object(context, 'get_relation_ip')
+    def test_host_ip_context(self, _get_relation_ip, _kv, _getfqdn):
+        _kv.return_value = {'install_version': 0}
+        _getfqdn.return_value = 'some'
+        ctxt = context.HostIPContext()
+        self.assertDictEqual({}, ctxt())
+        _getfqdn.return_value = 'some.hostname'
+        ctxt = context.HostIPContext()
+        self.assertDictEqual({}, ctxt())
+        _kv.return_value = {'install_version': 1910}
+        ctxt = context.HostIPContext()
+        self.assertDictEqual({'host': 'some.hostname'}, ctxt())

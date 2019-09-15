@@ -43,6 +43,8 @@ from charmhelpers.core.host import (
     is_container,
 )
 
+from charmhelpers.core.unitdata import kv
+
 from neutron_ovs_utils import (
     DHCP_PACKAGES,
     DVR_PACKAGES,
@@ -74,9 +76,13 @@ hooks = Hooks()
 CONFIGS = register_configs()
 
 
-@hooks.hook()
+@hooks.hook('install.real')
 def install():
     install_packages()
+
+    db = kv()
+    db.set('install_version', 1910)
+    db.flush()
 
 
 # NOTE(wolsen): Do NOT add restart_on_change decorator without consideration
