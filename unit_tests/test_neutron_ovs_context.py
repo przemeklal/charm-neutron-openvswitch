@@ -275,6 +275,44 @@ class OVSPluginContextTest(CharmTestCase):
         self.assertEqual(expect, napi_ctxt())
 
 
+class ZoneContextTest(CharmTestCase):
+
+    def setUp(self):
+        super(ZoneContextTest, self).setUp(context, TO_PATCH)
+        self.config.side_effect = self.test_config.get
+
+    def tearDown(self):
+        super(ZoneContextTest, self).tearDown()
+
+    def test_default_availability_zone_not_provided(self):
+        self.relation_ids.return_value = ['rid1']
+        self.related_units.return_value = ['nova-compute/0']
+        self.relation_get.return_value = None
+        self.assertEqual(
+            context.ZoneContext()(),
+            {}
+        )
+        self.relation_ids.assert_called_with('neutron-plugin')
+        self.relation_get.assert_called_once_with(
+            'default_availability_zone',
+            rid='rid1',
+            unit='nova-compute/0')
+
+    def test_default_availability_zone_provided(self):
+        self.relation_ids.return_value = ['rid1']
+        self.related_units.return_value = ['nova-compute/0']
+        self.relation_get.return_value = 'nova'
+        self.assertEqual(
+            context.ZoneContext()(),
+            {'availability_zone': 'nova'}
+        )
+        self.relation_ids.assert_called_with('neutron-plugin')
+        self.relation_get.assert_called_once_with(
+            'default_availability_zone',
+            rid='rid1',
+            unit='nova-compute/0')
+
+
 class DHCPAgentContextTest(CharmTestCase):
 
     def setUp(self):

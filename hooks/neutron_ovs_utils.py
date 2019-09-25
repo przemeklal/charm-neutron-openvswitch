@@ -164,6 +164,7 @@ BASE_RESOURCE_MAP = OrderedDict([
                      context.ZeroMQContext(),
                      context.NotificationDriverContext(),
                      neutron_ovs_context.HostIPContext(),
+                     neutron_ovs_context.ZoneContext(),
                      ],
     }),
     (ML2_CONF, {

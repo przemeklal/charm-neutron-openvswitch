@@ -258,12 +258,11 @@ class OVSPluginContext(context.NeutronContext):
         return ovs_ctxt
 
 
-class DHCPAgentContext(OSContextGenerator):
+class ZoneContext(OSContextGenerator):
 
     def __call__(self):
         """Return the 'default_availability_zone' from the principal that this
-        ovs unit is attached to (as a subordinate) and the 'dns_domain' from
-        the neutron-plugin-api relations (if one is set).
+        ovs unit is attached to (as a subordinate)
 
         :returns: {} if no relation set, or
             {'availability_zone': availability_zone from principal relation}
@@ -283,6 +282,20 @@ class DHCPAgentContext(OSContextGenerator):
                     unit=units[0])
                 if availability_zone:
                     ctxt['availability_zone'] = availability_zone
+        return ctxt
+
+
+class DHCPAgentContext(ZoneContext):
+
+    def __call__(self):
+        """Return the 'default_availability_zone' from the principal that this
+        ovs unit is attached to (as a subordinate) and the 'dns_domain' from
+        the neutron-plugin-api relations (if one is set).
+
+        :returns: {} if no relation set, or
+            {'availability_zone': availability_zone from principal relation}
+        """
+        ctxt = super(DHCPAgentContext, self).__call__()
 
         dnsmasq_flags = config('dnsmasq-flags')
         if dnsmasq_flags:
