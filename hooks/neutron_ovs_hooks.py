@@ -71,8 +71,6 @@ from neutron_ovs_utils import (
     pause_unit_helper,
     resume_unit_helper,
     determine_purge_packages,
-    install_sriov_systemd_files,
-    enable_sriov,
     use_fqdn_hint,
 )
 
@@ -116,10 +114,6 @@ def upgrade_charm():
             # migrating.
             if 'Service restart triggered' not in f.read():
                 CONFIGS.write(OVS_DEFAULT)
-    # Ensure that the SR-IOV systemd files are copied if a charm-upgrade
-    # happens
-    if enable_sriov():
-        install_sriov_systemd_files()
 
 
 @hooks.hook('neutron-plugin-relation-changed')
@@ -150,9 +144,11 @@ def config_changed():
 
     configure_ovs()
     CONFIGS.write_all()
+
     # NOTE(fnordahl): configure_sriov must be run after CONFIGS.write_all()
     # to allow us to enable boot time execution of init script
     configure_sriov()
+
     for rid in relation_ids('neutron-plugin'):
         neutron_plugin_joined(
             relation_id=rid,

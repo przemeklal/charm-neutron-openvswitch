@@ -238,6 +238,14 @@ options:
       NOTE: Changing this value will disrupt networking on all SR-IOV capable
       interfaces for blanket configuration or listed interfaces when per-device
       configuration is used.
+  networking-tools-source:
+    type: string
+    default: ppa:openstack-charmers/networking-tools
+    description: |
+      Package archive source to use for utilities associated with configuring
+      SR-IOV VF's and switchdev mode in Mellanox network adapters.
+      .
+      This PPA can be mirrored for offline deployments.
   worker-multiplier:
     type: float
     default:

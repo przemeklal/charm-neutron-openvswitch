@@ -13,7 +13,9 @@
 # limitations under the License.
 
 import hashlib
+import io
 import subprocess
+import yaml
 
 from mock import MagicMock, patch, call
 from collections import OrderedDict
@@ -26,6 +28,7 @@ import neutron_ovs_context
 
 from test_utils import (
     CharmTestCase,
+    patch_open,
 )
 import charmhelpers
 import charmhelpers.core.hookenv as hookenv
@@ -41,6 +44,7 @@ TO_PATCH = [
     'dpdk_set_bond_config',
     'dpdk_set_mtu_request',
     'dpdk_set_interfaces_mtu',
+    'add_source',
     'apt_install',
     'apt_update',
     'config',
@@ -50,7 +54,6 @@ TO_PATCH = [
     'lsb_release',
     'neutron_plugin_attribute',
     'full_restart',
-    'service',
     'service_restart',
     'service_running',
     'ExternalPortContext',
@@ -365,6 +368,7 @@ class TestNeutronOVSUtils(CharmTestCase):
             head_pkg,
             'neutron-plugin-openvswitch-agent',
             'neutron-plugin-sriov-agent',
+            'sriov-netplan-shim',
         ]
         self.assertEqual(pkg_list, expect)
 
@@ -386,6 +390,7 @@ class TestNeutronOVSUtils(CharmTestCase):
             head_pkg,
             'neutron-openvswitch-agent',
             'neutron-sriov-agent',
+            'sriov-netplan-shim',
         ]
         self.assertEqual(pkg_list, expect)
 
@@ -933,14 +938,22 @@ class TestNeutronOVSUtils(CharmTestCase):
         }
         self._configure_sriov_base(_config)
 
-        nutils.configure_sriov()
+        with patch_open() as (_open, _file):
+            mock_stringio = io.StringIO()
+            _file.write.side_effect = mock_stringio.write
+            nutils.configure_sriov()
+            self.assertEqual(
+                yaml.load(mock_stringio.getvalue()),
+                {
+                    'interfaces': {
+                        'ens0': {'num_vfs': 64},
+                        'ens49': {'num_vfs': 64}
+                    }
+                }
+            )
 
-        self.mock_sriov_device.set_sriov_numvfs.assert_called_with(
-            self.mock_sriov_device.sriov_totalvfs
-        )
-        self.mock_sriov_device2.set_sriov_numvfs.assert_called_with(
-            self.mock_sriov_device2.sriov_totalvfs
-        )
+        self.mock_sriov_device.set_sriov_numvfs.assert_not_called()
+        self.mock_sriov_device2.set_sriov_numvfs.assert_not_called()
         self.assertTrue(self.remote_restart.called)
 
     @patch('shutil.copy')
@@ -954,12 +967,21 @@ class TestNeutronOVSUtils(CharmTestCase):
         }
         self._configure_sriov_base(_config)
 
-        nutils.configure_sriov()
+        with patch_open() as (_open, _file):
+            mock_stringio = io.StringIO()
+            _file.write.side_effect = mock_stringio.write
+            nutils.configure_sriov()
+            self.assertEqual(
+                yaml.load(mock_stringio.getvalue()),
+                {
+                    'interfaces': {
+                        'ens49': {'num_vfs': 64}
+                    }
+                }
+            )
 
-        self.assertFalse(self.mock_sriov_device.set_sriov_numvfs.called)
-        self.mock_sriov_device2.set_sriov_numvfs.assert_called_with(
-            self.mock_sriov_device2.sriov_totalvfs
-        )
+        self.mock_sriov_device.set_sriov_numvfs.assert_not_called()
+        self.mock_sriov_device2.set_sriov_numvfs.assert_not_called()
         self.assertTrue(self.remote_restart.called)
 
     @patch('shutil.copy')
@@ -972,11 +994,22 @@ class TestNeutronOVSUtils(CharmTestCase):
         }
         self._configure_sriov_base(_config)
 
-        nutils.configure_sriov()
+        with patch_open() as (_open, _file):
+            mock_stringio = io.StringIO()
+            _file.write.side_effect = mock_stringio.write
+            nutils.configure_sriov()
+            self.assertEqual(
+                yaml.load(mock_stringio.getvalue()),
+                {
+                    'interfaces': {
+                        'ens0': {'num_vfs': 32},
+                        'ens49': {'num_vfs': 32}
+                    }
+                }
+            )
 
-        self.mock_sriov_device.set_sriov_numvfs.assert_called_with(32)
-        self.mock_sriov_device2.set_sriov_numvfs.assert_called_with(32)
-
+        self.mock_sriov_device.set_sriov_numvfs.assert_not_called()
+        self.mock_sriov_device2.set_sriov_numvfs.assert_not_called()
         self.assertTrue(self.remote_restart.called)
 
     @patch('shutil.copy')
@@ -989,30 +1022,21 @@ class TestNeutronOVSUtils(CharmTestCase):
         }
         self._configure_sriov_base(_config)
 
-        nutils.configure_sriov()
+        with patch_open() as (_open, _file):
+            mock_stringio = io.StringIO()
+            _file.write.side_effect = mock_stringio.write
+            nutils.configure_sriov()
+            self.assertEqual(
+                yaml.load(mock_stringio.getvalue()),
+                {
+                    'interfaces': {
+                        'ens0': {'num_vfs': 32},
+                    }
+                }
+            )
 
-        self.mock_sriov_device.set_sriov_numvfs.assert_called_with(32)
+        self.mock_sriov_device.set_sriov_numvfs.assert_not_called()
         self.mock_sriov_device2.set_sriov_numvfs.assert_not_called()
-
-        self.assertTrue(self.remote_restart.called)
-
-    @patch('shutil.copy')
-    @patch('os.chmod')
-    def test_configure_sriov_auto_avoid_recall(self, _os_chmod, _sh_copy):
-        self.os_release.return_value = 'mitaka'
-        _config = {
-            'enable-sriov': True,
-            'sriov-numvfs': 'auto'
-        }
-        self._configure_sriov_base(_config)
-
-        nutils.configure_sriov()
-
-        self.mock_sriov_device2.sriov_numvfs = 64
-        self.mock_sriov_device2.set_sriov_numvfs.assert_called_with(
-            self.mock_sriov_device2.sriov_totalvfs)
-        self.mock_sriov_device2._set_sriov_numvfs.assert_not_called()
-
         self.assertTrue(self.remote_restart.called)
 
     @patch.object(nutils, 'subprocess')

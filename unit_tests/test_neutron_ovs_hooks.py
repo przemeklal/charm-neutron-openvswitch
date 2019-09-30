@@ -85,7 +85,6 @@ class NeutronOVSHooksTests(CharmTestCase):
         _kv.assert_called_once_with()
         fake_dict.set.assert_called_once_with(hooks.USE_FQDN_KEY, True)
 
-    @patch('neutron_ovs_hooks.enable_sriov', MagicMock(return_value=False))
     @patch.object(hooks, 'restart_map')
     @patch.object(hooks, 'restart_on_change')
     def test_migrate_ovs_default_file(self, mock_restart, mock_restart_map):
