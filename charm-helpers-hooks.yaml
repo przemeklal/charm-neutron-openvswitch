@@ -12,3 +12,4 @@ include:
     - payload
     - contrib.network.ip
     - contrib.python
+    - contrib.openstack.policyd
