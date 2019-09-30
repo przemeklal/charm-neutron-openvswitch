@@ -51,6 +51,7 @@ from charmhelpers.core.hookenv import (
     DEBUG,
     log,
     status_set,
+    ERROR,
 )
 from charmhelpers.contrib.openstack.neutron import (
     parse_bridge_mappings,
@@ -288,6 +289,9 @@ def install_packages():
     if use_dpdk():
         enable_ovs_dpdk()
 
+    if use_hw_offload():
+        enable_hw_offload()
+
     # NOTE(tpsilva): if we're using openvswitch driver, we need to explicitly
     #                load the nf_conntrack_ipv4/6 module, since it won't be
     #                loaded automatically in some cases. LP#1834213
@@ -355,6 +359,11 @@ def determine_packages():
         else:
             pkgs.append('neutron-plugin-sriov-agent')
         pkgs.append('sriov-netplan-shim')
+
+    if use_hw_offload():
+        pkgs.append('mlnx-switchdev-mode')
+        if 'sriov-netplan-shim' not in pkgs:
+            pkgs.append('sriov-netplan-shim')
 
     if cmp_release >= 'rocky':
         pkgs = [p for p in pkgs if not p.startswith('python-')]
@@ -545,6 +554,19 @@ def enable_ovs_dpdk():
         service_restart('openvswitch-switch')
 
 
+def enable_hw_offload():
+    '''Enable hardware offload support in Open vSwitch'''
+    values_changed = [
+        set_Open_vSwitch_column_value('other_config:hw-offload',
+                                      'true'),
+        set_Open_vSwitch_column_value('other_config:max-idle',
+                                      '30000')
+    ]
+    if ((values_changed and any(values_changed)) and
+            not is_unit_paused_set()):
+        service_restart('openvswitch-switch')
+
+
 def install_tmpfilesd():
     '''Install systemd-tmpfiles configuration for ovs vhost-user sockets'''
     # NOTE(jamespage): Only do this if libvirt is actually installed
@@ -604,7 +626,14 @@ def configure_ovs():
                     else:
                         add_ovsbridge_linuxbridge(br, port)
 
-    if use_dpdk():
+    # NOTE(jamespage):
+    # hw-offload and dpdk are mutually exclusive so log and error
+    # and skip any subsequent DPDK configuration
+    if use_dpdk() and use_hw_offload():
+        log('DPDK and Hardware offload are mutually exclusive, '
+            'please disable enable-dpdk or enable-hardware-offload',
+            level=ERROR)
+    elif use_dpdk():
         log('Configuring bridges with DPDK', level=DEBUG)
         global_mtu = (
             neutron_ovs_context.NeutronAPIContext()()['global_physnet_mtu'])
@@ -809,7 +838,11 @@ def configure_sriov():
             yaml.dump(interfaces_yaml, _conf)
         return numvfs_changed
 
-    if not enable_sriov():
+    # NOTE(jamespage)
+    # Hardware offload makes use of SR-IOV VF representor ports so
+    # makes use of the general SR-IOV configuration support in this
+    # charm
+    if not (enable_sriov() or use_hw_offload()):
         return
 
     # Tidy up any prior installation of obsolete sriov startup
@@ -821,7 +854,7 @@ def configure_sriov():
     # Trigger remote restart in parent application
     remote_restart('neutron-plugin', 'nova-compute')
 
-    if numvfs_changed:
+    if not use_hw_offload() and numvfs_changed:
         # Restart of SRIOV agent is required after changes to system runtime
         # VF configuration
         cmp_release = CompareOpenStackReleases(
@@ -830,6 +863,9 @@ def configure_sriov():
             service_restart('neutron-sriov-agent')
         else:
             service_restart('neutron-plugin-sriov-agent')
+
+    if use_hw_offload() and numvfs_changed:
+        service_restart('mlnx-switchdev-mode')
 
 
 def get_shared_secret():
@@ -864,6 +900,19 @@ def use_dpdk():
     cmp_release = CompareOpenStackReleases(
         os_release('neutron-common', base='icehouse'))
     return (cmp_release >= 'mitaka' and config('enable-dpdk'))
+
+
+def use_hw_offload():
+    '''
+    Determine whether OVS hardware offload should be used
+
+    :returns: boolean indicating whether hardware offload should be enabled
+    :rtype: bool
+    '''
+    cmp_release = CompareOpenStackReleases(
+        os_release('neutron-common')
+    )
+    return (cmp_release >= 'stein' and config('enable-hardware-offload'))
 
 
 def ovs_has_late_dpdk_init():

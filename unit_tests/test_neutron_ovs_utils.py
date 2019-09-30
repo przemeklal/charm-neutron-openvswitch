@@ -74,6 +74,7 @@ TO_PATCH = [
     'init_is_systemd',
     'modprobe',
     'is_container',
+    'is_unit_paused_set',
 ]
 
 head_pkg = 'linux-headers-3.15.0-5-generic'
@@ -181,6 +182,27 @@ class TestNeutronOVSUtils(CharmTestCase):
                   'openvswitch-datapath-dkms'], fatal=True),
             call(self.filter_installed_packages(), fatal=True),
         ])
+
+    @patch.object(nutils, 'use_hw_offload')
+    @patch.object(nutils, 'enable_hw_offload')
+    @patch.object(nutils, 'determine_packages')
+    def test_install_packages_hwoffload(self, _determine_packages,
+                                        _enable_hw_offload,
+                                        _use_hw_offload):
+        self.os_release.return_value = 'stein'
+        _determine_packages.return_value = 'randompkg'
+        _use_hw_offload.return_value = True
+        self.determine_dkms_package.return_value = \
+            ['openvswitch-datapath-dkms']
+        self.headers_package.return_value = 'linux-headers-foobar'
+        nutils.install_packages()
+        self.apt_update.assert_called_with()
+        self.apt_install.assert_has_calls([
+            call(['linux-headers-foobar',
+                  'openvswitch-datapath-dkms'], fatal=True),
+            call(self.filter_installed_packages(), fatal=True),
+        ])
+        _enable_hw_offload.assert_called_once_with()
 
     @patch.object(nutils, 'use_l3ha')
     @patch.object(nutils, 'use_dvr')
@@ -391,6 +413,33 @@ class TestNeutronOVSUtils(CharmTestCase):
             'neutron-openvswitch-agent',
             'neutron-sriov-agent',
             'sriov-netplan-shim',
+        ]
+        self.assertEqual(pkg_list, expect)
+
+    @patch.object(nutils, 'use_hw_offload')
+    @patch.object(nutils, 'use_l3ha')
+    @patch.object(nutils, 'use_dvr')
+    @patch.object(charmhelpers.contrib.openstack.neutron, 'os_release')
+    @patch.object(charmhelpers.contrib.openstack.neutron, 'headers_package')
+    def test_determine_pkgs_hardware_offload(self, _head_pkgs, _os_rel,
+                                             _use_dvr, _use_l3ha,
+                                             _use_hw_offload):
+        self.test_config.set('enable-local-dhcp-and-metadata', False)
+        self.test_config.set('enable-hardware-offload', True)
+        _use_hw_offload.return_value = True
+        _use_dvr.return_value = False
+        _use_l3ha.return_value = False
+        _os_rel.return_value = 'stein'
+        self.os_release.return_value = 'stein'
+        _head_pkgs.return_value = head_pkg
+        pkg_list = nutils.determine_packages()
+        expect = [
+            head_pkg,
+            'neutron-openvswitch-agent',
+            'mlnx-switchdev-mode',
+            'sriov-netplan-shim',
+            'python3-neutron',
+            'python3-zmq',
         ]
         self.assertEqual(pkg_list, expect)
 
@@ -764,6 +813,7 @@ class TestNeutronOVSUtils(CharmTestCase):
                                         2, _late_init), 1500)],
                 any_order=True)
 
+    @patch.object(nutils, 'use_hw_offload', return_value=False)
     @patch.object(neutron_ovs_context, 'NeutronAPIContext')
     @patch.object(neutron_ovs_context, 'resolve_dpdk_bonds')
     @patch.object(neutron_ovs_context, 'resolve_dpdk_bridges')
@@ -772,7 +822,8 @@ class TestNeutronOVSUtils(CharmTestCase):
     def test_configure_ovs_dpdk(self, mock_config, _use_dvr,
                                 _resolve_dpdk_bridges,
                                 _resolve_dpdk_bonds,
-                                _NeutronAPIContext):
+                                _NeutronAPIContext,
+                                _use_hw_offload):
         _NeutronAPIContext.return_value = DummyContext(
             return_value={'global_physnet_mtu': 1500})
         return self._run_configure_ovs_dpdk(mock_config, _use_dvr,
@@ -781,6 +832,7 @@ class TestNeutronOVSUtils(CharmTestCase):
                                             _late_init=False,
                                             _test_bonds=False)
 
+    @patch.object(nutils, 'use_hw_offload', return_value=False)
     @patch.object(neutron_ovs_context, 'NeutronAPIContext')
     @patch.object(neutron_ovs_context, 'resolve_dpdk_bonds')
     @patch.object(neutron_ovs_context, 'resolve_dpdk_bridges')
@@ -789,7 +841,8 @@ class TestNeutronOVSUtils(CharmTestCase):
     def test_configure_ovs_dpdk_late_init(self, mock_config, _use_dvr,
                                           _resolve_dpdk_bridges,
                                           _resolve_dpdk_bonds,
-                                          _NeutronAPIContext):
+                                          _NeutronAPIContext,
+                                          _use_hw_offload):
         _NeutronAPIContext.return_value = DummyContext(
             return_value={'global_physnet_mtu': 1500})
         return self._run_configure_ovs_dpdk(mock_config, _use_dvr,
@@ -798,6 +851,7 @@ class TestNeutronOVSUtils(CharmTestCase):
                                             _late_init=True,
                                             _test_bonds=False)
 
+    @patch.object(nutils, 'use_hw_offload', return_value=False)
     @patch.object(neutron_ovs_context, 'NeutronAPIContext')
     @patch.object(neutron_ovs_context, 'resolve_dpdk_bonds')
     @patch.object(neutron_ovs_context, 'resolve_dpdk_bridges')
@@ -806,7 +860,8 @@ class TestNeutronOVSUtils(CharmTestCase):
     def test_configure_ovs_dpdk_late_init_bonds(self, mock_config, _use_dvr,
                                                 _resolve_dpdk_bridges,
                                                 _resolve_dpdk_bonds,
-                                                _NeutronAPIContext):
+                                                _NeutronAPIContext,
+                                                _use_hw_offload):
         _NeutronAPIContext.return_value = DummyContext(
             return_value={'global_physnet_mtu': 1500})
         return self._run_configure_ovs_dpdk(mock_config, _use_dvr,
@@ -1169,6 +1224,54 @@ class TestNeutronOVSUtils(CharmTestCase):
         self.assertEquals(nutils.use_fqdn_hint(), False)
         _kv().get.return_value = True
         self.assertEquals(nutils.use_fqdn_hint(), True)
+
+    def test_use_hw_offload_rocky(self):
+        self.os_release.return_value = 'rocky'
+        self.test_config.set('enable-hardware-offload', True)
+        self.assertFalse(nutils.use_hw_offload())
+
+    def test_use_hw_offload_stein(self):
+        self.os_release.return_value = 'stein'
+        self.test_config.set('enable-hardware-offload', True)
+        self.assertTrue(nutils.use_hw_offload())
+
+    def test_use_hw_offload_disabled(self):
+        self.os_release.return_value = 'stein'
+        self.test_config.set('enable-hardware-offload', False)
+        self.assertFalse(nutils.use_hw_offload())
+
+    @patch.object(nutils, 'set_Open_vSwitch_column_value')
+    def test_enable_hw_offload(self, _ovs_set):
+        _ovs_set.return_value = True
+        self.is_unit_paused_set.return_value = False
+        nutils.enable_hw_offload()
+        _ovs_set.assert_has_calls([
+            call('other_config:hw-offload', 'true'),
+            call('other_config:max-idle', '30000'),
+        ])
+        self.service_restart.assert_called_once_with('openvswitch-switch')
+
+    @patch.object(nutils, 'set_Open_vSwitch_column_value')
+    def test_enable_hw_offload_unit_paused(self, _ovs_set):
+        _ovs_set.return_value = True
+        self.is_unit_paused_set.return_value = True
+        nutils.enable_hw_offload()
+        _ovs_set.assert_has_calls([
+            call('other_config:hw-offload', 'true'),
+            call('other_config:max-idle', '30000'),
+        ])
+        self.service_restart.assert_not_called()
+
+    @patch.object(nutils, 'set_Open_vSwitch_column_value')
+    def test_enable_hw_offload_no_changes(self, _ovs_set):
+        _ovs_set.return_value = False
+        self.is_unit_paused_set.return_value = False
+        nutils.enable_hw_offload()
+        _ovs_set.assert_has_calls([
+            call('other_config:hw-offload', 'true'),
+            call('other_config:max-idle', '30000'),
+        ])
+        self.service_restart.assert_not_called()
 
 
 class TestDPDKBridgeBondMap(CharmTestCase):

@@ -238,6 +238,23 @@ options:
       NOTE: Changing this value will disrupt networking on all SR-IOV capable
       interfaces for blanket configuration or listed interfaces when per-device
       configuration is used.
+  enable-hardware-offload:
+    type: boolean
+    default: false
+    description: |
+      Enable support for hardware offload of flows from Open vSwitch to supported
+      network adapters.  This requires use of OpenStack Stein or later and has
+      only been tested on Mellanox ConnectX 5 adapters.
+      .
+      Enabling this option will make use of the sriov-numvfs option to configure
+      the VF functions of the physical network adapters detected in each unit.
+      .
+      Enabling this option also requires that the firewall-driver option be
+      set to 'openvswitch'; this will allow security groups to be applied to
+      hardware offloaded ports (note that this feature is currently not
+      supported by OVS or the Linux kernel).
+      .
+      This option must not be enabled with either enable-sriov or enable-dpdk.
   networking-tools-source:
     type: string
     default: ppa:openstack-charmers/networking-tools
