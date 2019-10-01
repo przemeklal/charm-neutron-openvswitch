@@ -72,6 +72,8 @@ from neutron_ovs_utils import (
     enable_sriov,
 )
 
+import neutron_ovs_context
+
 hooks = Hooks()
 CONFIGS = register_configs()
 
@@ -197,6 +199,9 @@ def neutron_plugin_joined(relation_id=None, request_restart=False):
     rel_data = {
         'metadata-shared-secret': secret,
     }
+    host = neutron_ovs_context.HostIPContext()().get('host')
+    if host:
+        rel_data.update({'host': host})
     if request_restart:
         rel_data['restart-nonce'] = str(uuid.uuid4())
     relation_set(relation_id=relation_id, **rel_data)

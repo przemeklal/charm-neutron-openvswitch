@@ -178,14 +178,17 @@ class NeutronOVSHooksTests(CharmTestCase):
                                                 'libnetfilter-log1',
                                                 'keepalived'])
 
-    def test_neutron_plugin_joined_dvr_dhcp(self):
+    @patch.object(hooks.neutron_ovs_context, 'HostIPContext')
+    def test_neutron_plugin_joined_dvr_dhcp(self, _HostIPContext):
         self.enable_nova_metadata.return_value = True
         self.enable_local_dhcp.return_value = True
         self.use_dvr.return_value = True
         self.get_shared_secret.return_value = 'secret'
+        _HostIPContext()().get.return_value = 'fq.dn'
         self._call_hook('neutron-plugin-relation-joined')
         rel_data = {
             'metadata-shared-secret': 'secret',
+            'host': 'fq.dn',
         }
         self.relation_set.assert_called_with(
             relation_id=None,
@@ -193,14 +196,17 @@ class NeutronOVSHooksTests(CharmTestCase):
         )
         self.assertTrue(self.install_packages.called)
 
-    def test_neutron_plugin_joined_dvr_nodhcp(self):
+    @patch.object(hooks.neutron_ovs_context, 'HostIPContext')
+    def test_neutron_plugin_joined_dvr_nodhcp(self, _HostIPContext):
         self.enable_nova_metadata.return_value = True
         self.enable_local_dhcp.return_value = False
         self.use_dvr.return_value = True
         self.get_shared_secret.return_value = 'secret'
+        _HostIPContext()().get.return_value = 'fq.dn'
         self._call_hook('neutron-plugin-relation-joined')
         rel_data = {
             'metadata-shared-secret': 'secret',
+            'host': 'fq.dn',
         }
         self.relation_set.assert_called_with(
             relation_id=None,
@@ -209,14 +215,17 @@ class NeutronOVSHooksTests(CharmTestCase):
         self.purge_packages.assert_called_with(['neutron-dhcp-agent'])
         self.assertFalse(self.install_packages.called)
 
-    def test_neutron_plugin_joined_nodvr_nodhcp(self):
+    @patch.object(hooks.neutron_ovs_context, 'HostIPContext')
+    def test_neutron_plugin_joined_nodvr_nodhcp(self, _HostIPContext):
         self.enable_nova_metadata.return_value = False
         self.enable_local_dhcp.return_value = False
         self.use_dvr.return_value = False
         self.get_shared_secret.return_value = 'secret'
+        _HostIPContext()().get.return_value = 'fq.dn'
         self._call_hook('neutron-plugin-relation-joined')
         rel_data = {
             'metadata-shared-secret': None,
+            'host': 'fq.dn',
         }
         self.relation_set.assert_called_with(
             relation_id=None,
