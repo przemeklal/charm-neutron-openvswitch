@@ -45,6 +45,7 @@ from charmhelpers.contrib.openstack.context import (
     NeutronAPIContext,
     parse_data_port_mappings
 )
+import charmhelpers.contrib.openstack.utils as os_utils
 from charmhelpers.core.unitdata import kv
 
 IPTABLES_HYBRID = 'iptables_hybrid'
@@ -609,6 +610,8 @@ class HostIPContext(context.OSContextGenerator):
         # Use the address used in the neutron-plugin subordinate relation
         host_ip = get_relation_ip('neutron-plugin')
 
+        cmp_release = os_utils.CompareOpenStackReleases(
+            os_utils.os_release('neutron-common', base='icehouse'))
         # the contents of the Neutron ``host`` configuration option is
         # referenced throughout a OpenStack deployment, an example being
         # Neutron port bindings.  It's value should not change after a
@@ -617,7 +620,8 @@ class HostIPContext(context.OSContextGenerator):
         # We do want to migrate to using FQDNs so we enable this for new
         # installations.
         db = kv()
-        if db.get('install_version', 0) >= 1910 and host_ip:
+        if (db.get('install_version', 0) >= 1910 and cmp_release >= 'stein' and
+                host_ip):
             fqdn = socket.getfqdn(host_ip)
             if '.' in fqdn:
                 # only populate the value if getfqdn() is able to find an
