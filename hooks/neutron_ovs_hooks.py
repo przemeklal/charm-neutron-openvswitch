@@ -82,9 +82,13 @@ CONFIGS = register_configs()
 def install():
     install_packages()
 
-    db = kv()
-    db.set('install_version', 1910)
-    db.flush()
+    # Start migration to agent registration with FQDNs for newly installed
+    # units with OpenStack release Stein or newer.
+    release = os_release('neutron-common')
+    if CompareOpenStackReleases(release) >= 'stein':
+        db = kv()
+        db.set('neutron-ovs-charm-use-fqdn', True)
+        db.flush()
 
 
 # NOTE(wolsen): Do NOT add restart_on_change decorator without consideration

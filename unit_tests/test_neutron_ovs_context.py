@@ -1001,7 +1001,7 @@ class TestHostIPContext(CharmTestCase):
         _getfqdn.return_value = 'some.hostname'
         ctxt = context.HostIPContext()
         self.assertDictEqual({}, ctxt())
-        _kv.return_value = {'install_version': 1910}
+        _kv.return_value = {'neutron-ovs-charm-use-fqdn': True}
         ctxt = context.HostIPContext()
         self.assertDictEqual({'host': 'some.hostname'}, ctxt())
         _os_release.return_value = 'rocky'

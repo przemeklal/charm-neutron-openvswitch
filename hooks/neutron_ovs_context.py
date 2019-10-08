@@ -620,7 +620,8 @@ class HostIPContext(context.OSContextGenerator):
         # We do want to migrate to using FQDNs so we enable this for new
         # installations.
         db = kv()
-        if (db.get('install_version', 0) >= 1910 and cmp_release >= 'stein' and
+        if (db.get('neutron-ovs-charm-use-fqdn', False) and
+                cmp_release >= 'stein' and
                 host_ip):
             fqdn = socket.getfqdn(host_ip)
             if '.' in fqdn:
