@@ -458,18 +458,24 @@ class L3AgentContextTest(CharmTestCase):
     def tearDown(self):
         super(L3AgentContextTest, self).tearDown()
 
+    @patch.object(context, 'os_release')
+    @patch.object(charmhelpers.contrib.openstack.utils,
+                  'get_os_codename_package')
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_get')
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_ids')
     @patch.object(charmhelpers.contrib.openstack.context, 'related_units')
-    def test_dvr_enabled(self, _runits, _rids, _rget):
+    def test_dvr_enabled(self, _runits, _rids, _rget,
+                         _get_os_cdnm_pkg, _os_release):
         _runits.return_value = ['unit1']
         _rids.return_value = ['rid2']
+        _os_release.return_value = 'stein'
         rdata = {
             'neutron-security-groups': 'True',
             'enable-dvr': 'True',
             'l2-population': 'True',
             'overlay-network-type': 'vxlan',
             'network-device-mtu': 1500,
+            'l3_extension_plugins': 'fwaas_v2',
         }
         _rget.side_effect = lambda *args, **kwargs: rdata
         self.assertEqual(
@@ -481,15 +487,21 @@ class L3AgentContextTest(CharmTestCase):
                 'nfg_log_burst_limit': 25,
                 'nfg_log_output_base': None,
                 'nfg_log_rate_limit': None,
+                'l3_extension_plugins': 'fwaas_v2',
             }
         )
 
+    @patch.object(context, 'os_release')
+    @patch.object(charmhelpers.contrib.openstack.utils,
+                  'get_os_codename_package')
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_get')
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_ids')
     @patch.object(charmhelpers.contrib.openstack.context, 'related_units')
-    def test_dvr_enabled_l3ha_enabled(self, _runits, _rids, _rget):
+    def test_dvr_enabled_l3ha_enabled(self, _runits, _rids, _rget,
+                                      _get_os_cdnm_pkg, _os_release):
         _runits.return_value = ['unit1']
         _rids.return_value = ['rid2']
+        _os_release.return_value = 'rocky'
         rdata = {
             'neutron-security-groups': 'True',
             'enable-dvr': 'True',
@@ -508,17 +520,23 @@ class L3AgentContextTest(CharmTestCase):
                 'nfg_log_burst_limit': 25,
                 'nfg_log_output_base': None,
                 'nfg_log_rate_limit': None,
+                'l3_extension_plugins': '',
             }
         )
 
+    @patch.object(context, 'os_release')
+    @patch.object(charmhelpers.contrib.openstack.utils,
+                  'get_os_codename_package')
     @patch.object(context, 'validate_nfg_log_path')
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_get')
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_ids')
     @patch.object(charmhelpers.contrib.openstack.context, 'related_units')
     def test_dvr_nfg_enabled(self, _runits, _rids, _rget,
-                             _validate_nfg_log_path):
+                             _validate_nfg_log_path,
+                             _get_os_cdnm_pkg, _os_release):
         _runits.return_value = ['unit1']
         _rids.return_value = ['rid2']
+        _os_release.return_value = 'stein'
         rdata = {
             'neutron-security-groups': 'True',
             'enable-dvr': 'True',
@@ -527,6 +545,7 @@ class L3AgentContextTest(CharmTestCase):
             'network-device-mtu': 1500,
             'enable-nfg-logging': 'True',
             'use_l3ha': False,
+            'l3_extension_plugins': 'fwaas_v2,fwaas_v2_log',
         }
         _rget.side_effect = lambda *args, **kwargs: rdata
         _validate_nfg_log_path.side_effect = lambda x: x
@@ -543,17 +562,23 @@ class L3AgentContextTest(CharmTestCase):
                 'nfg_log_output_base': '/var/log/neutron/firewall.log',
                 'nfg_log_rate_limit': 200,
                 'use_l3ha': False,
+                'l3_extension_plugins': 'fwaas_v2,fwaas_v2_log',
             }
         )
 
+    @patch.object(context, 'os_release')
+    @patch.object(charmhelpers.contrib.openstack.utils,
+                  'get_os_codename_package')
     @patch.object(context, 'validate_nfg_log_path')
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_get')
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_ids')
     @patch.object(charmhelpers.contrib.openstack.context, 'related_units')
     def test_dvr_nfg_enabled_mins(self, _runits, _rids, _rget,
-                                  _validate_nfg_log_path):
+                                  _validate_nfg_log_path,
+                                  _get_os_cdnm_pkg, _os_release):
         _runits.return_value = ['unit1']
         _rids.return_value = ['rid2']
+        _os_release.return_value = 'stein'
         rdata = {
             'neutron-security-groups': 'True',
             'enable-dvr': 'True',
@@ -561,6 +586,7 @@ class L3AgentContextTest(CharmTestCase):
             'overlay-network-type': 'vxlan',
             'network-device-mtu': 1500,
             'enable-nfg-logging': 'True',
+            'l3_extension_plugins': 'fwaas_v2,fwaas_v2_log',
         }
         _rget.side_effect = lambda *args, **kwargs: rdata
         _validate_nfg_log_path.side_effect = lambda x: x
@@ -577,22 +603,29 @@ class L3AgentContextTest(CharmTestCase):
                 'nfg_log_output_base': '/var/log/neutron/firewall.log',
                 'nfg_log_rate_limit': 100,
                 'use_l3ha': False,
+                'l3_extension_plugins': 'fwaas_v2,fwaas_v2_log',
             }
         )
 
+    @patch.object(context, 'os_release')
+    @patch.object(charmhelpers.contrib.openstack.utils,
+                  'get_os_codename_package')
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_get')
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_ids')
     @patch.object(charmhelpers.contrib.openstack.context, 'related_units')
-    def test_dvr_enabled_dvr_snat_enabled(self, _runits, _rids, _rget):
+    def test_dvr_enabled_dvr_snat_enabled(self, _runits, _rids, _rget,
+                                          _get_os_cdnm_pkg, _os_release):
         self.test_config.set('use-dvr-snat', True)
         _runits.return_value = ['unit1']
         _rids.return_value = ['rid2']
+        _os_release.return_value = 'stein'
         rdata = {
             'neutron-security-groups': 'True',
             'enable-dvr': 'True',
             'l2-population': 'True',
             'overlay-network-type': 'vxlan',
             'network-device-mtu': 1500,
+            'l3_extension_plugins': 'fwaas_v2,fwaas_v2_log',
         }
         _rget.side_effect = lambda *args, **kwargs: rdata
         self.assertEqual(
@@ -604,21 +637,28 @@ class L3AgentContextTest(CharmTestCase):
                 'nfg_log_burst_limit': 25,
                 'nfg_log_output_base': None,
                 'nfg_log_rate_limit': None,
+                'l3_extension_plugins': 'fwaas_v2',
             }
         )
 
+    @patch.object(context, 'os_release')
+    @patch.object(charmhelpers.contrib.openstack.utils,
+                  'get_os_codename_package')
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_get')
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_ids')
     @patch.object(charmhelpers.contrib.openstack.context, 'related_units')
-    def test_dvr_disabled(self, _runits, _rids, _rget):
+    def test_dvr_disabled(self, _runits, _rids, _rget,
+                          _get_os_cdnm_pkg, _os_release):
         _runits.return_value = ['unit1']
         _rids.return_value = ['rid2']
+        _os_release.return_value = 'stein'
         rdata = {
             'neutron-security-groups': 'True',
             'enable-dvr': 'False',
             'l2-population': 'True',
             'overlay-network-type': 'vxlan',
             'network-device-mtu': 1500,
+            'l3_extension_plugins': 'fwaas_v2',
         }
         _rget.side_effect = lambda *args, **kwargs: rdata
         self.assertEqual(context.L3AgentContext()(), {
@@ -627,6 +667,7 @@ class L3AgentContextTest(CharmTestCase):
             'nfg_log_burst_limit': 25,
             'nfg_log_output_base': None,
             'nfg_log_rate_limit': None,
+            'l3_extension_plugins': 'fwaas_v2',
         })
 
 
