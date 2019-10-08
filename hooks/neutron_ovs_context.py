@@ -30,6 +30,7 @@ from charmhelpers.core.hookenv import (
 from charmhelpers.core.host import (
     CompareHostReleases,
     lsb_release,
+    write_file,
 )
 from charmhelpers.contrib.openstack import context
 from charmhelpers.contrib.openstack.utils import (
@@ -537,9 +538,10 @@ def get_shared_secret():
     secret = None
     if not os.path.exists(SHARED_SECRET):
         secret = str(uuid.uuid4())
-        with open(SHARED_SECRET, 'w') as secret_file:
-            secret_file.write(secret)
+        write_file(SHARED_SECRET, secret,
+                   perms=0o400)
     else:
+        os.chmod(SHARED_SECRET, 0o400)
         with open(SHARED_SECRET, 'r') as secret_file:
             secret = secret_file.read().strip()
     return secret
