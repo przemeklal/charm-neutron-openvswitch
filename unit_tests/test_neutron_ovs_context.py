@@ -38,6 +38,7 @@ TO_PATCH = [
     'relation_get',
     'related_units',
     'lsb_release',
+    'write_file',
 ]
 
 
@@ -683,15 +684,17 @@ class SharedSecretContext(CharmTestCase):
     def test_secret_created_stored(self, _uuid4, _path):
         _path.exists.return_value = False
         _uuid4.return_value = 'secret_thing'
-        with patch_open() as (_open, _file):
-            self.assertEqual(context.get_shared_secret(),
-                             'secret_thing')
-            _open.assert_called_with(
-                context.SHARED_SECRET.format('quantum'), 'w')
-            _file.write.assert_called_with('secret_thing')
+        self.assertEqual(context.get_shared_secret(),
+                         'secret_thing')
+        self.write_file.assert_called_once_with(
+            context.SHARED_SECRET,
+            'secret_thing',
+            perms=0o400,
+        )
 
+    @patch('os.chmod')
     @patch('os.path')
-    def test_secret_retrieved(self, _path):
+    def test_secret_retrieved(self, _path, _chmod):
         _path.exists.return_value = True
         with patch_open() as (_open, _file):
             _file.read.return_value = 'secret_thing\n'
@@ -699,6 +702,10 @@ class SharedSecretContext(CharmTestCase):
                              'secret_thing')
             _open.assert_called_with(
                 context.SHARED_SECRET.format('quantum'), 'r')
+        _chmod.assert_called_once_with(
+            context.SHARED_SECRET,
+            0o400
+        )
 
     @patch.object(context, 'NeutronAPIContext')
     @patch.object(context, 'get_shared_secret')
