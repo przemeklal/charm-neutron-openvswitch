@@ -74,6 +74,8 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
             {'name': 'neutron-api'},
             self.get_percona_service_entry(),
         ]
+        if self._get_openstack_release() >= self.bionic_train:
+            other_services.append({'name': 'placement'})
         super(NeutronOVSBasicDeployment, self)._add_services(this_service,
                                                              other_services)
 
@@ -103,6 +105,13 @@ class NeutronOVSBasicDeployment(OpenStackAmuletDeployment):
                                                    'cloud-compute',
             'nova-cloud-controller:image-service': 'glance:image-service',
         }
+        if self._get_openstack_release() >= self.bionic_train:
+            relations.update({
+                'placement:shared-db': 'percona-cluster:shared-db',
+                'placement:amqp': 'rabbitmq-server:amqp',
+                'placement:placement': 'nova-cloud-controller:placement',
+                'placement:identity-service': 'keystone:identity-service',
+            })
         super(NeutronOVSBasicDeployment, self)._add_relations(relations)
 
     def _configure_services(self):
