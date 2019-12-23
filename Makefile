@@ -1,16 +1,16 @@
 #!/usr/bin/make
-PYTHON := /usr/bin/env python
+PYTHON := /usr/bin/env python3
 
 lint:
 	@tox -e pep8
 
 test:
 	@echo Starting tests...
-	@tox -e py27
+	@tox -e py3
 
 functional_test:
-	@echo Starting Amulet tests...
-	@tox -e func27
+	@echo Starting Zaza tests...
+	@tox -e func
 
 bin/charm_helpers_sync.py:
 	@mkdir -p bin
