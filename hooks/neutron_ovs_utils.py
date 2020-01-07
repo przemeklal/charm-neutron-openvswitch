@@ -47,9 +47,9 @@ from charmhelpers.contrib.network.ovs import (
 )
 from charmhelpers.core.hookenv import (
     config,
-    status_set,
-    log,
     DEBUG,
+    log,
+    status_set,
 )
 from charmhelpers.contrib.openstack.neutron import (
     parse_bridge_mappings,
@@ -61,6 +61,8 @@ from charmhelpers.contrib.openstack.context import (
     DataPortContext,
     WorkerConfigContext,
     parse_data_port_mappings,
+    DHCPAgentContext,
+    validate_ovs_use_veth,
 )
 from charmhelpers.core.host import (
     lsb_release,
@@ -214,11 +216,11 @@ METADATA_RESOURCE_MAP = OrderedDict([
 DHCP_RESOURCE_MAP = OrderedDict([
     (NEUTRON_DHCP_AGENT_CONF, {
         'services': ['neutron-dhcp-agent'],
-        'contexts': [neutron_ovs_context.DHCPAgentContext()],
+        'contexts': [DHCPAgentContext()],
     }),
     (NEUTRON_DNSMASQ_CONF, {
         'services': ['neutron-dhcp-agent'],
-        'contexts': [neutron_ovs_context.DHCPAgentContext()],
+        'contexts': [DHCPAgentContext()],
     }),
 ])
 DVR_RESOURCE_MAP = OrderedDict([
@@ -945,6 +947,7 @@ def assess_status_func(configs):
         required_interfaces['neutron-plugin-api'] = ['neutron-plugin-api']
     return make_assess_status_func(
         configs, required_interfaces,
+        charm_func=validate_ovs_use_veth,
         services=services(), ports=None)
 
 

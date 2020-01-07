@@ -860,6 +860,7 @@ class TestNeutronOVSUtils(CharmTestCase):
         make_assess_status_func.assert_called_once_with(
             'test-config',
             {'Test': True},
+            charm_func=nutils.validate_ovs_use_veth,
             services='s1',
             ports=None)
 

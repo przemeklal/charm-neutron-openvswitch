@@ -353,3 +353,12 @@ options:
       Can be used to avoid excessive memory consumption.
       WARNING: Should be NOT LESS than 25.
       (Available from Stein)
+  ovs-use-veth:
+    type: string
+    default:
+    description: |
+      "True" or "False" string value. It is safe to leave this option unset.
+      This option allows the DHCP agent to use a veth interface for OVS in
+      order to support kernels with limited namespace support. i.e. Trusty.
+      Changing the value after neutron DHCP agents are created will break
+      access. The charm will go into a blocked state if this is attempted.

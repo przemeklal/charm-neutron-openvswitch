@@ -12,7 +12,6 @@ gate_bundles:
   - bionic_rocky
   - bionic_stein
   - bionic_train
-  - disco_stein
 
 dev_bundles:
   - bionic_train
