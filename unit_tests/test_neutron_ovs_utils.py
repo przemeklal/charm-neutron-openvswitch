@@ -1138,6 +1138,13 @@ class TestNeutronOVSUtils(CharmTestCase):
         _is_container.return_value = True
         self.assertEquals(nutils.enable_local_dhcp(), False)
 
+    @patch.object(nutils, 'kv')
+    def test_use_fqdn_hint(self, _kv):
+        _kv().get.return_value = False
+        self.assertEquals(nutils.use_fqdn_hint(), False)
+        _kv().get.return_value = True
+        self.assertEquals(nutils.use_fqdn_hint(), True)
+
 
 class TestDPDKBridgeBondMap(CharmTestCase):
 

@@ -15,7 +15,6 @@
 import collections
 import glob
 import os
-import socket
 import uuid
 from pci import PCINetDevices
 from charmhelpers.core.hookenv import (
@@ -39,7 +38,6 @@ from charmhelpers.contrib.openstack.utils import (
 )
 from charmhelpers.contrib.network.ip import (
     get_address_in_network,
-    get_relation_ip,
 )
 from charmhelpers.contrib.openstack.context import (
     OSContextGenerator,
@@ -50,7 +48,6 @@ from charmhelpers.contrib.openstack.utils import (
     os_release,
     CompareOpenStackReleases,
 )
-import charmhelpers.contrib.openstack.utils as os_utils
 from charmhelpers.core.unitdata import kv
 
 IPTABLES_HYBRID = 'iptables_hybrid'
@@ -623,33 +620,4 @@ class APIIdentityServiceContext(context.IdentityServiceContext):
                 ctxt['region'] = rdata.get('region')
                 if ctxt['region']:
                     return ctxt
-        return ctxt
-
-
-class HostIPContext(context.OSContextGenerator):
-    def __call__(self):
-        ctxt = {}
-        # Use the address used in the neutron-plugin subordinate relation
-        host_ip = get_relation_ip('neutron-plugin')
-
-        cmp_release = os_utils.CompareOpenStackReleases(
-            os_utils.os_release('neutron-common', base='icehouse'))
-        # the contents of the Neutron ``host`` configuration option is
-        # referenced throughout a OpenStack deployment, an example being
-        # Neutron port bindings.  It's value should not change after a
-        # individual units initial deployment.
-        #
-        # We do want to migrate to using FQDNs so we enable this for new
-        # installations.
-        db = kv()
-        if (db.get('neutron-ovs-charm-use-fqdn', False) and
-                cmp_release >= 'stein' and
-                host_ip):
-            fqdn = socket.getfqdn(host_ip)
-            if '.' in fqdn:
-                # only populate the value if getfqdn() is able to find an
-                # actual FQDN for this host.  If not, we revert back to
-                # not setting the configuration option and use Neutron's
-                # default behaviour.
-                ctxt['host'] = fqdn
         return ctxt

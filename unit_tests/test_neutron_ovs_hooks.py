@@ -18,7 +18,8 @@ from test_utils import CharmTestCase
 
 with patch('charmhelpers.core.hookenv.config') as config:
     config.return_value = 'neutron'
-    import neutron_ovs_utils as utils
+    with patch('charmhelpers.contrib.openstack.context.HostInfoContext'):
+        import neutron_ovs_utils as utils
 
 _reg = utils.register_configs
 _map = utils.restart_map
@@ -82,8 +83,7 @@ class NeutronOVSHooksTests(CharmTestCase):
         _os_release.return_value = 'stein'
         self._call_hook('install')
         _kv.assert_called_once_with()
-        fake_dict.set.assert_called_once_with(
-            'neutron-ovs-charm-use-fqdn', True)
+        fake_dict.set.assert_called_once_with(hooks.USE_FQDN_KEY, True)
 
     @patch('neutron_ovs_hooks.enable_sriov', MagicMock(return_value=False))
     @patch.object(hooks, 'restart_map')
@@ -183,13 +183,15 @@ class NeutronOVSHooksTests(CharmTestCase):
                                                 'libnetfilter-log1',
                                                 'keepalived'])
 
-    @patch.object(hooks.neutron_ovs_context, 'HostIPContext')
-    def test_neutron_plugin_joined_dvr_dhcp(self, _HostIPContext):
+    @patch.object(hooks, 'use_fqdn_hint')
+    @patch.object(hooks.os_context, 'HostInfoContext')
+    def test_neutron_plugin_joined_dvr_dhcp(
+            self, _HostInfoContext, _use_fqdn_hint):
         self.enable_nova_metadata.return_value = True
         self.enable_local_dhcp.return_value = True
         self.use_dvr.return_value = True
         self.get_shared_secret.return_value = 'secret'
-        _HostIPContext()().get.return_value = 'fq.dn'
+        _HostInfoContext()().__getitem__.return_value = 'fq.dn'
         self._call_hook('neutron-plugin-relation-joined')
         rel_data = {
             'metadata-shared-secret': 'secret',
@@ -201,13 +203,15 @@ class NeutronOVSHooksTests(CharmTestCase):
         )
         self.assertTrue(self.install_packages.called)
 
-    @patch.object(hooks.neutron_ovs_context, 'HostIPContext')
-    def test_neutron_plugin_joined_dvr_nodhcp(self, _HostIPContext):
+    @patch.object(hooks, 'use_fqdn_hint')
+    @patch.object(hooks.os_context, 'HostInfoContext')
+    def test_neutron_plugin_joined_dvr_nodhcp(
+            self, _HostInfoContext, _use_fqdn_hint):
         self.enable_nova_metadata.return_value = True
         self.enable_local_dhcp.return_value = False
         self.use_dvr.return_value = True
         self.get_shared_secret.return_value = 'secret'
-        _HostIPContext()().get.return_value = 'fq.dn'
+        _HostInfoContext()().__getitem__.return_value = 'fq.dn'
         self._call_hook('neutron-plugin-relation-joined')
         rel_data = {
             'metadata-shared-secret': 'secret',
@@ -220,13 +224,15 @@ class NeutronOVSHooksTests(CharmTestCase):
         self.purge_packages.assert_called_with(['neutron-dhcp-agent'])
         self.assertFalse(self.install_packages.called)
 
-    @patch.object(hooks.neutron_ovs_context, 'HostIPContext')
-    def test_neutron_plugin_joined_nodvr_nodhcp(self, _HostIPContext):
+    @patch.object(hooks, 'use_fqdn_hint')
+    @patch.object(hooks.os_context, 'HostInfoContext')
+    def test_neutron_plugin_joined_nodvr_nodhcp(
+            self, _HostInfoContext, _use_fqdn_hint):
         self.enable_nova_metadata.return_value = False
         self.enable_local_dhcp.return_value = False
         self.use_dvr.return_value = False
         self.get_shared_secret.return_value = 'secret'
-        _HostIPContext()().get.return_value = 'fq.dn'
+        _HostInfoContext()().__getitem__.return_value = 'fq.dn'
         self._call_hook('neutron-plugin-relation-joined')
         rel_data = {
             'metadata-shared-secret': None,
