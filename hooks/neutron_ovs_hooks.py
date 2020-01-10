@@ -19,6 +19,8 @@ import uuid
 
 from copy import deepcopy
 
+from charmhelpers.contrib.openstack import context as os_context
+
 from charmhelpers.contrib.openstack.utils import (
     pausable_restart_on_change as restart_on_change,
     series_upgrade_prepare,
@@ -51,6 +53,7 @@ from neutron_ovs_utils import (
     L3HA_PACKAGES,
     METADATA_PACKAGES,
     OVS_DEFAULT,
+    USE_FQDN_KEY,
     configure_ovs,
     configure_sriov,
     get_shared_secret,
@@ -70,9 +73,8 @@ from neutron_ovs_utils import (
     determine_purge_packages,
     install_sriov_systemd_files,
     enable_sriov,
+    use_fqdn_hint,
 )
-
-import neutron_ovs_context
 
 hooks = Hooks()
 CONFIGS = register_configs()
@@ -87,7 +89,7 @@ def install():
     release = os_release('neutron-common')
     if CompareOpenStackReleases(release) >= 'stein':
         db = kv()
-        db.set('neutron-ovs-charm-use-fqdn', True)
+        db.set(USE_FQDN_KEY, True)
         db.flush()
 
 
@@ -203,9 +205,9 @@ def neutron_plugin_joined(relation_id=None, request_restart=False):
     rel_data = {
         'metadata-shared-secret': secret,
     }
-    host = neutron_ovs_context.HostIPContext()().get('host')
-    if host:
-        rel_data.update({'host': host})
+    host_info = os_context.HostInfoContext()()
+    if use_fqdn_hint() and host_info.get('host_fqdn'):
+        rel_data.update({'host': host_info['host_fqdn']})
     if request_restart:
         rel_data['restart-nonce'] = str(uuid.uuid4())
     relation_set(relation_id=relation_id, **rel_data)

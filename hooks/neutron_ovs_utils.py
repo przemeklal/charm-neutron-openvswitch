@@ -33,6 +33,7 @@ from charmhelpers.contrib.openstack.utils import (
     CompareOpenStackReleases,
     os_release,
 )
+from charmhelpers.core.unitdata import kv
 from collections import OrderedDict
 import neutron_ovs_context
 from charmhelpers.contrib.network.ovs import (
@@ -153,6 +154,18 @@ NEUTRON_SRIOV_SYSTEMD_UNIT = os.path.join('/lib/systemd/system',
 NEUTRON_SRIOV_UPSTART_CONF = os.path.join('/etc/init',
                                           'neutron-openvswitch-'
                                           'networking-sriov.conf')
+USE_FQDN_KEY = 'neutron-ovs-charm-use-fqdn'
+
+
+def use_fqdn_hint():
+    """Hint for whether FQDN should be used for agent registration
+
+    :returns: True or False
+    :rtype: bool
+    """
+    db = kv()
+    return db.get(USE_FQDN_KEY, False)
+
 
 BASE_RESOURCE_MAP = OrderedDict([
     (NEUTRON_CONF, {
@@ -163,7 +176,7 @@ BASE_RESOURCE_MAP = OrderedDict([
                      context.AMQPContext(ssl_dir=NEUTRON_CONF_DIR),
                      context.ZeroMQContext(),
                      context.NotificationDriverContext(),
-                     neutron_ovs_context.HostIPContext(),
+                     context.HostInfoContext(use_fqdn_hint_cb=use_fqdn_hint),
                      neutron_ovs_context.ZoneContext(),
                      ],
     }),

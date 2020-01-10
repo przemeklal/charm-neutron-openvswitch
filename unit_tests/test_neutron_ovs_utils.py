@@ -1101,6 +1101,13 @@ class TestNeutronOVSUtils(CharmTestCase):
         )
         self.service_restart.assert_called_with('openvswitch-switch')
 
+    @patch.object(nutils, 'kv')
+    def test_use_fqdn_hint(self, _kv):
+        _kv().get.return_value = False
+        self.assertEquals(nutils.use_fqdn_hint(), False)
+        _kv().get.return_value = True
+        self.assertEquals(nutils.use_fqdn_hint(), True)
+
 
 class TestDPDKBridgeBondMap(CharmTestCase):
 
