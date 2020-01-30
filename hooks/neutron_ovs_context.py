@@ -33,7 +33,6 @@ from charmhelpers.core.host import (
 )
 from charmhelpers.contrib.openstack import context
 from charmhelpers.contrib.openstack.utils import (
-    config_flags_parser,
     get_host_ip,
 )
 from charmhelpers.contrib.network.ip import (
@@ -285,32 +284,6 @@ class ZoneContext(OSContextGenerator):
                     unit=units[0])
                 if availability_zone:
                     ctxt['availability_zone'] = availability_zone
-        return ctxt
-
-
-class DHCPAgentContext(ZoneContext):
-
-    def __call__(self):
-        """Return the 'default_availability_zone' from the principal that this
-        ovs unit is attached to (as a subordinate) and the 'dns_domain' from
-        the neutron-plugin-api relations (if one is set).
-
-        :returns: {} if no relation set, or
-            {'availability_zone': availability_zone from principal relation}
-        """
-        ctxt = super(DHCPAgentContext, self).__call__()
-
-        dnsmasq_flags = config('dnsmasq-flags')
-        if dnsmasq_flags:
-            ctxt['dnsmasq_flags'] = config_flags_parser(dnsmasq_flags)
-        ctxt['dns_servers'] = config('dns-servers')
-
-        neutron_api_settings = NeutronAPIContext()()
-        if neutron_api_settings.get('dns_domain'):
-            ctxt['dns_domain'] = neutron_api_settings.get('dns_domain')
-
-        ctxt['instance_mtu'] = config('instance-mtu')
-
         return ctxt
 
 
