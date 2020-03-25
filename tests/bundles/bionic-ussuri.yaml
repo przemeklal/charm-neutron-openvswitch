@@ -16,7 +16,7 @@ applications:
     charm: cs:~openstack-charmers-next/nova-compute
     num_units: 1
     options:
-      openstack-origin: cloud:bionic-train
+      openstack-origin: cloud:bionic-ussuri
     to:
     - '1'
   nova-cloud-controller:
@@ -24,7 +24,7 @@ applications:
     num_units: 1
     options:
       network-manager: Neutron
-      openstack-origin: cloud:bionic-train
+      openstack-origin: cloud:bionic-ussuri
     to:
     - '2'
   rabbitmq-server:
@@ -37,21 +37,22 @@ applications:
     charm: cs:~openstack-charmers-next/keystone
     num_units: 1
     options:
-      openstack-origin: cloud:bionic-train
+      openstack-origin: cloud:bionic-ussuri
     to:
     - '4'
   glance:
     charm: cs:~openstack-charmers-next/glance
     num_units: 1
     options:
-      openstack-origin: cloud:bionic-train
+      openstack-origin: cloud:bionic-ussuri
     to:
     - '5'
   neutron-api:
     charm: cs:~openstack-charmers-next/neutron-api
     num_units: 1
     options:
-      openstack-origin: cloud:bionic-train
+      manage-neutron-plugin-legacy-mode: true
+      openstack-origin: cloud:bionic-ussuri
     to:
     - '6'
   percona-cluster:
@@ -60,10 +61,10 @@ applications:
     to:
     - '0'
   placement:
-    charm: cs:~openstack-charmers/bionic/placement
+    charm: cs:~openstack-charmers-next/bionic/placement
     num_units: 1
     options:
-      openstack-origin: cloud:bionic-train
+      openstack-origin: cloud:bionic-ussuri
     to:
     - '7'
   neutron-openvswitch:

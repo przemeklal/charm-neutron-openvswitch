@@ -1,20 +1,25 @@
 charm_name: neutron-openvswitch
 
 smoke_bundles:
-  - bionic_train
+  - bionic-ussuri
 
 gate_bundles:
-  - xenial_mitaka
-  - xenial_ocata
-  - xenial_pike
-  - xenial_queens
-  - bionic_queens
-  - bionic_rocky
-  - bionic_stein
-  - bionic_train
+  - xenial-mitaka
+  - xenial-ocata
+  - xenial-pike
+  - xenial-queens
+  - bionic-queens
+  - bionic-rocky
+  - bionic-stein
+  - bionic-train
+  - bionic-ussuri
+  - focal-ussuri
 
 dev_bundles:
-  - bionic_train
+  - focal-ussuri
 
 tests:
   - zaza.openstack.charm_tests.neutron.tests.NeutronOpenvSwitchTest
+tests_options:
+  force_deploy:
+    - focal-ussuri
