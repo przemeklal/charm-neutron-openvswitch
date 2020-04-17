@@ -1,25 +1,29 @@
 charm_name: neutron-openvswitch
 
 smoke_bundles:
-  - bionic-ussuri
+  - bionic-ussuri-dvr-snat
 
 gate_bundles:
   - xenial-mitaka
   - xenial-ocata
   - xenial-pike
-  - xenial-queens
-  - bionic-queens
-  - bionic-rocky
-  - bionic-stein
-  - bionic-train
-  - bionic-ussuri
-  - focal-ussuri
+  - xenial-queens-dvr-snat
+  - bionic-queens-dvr-snat
+  - bionic-rocky-dvr-snat
+  - bionic-stein-dvr-snat
+  - bionic-train-dvr-snat
+  - bionic-ussuri-dvr-snat
+  - focal-ussuri-dvr-snat
 
-dev_bundles:
-  - focal-ussuri
+configure:
+  - zaza.openstack.charm_tests.glance.setup.add_lts_image
+  - zaza.openstack.charm_tests.neutron.setup.basic_overcloud_network
+  - zaza.openstack.charm_tests.nova.setup.create_flavors
+  - zaza.openstack.charm_tests.nova.setup.manage_ssh_key
 
 tests:
+  - zaza.openstack.charm_tests.neutron.tests.NeutronNetworkingTest
   - zaza.openstack.charm_tests.neutron.tests.NeutronOpenvSwitchTest
 tests_options:
   force_deploy:
-    - focal-ussuri
+    - focal-ussuri-dvr-snat
