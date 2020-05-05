@@ -210,6 +210,8 @@ options:
       option allows instances to be plugged into directly into SR-IOV VF
       devices connected to underlying provider networks alongside the default
       Open vSwitch networking options.
+      .
+      NOTE: This configuration option will be ignored on Trusty and older.
   sriov-device-mappings:
     type: string
     default:
@@ -219,6 +221,8 @@ options:
         <provider>:<interface>
       .
       Multiple mappings can be provided, delimited by spaces.
+      .
+      NOTE: This configuration option will be ignored if enable-sriov is false.
   sriov-numvfs:
     type: string
     default: auto
@@ -263,6 +267,9 @@ options:
       SR-IOV VF's and switchdev mode in Mellanox network adapters.
       .
       This PPA can be mirrored for offline deployments.
+      .
+      NOTE: This configuration option will be ignored if enable-sriov and
+      enable-hardware-offload are both false.
   worker-multiplier:
     type: float
     default:

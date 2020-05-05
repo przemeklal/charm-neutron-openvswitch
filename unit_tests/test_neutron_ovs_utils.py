@@ -48,6 +48,7 @@ TO_PATCH = [
     'apt_install',
     'apt_update',
     'config',
+    'lsb_release',
     'os_release',
     'filter_installed_packages',
     'filter_missing_packages',
@@ -122,6 +123,7 @@ class TestNeutronOVSUtils(CharmTestCase):
     @patch.object(nutils, 'determine_packages')
     def test_install_packages(self, _determine_packages):
         self.os_release.return_value = 'mitaka'
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'xenial'}
         _determine_packages.return_value = 'randompkg'
         nutils.install_packages()
         self.apt_update.assert_called_with()
@@ -132,6 +134,7 @@ class TestNeutronOVSUtils(CharmTestCase):
     @patch.object(nutils, 'determine_packages')
     def test_install_packages_container(self, _determine_packages):
         self.os_release.return_value = 'mitaka'
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'xenial'}
         self.is_container.return_value = True
         _determine_packages.return_value = 'randompkg'
         nutils.install_packages()
@@ -143,6 +146,7 @@ class TestNeutronOVSUtils(CharmTestCase):
     @patch.object(nutils, 'determine_packages')
     def test_install_packages_ovs_firewall(self, _determine_packages):
         self.os_release.return_value = 'mitaka'
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'xenial'}
         _determine_packages.return_value = 'randompkg'
         self.is_container.return_value = False
         self.test_config.set('firewall-driver', 'openvswitch')
@@ -156,6 +160,7 @@ class TestNeutronOVSUtils(CharmTestCase):
     @patch.object(nutils, 'determine_packages')
     def test_install_packages_ovs_fw_newer_kernel(self, _determine_packages):
         self.os_release.return_value = 'mitaka'
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'xenial'}
         _determine_packages.return_value = 'randompkg'
         self.is_container.return_value = False
         self.test_config.set('firewall-driver', 'openvswitch')
@@ -171,6 +176,7 @@ class TestNeutronOVSUtils(CharmTestCase):
     @patch.object(nutils, 'determine_packages')
     def test_install_packages_dkms_needed(self, _determine_packages):
         self.os_release.return_value = 'mitaka'
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'xenial'}
         _determine_packages.return_value = 'randompkg'
         self.determine_dkms_package.return_value = \
             ['openvswitch-datapath-dkms']
@@ -190,6 +196,7 @@ class TestNeutronOVSUtils(CharmTestCase):
                                         _enable_hw_offload,
                                         _use_hw_offload):
         self.os_release.return_value = 'stein'
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'bionic'}
         _determine_packages.return_value = 'randompkg'
         _use_hw_offload.return_value = True
         self.determine_dkms_package.return_value = \
@@ -213,27 +220,9 @@ class TestNeutronOVSUtils(CharmTestCase):
         self.test_config.set('enable-local-dhcp-and-metadata', False)
         _use_dvr.return_value = False
         _use_l3ha.return_value = False
-        _os_rel.return_value = 'icehouse'
-        self.os_release.return_value = 'icehouse'
-        _head_pkgs.return_value = head_pkg
-        pkg_list = nutils.determine_packages()
-        expect = [
-            head_pkg,
-            'neutron-plugin-openvswitch-agent'
-        ]
-        self.assertEqual(pkg_list, expect)
-
-    @patch.object(nutils, 'use_l3ha')
-    @patch.object(nutils, 'use_dvr')
-    @patch.object(charmhelpers.contrib.openstack.neutron, 'os_release')
-    @patch.object(charmhelpers.contrib.openstack.neutron, 'headers_package')
-    def test_determine_packages_mitaka(self, _head_pkgs, _os_rel,
-                                       _use_dvr, _use_l3ha):
-        self.test_config.set('enable-local-dhcp-and-metadata', False)
-        _use_dvr.return_value = False
-        _use_l3ha.return_value = False
         _os_rel.return_value = 'mitaka'
         self.os_release.return_value = 'mitaka'
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'xenial'}
         _head_pkgs.return_value = head_pkg
         pkg_list = nutils.determine_packages()
         expect = [
@@ -252,16 +241,17 @@ class TestNeutronOVSUtils(CharmTestCase):
         self.test_config.set('enable-local-dhcp-and-metadata', True)
         _use_dvr.return_value = False
         _use_l3ha.return_value = False
-        _os_rel.return_value = 'icehouse'
-        self.os_release.return_value = 'icehouse'
+        _os_rel.return_value = 'mitaka'
+        self.os_release.return_value = 'mitaka'
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'xenial'}
         _head_pkgs.return_value = head_pkg
         pkg_list = nutils.determine_packages()
         expect = [
             head_pkg,
-            'neutron-plugin-openvswitch-agent',
             'neutron-dhcp-agent',
             'neutron-metadata-agent',
             'haproxy',
+            'neutron-openvswitch-agent',
         ]
         self.assertEqual(pkg_list, expect)
 
@@ -273,15 +263,16 @@ class TestNeutronOVSUtils(CharmTestCase):
                                     _use_l3ha):
         _use_dvr.return_value = True
         _use_l3ha.return_value = False
-        _os_rel.return_value = 'icehouse'
-        self.os_release.return_value = 'icehouse'
+        _os_rel.return_value = 'mitaka'
+        self.os_release.return_value = 'mitaka'
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'xenial'}
         _head_pkgs.return_value = head_pkg
         pkg_list = nutils.determine_packages()
         expect = [
             head_pkg,
-            'neutron-plugin-openvswitch-agent',
             'neutron-l3-agent',
             'libnetfilter-log1',
+            'neutron-openvswitch-agent',
         ]
         self.assertEqual(pkg_list, expect)
 
@@ -295,6 +286,7 @@ class TestNeutronOVSUtils(CharmTestCase):
         _use_l3ha.return_value = False
         _os_rel.return_value = 'rocky'
         self.os_release.return_value = 'rocky'
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'bionic'}
         _head_pkgs.return_value = head_pkg
         pkg_list = nutils.determine_packages()
         expect = [
@@ -319,6 +311,7 @@ class TestNeutronOVSUtils(CharmTestCase):
         _use_l3ha.return_value = True
         _os_rel.return_value = 'newton'
         self.os_release.return_value = 'newton'
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'xenial'}
         _head_pkgs.return_value = head_pkg
         pkg_list = nutils.determine_packages()
         expect = [
@@ -341,6 +334,7 @@ class TestNeutronOVSUtils(CharmTestCase):
         _use_l3ha.return_value = False
         _os_rel.return_value = 'newton'
         self.os_release.return_value = 'newton'
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'xenial'}
         _head_pkgs.return_value = head_pkg
         pkg_list = nutils.determine_packages()
         expect = [
@@ -362,6 +356,7 @@ class TestNeutronOVSUtils(CharmTestCase):
         _use_l3ha.return_value = True
         _os_rel.return_value = 'mitaka'
         self.os_release.return_value = 'mitaka'
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'xenial'}
         _head_pkgs.return_value = head_pkg
         pkg_list = nutils.determine_packages()
         expect = [
@@ -382,30 +377,9 @@ class TestNeutronOVSUtils(CharmTestCase):
         self.test_config.set('enable-sriov', True)
         _use_dvr.return_value = False
         _use_l3ha.return_value = False
-        _os_rel.return_value = 'kilo'
-        self.os_release.return_value = 'kilo'
-        _head_pkgs.return_value = head_pkg
-        pkg_list = nutils.determine_packages()
-        expect = [
-            head_pkg,
-            'neutron-plugin-openvswitch-agent',
-            'neutron-plugin-sriov-agent',
-            'sriov-netplan-shim',
-        ]
-        self.assertEqual(pkg_list, expect)
-
-    @patch.object(nutils, 'use_l3ha')
-    @patch.object(nutils, 'use_dvr')
-    @patch.object(charmhelpers.contrib.openstack.neutron, 'os_release')
-    @patch.object(charmhelpers.contrib.openstack.neutron, 'headers_package')
-    def test_determine_pkgs_sriov_mitaka(self, _head_pkgs, _os_rel,
-                                         _use_dvr, _use_l3ha):
-        self.test_config.set('enable-local-dhcp-and-metadata', False)
-        self.test_config.set('enable-sriov', True)
-        _use_dvr.return_value = False
-        _use_l3ha.return_value = False
         _os_rel.return_value = 'mitaka'
         self.os_release.return_value = 'mitaka'
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'xenial'}
         _head_pkgs.return_value = head_pkg
         pkg_list = nutils.determine_packages()
         expect = [
@@ -431,6 +405,7 @@ class TestNeutronOVSUtils(CharmTestCase):
         _use_l3ha.return_value = False
         _os_rel.return_value = 'stein'
         self.os_release.return_value = 'stein'
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'bionic'}
         _head_pkgs.return_value = head_pkg
         pkg_list = nutils.determine_packages()
         expect = [
@@ -987,6 +962,7 @@ class TestNeutronOVSUtils(CharmTestCase):
     @patch('os.chmod')
     def test_configure_sriov_auto(self, _os_chmod, _sh_copy):
         self.os_release.return_value = 'mitaka'
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'xenial'}
         _config = {
             'enable-sriov': True,
             'sriov-numvfs': 'auto'
@@ -1015,6 +991,7 @@ class TestNeutronOVSUtils(CharmTestCase):
     @patch('os.chmod')
     def test_configure_sriov_auto_mapping(self, _os_chmod, _sh_copy):
         self.os_release.return_value = 'mitaka'
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'xenial'}
         _config = {
             'enable-sriov': True,
             'sriov-numvfs': 'auto',
@@ -1043,6 +1020,7 @@ class TestNeutronOVSUtils(CharmTestCase):
     @patch('os.chmod')
     def test_configure_sriov_numvfs(self, _os_chmod, _sh_copy):
         self.os_release.return_value = 'mitaka'
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'xenial'}
         _config = {
             'enable-sriov': True,
             'sriov-numvfs': '32',
@@ -1070,7 +1048,8 @@ class TestNeutronOVSUtils(CharmTestCase):
     @patch('shutil.copy')
     @patch('os.chmod')
     def test_configure_sriov_numvfs_per_device(self, _os_chmod, _sh_copy):
-        self.os_release.return_value = 'kilo'
+        self.os_release.return_value = 'mitaka'
+        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'xenial'}
         _config = {
             'enable-sriov': True,
             'sriov-numvfs': 'ens0:32 sriov23:64'

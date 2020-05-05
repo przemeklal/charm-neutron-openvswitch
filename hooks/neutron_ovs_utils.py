@@ -267,7 +267,8 @@ def install_packages():
     # of SR-IOV VF's and Mellanox ConnectX switchdev capable adapters
     # The default PPA published packages back to Xenial, which covers
     # all target series for this charm.
-    if config('networking-tools-source'):
+    if config('networking-tools-source') and \
+       (enable_sriov() or use_hw_offload()):
         add_source(config('networking-tools-source'))
     apt_update()
     # NOTE(jamespage): install neutron-common package so we always
@@ -935,9 +936,8 @@ def ovs_vhostuser_client():
 
 def enable_sriov():
     '''Determine whether SR-IOV is enabled and supported'''
-    cmp_release = CompareOpenStackReleases(
-        os_release('neutron-common', base='icehouse'))
-    return (cmp_release >= 'kilo' and config('enable-sriov'))
+    cmp_release = CompareHostReleases(lsb_release()['DISTRIB_CODENAME'])
+    return (cmp_release >= 'xenial' and config('enable-sriov'))
 
 
 # TODO: update into charm-helpers to add port_type parameter

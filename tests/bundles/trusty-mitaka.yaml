@@ -103,6 +103,8 @@ relations:
     - 'percona-cluster:shared-db'
   - - 'nova-compute:neutron-plugin'
     - 'neutron-openvswitch:neutron-plugin'
+  - - 'neutron-api:neutron-plugin-api'
+    - 'neutron-openvswitch:neutron-plugin-api'
   - - 'nova-cloud-controller:shared-db'
     - 'percona-cluster:shared-db'
   - - 'neutron-gateway:amqp'

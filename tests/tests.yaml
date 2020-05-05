@@ -4,6 +4,7 @@ smoke_bundles:
   - bionic-ussuri-dvr-snat
 
 gate_bundles:
+  - trusty-mitaka
   - xenial-mitaka
   - xenial-ocata
   - xenial-pike
