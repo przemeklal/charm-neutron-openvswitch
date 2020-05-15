@@ -262,6 +262,11 @@ DATA_BRIDGE = 'br-data'
 
 
 def install_packages():
+    # NOTE(jamespage): install neutron-common package so we always
+    #                  get a clear signal on which OS release is
+    #                  being deployed
+    apt_install(filter_installed_packages(['neutron-common']),
+                fatal=True)
     # NOTE(jamespage):
     # networking-tools-source provides general tooling for configuration
     # of SR-IOV VF's and Mellanox ConnectX switchdev capable adapters
@@ -271,11 +276,6 @@ def install_packages():
        (enable_sriov() or use_hw_offload()):
         add_source(config('networking-tools-source'))
     apt_update()
-    # NOTE(jamespage): install neutron-common package so we always
-    #                  get a clear signal on which OS release is
-    #                  being deployed
-    apt_install(filter_installed_packages(['neutron-common']),
-                fatal=True)
     # NOTE(jamespage): ensure early install of dkms related
     #                  dependencies for kernels which need
     #                  openvswitch via dkms (12.04).
