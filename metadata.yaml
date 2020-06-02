@@ -15,13 +15,14 @@ description: |
   This charm provides the OpenStack Neutron Open vSwitch agent, managing
   L2 connectivity on nova-compute services.
 tags:
-  - openstack
+- openstack
 series:
-  - xenial
-  - bionic
-  - eoan
-  - focal
-  - trusty
+- xenial
+- bionic
+- eoan
+- focal
+- trusty
+- groovy
 extra-bindings:
   data:
 provides:
