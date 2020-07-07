@@ -16,6 +16,10 @@ gate_bundles:
   - bionic-ussuri-dvr-snat
   - focal-ussuri-dvr-snat
 
+dev_bundles:
+  - focal-victoria-dvr-snat
+  - groovy-victoria-dvr-snat
+
 configure:
   - zaza.openstack.charm_tests.glance.setup.add_lts_image
   - zaza.openstack.charm_tests.neutron.setup.basic_overcloud_network
@@ -27,4 +31,4 @@ tests:
   - zaza.openstack.charm_tests.neutron.tests.NeutronOpenvSwitchTest
 tests_options:
   force_deploy:
-    - focal-ussuri-dvr-snat
+    - groovy-victoria-dvr-snat
