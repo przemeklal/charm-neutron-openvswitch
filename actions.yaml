@@ -1,3 +1,23 @@
+cleanup:
+    description: |
+        Clean up after the Neutron agents.
+    params:
+      i-really-mean-it:
+        type: boolean
+        default: false
+        description: |
+          The default false will not run the action, set to true to perform
+          cleanup.
+          .
+          WARNING: Running this action will interrupt instance connectivity and
+          it will not be restored until either Neutron agents or a different
+          SDN reprograms connectivity on the hypervisor.
+          .
+          NOTE: The application must be configured with `firewall-driver`
+          'openvswitch' and the unit must be paused prior to running this
+          action.
+    required:
+      - i-really-mean-it
 pause:
     description: Pause the neutron-openvswitch unit.  This action will stop neutron-openvswitch services.
 resume:

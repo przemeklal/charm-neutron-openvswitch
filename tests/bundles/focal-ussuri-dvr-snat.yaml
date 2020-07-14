@@ -1,5 +1,5 @@
 variables:
-  openstack-origin: &openstack-origin distro
+  openstack-origin: &openstack-origin distro-proposed
 
 series: &series focal
 
@@ -20,6 +20,8 @@ machines:
   9:
     constraints: "root-disk=20G mem=4G"
   10: {}
+  11: {}
+  12: {}
 
 # We specify machine placements for these to improve iteration
 # time, given that machine "0" comes up way before machine "7"
@@ -113,6 +115,27 @@ applications:
       openstack-origin: *openstack-origin
     to:
       - '10'
+  vault-mysql-router:
+    charm: cs:~openstack-charmers-next/mysql-router
+  vault:
+    charm: cs:~openstack-charmers-next/vault
+    num_units: 1
+    to:
+      - '11'
+  ovn-central:
+    charm: cs:~openstack-charmers-next/ovn-central
+    num_units: 3
+    options:
+      source: *openstack-origin
+    to:
+      - '12'
+  neutron-api-plugin-ovn:
+    charm: cs:~openstack-charmers-next/neutron-api-plugin-ovn
+  ovn-chassis:
+    charm: cs:~openstack-charmers-next/ovn-chassis
+    options:
+      # start new units paused to allow unit by unit OVS to OVN migration
+      new-units-paused: true
 relations:
   - - 'neutron-api:amqp'
     - 'rabbitmq-server:amqp'
@@ -156,3 +179,26 @@ relations:
   - ["glance-mysql-router:db-router", "mysql-innodb-cluster:db-router"]
   - ["neutron-mysql-router:db-router", "mysql-innodb-cluster:db-router"]
   - ["placement-mysql-router:db-router", "mysql-innodb-cluster:db-router"]
+  # We need to defer the addition of the neutron-api-plugin-ovn subordinate
+  # relation to the functional test as the test will first validate the legacy
+  # Neutron ML2+OVS topology, migrate it to OVN and then confirm connectivity
+  # post migration.
+  #
+  # - - neutron-api-plugin-ovn:neutron-plugin
+  #   - neutron-api:neutron-plugin-api-subordinate
+  - - ovn-central:certificates
+    - vault:certificates
+  - - ovn-central:ovsdb-cms
+    - neutron-api-plugin-ovn:ovsdb-cms
+  - - ovn-chassis:nova-compute
+    - nova-compute:neutron-plugin
+  - - ovn-chassis:certificates
+    - vault:certificates
+  - - ovn-chassis:ovsdb
+    - ovn-central:ovsdb
+  - - vault:certificates
+    - neutron-api-plugin-ovn:certificates
+  - - vault:shared-db
+    - vault-mysql-router:shared-db
+  - - vault-mysql-router:db-router
+    - mysql-innodb-cluster:db-router
