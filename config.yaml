@@ -403,3 +403,10 @@ options:
       option defines how frequently this check is performed. Setting this value
       to 0 will disable the healthchecks. Note that this only applies when
       using l3ha and dvr_snat.
+  of-inactivity-probe:
+    type: int
+    default: 10
+    description: |
+      The inactivity_probe interval in seconds for the local switch connection
+      to the controller. A value of 0 disables inactivity probes. Used only
+      for 'native' driver. The default value is 10 seconds.

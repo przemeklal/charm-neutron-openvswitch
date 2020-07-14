@@ -259,6 +259,8 @@ class OVSPluginContext(context.NeutronContext):
         if ovs_ctxt['firewall_driver'] != OPENVSWITCH:
             ovs_ctxt['enable_nsg_logging'] = False
 
+        ovs_ctxt['of_inactivity_probe'] = config('of-inactivity-probe')
+
         return ovs_ctxt
 
 
