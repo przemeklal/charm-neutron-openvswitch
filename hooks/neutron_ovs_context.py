@@ -201,6 +201,8 @@ class OVSPluginContext(context.NeutronContext):
         ovs_ctxt['debug'] = conf['debug']
         ovs_ctxt['prevent_arp_spoofing'] = conf['prevent-arp-spoofing']
         ovs_ctxt['enable_dpdk'] = conf['enable-dpdk']
+        ovs_ctxt['keepalived_healthcheck_interval'] = \
+            conf['keepalived-healthcheck-interval']
 
         net_dev_mtu = neutron_api_settings.get('network_device_mtu')
         if net_dev_mtu:

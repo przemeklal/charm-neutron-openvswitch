@@ -133,7 +133,8 @@ class OVSPluginContextTest(CharmTestCase):
                   'enable-dpdk': False,
                   'security-group-log-output-base': '/var/log/nsg.log',
                   'security-group-log-rate-limit': None,
-                  'security-group-log-burst-limit': 25}
+                  'security-group-log-burst-limit': 25,
+                  'keepalived-healthcheck-interval': 0}
 
         def mock_config(key=None):
             if key:
@@ -191,6 +192,7 @@ class OVSPluginContextTest(CharmTestCase):
             'nsg_log_output_base': '/var/log/nsg.log',
             'nsg_log_rate_limit': None,
             'nsg_log_burst_limit': 25,
+            'keepalived_healthcheck_interval': 0,
         }
         self.assertEqual(expect, napi_ctxt())
 
@@ -271,6 +273,7 @@ class OVSPluginContextTest(CharmTestCase):
             'nsg_log_output_base': None,
             'nsg_log_rate_limit': None,
             'nsg_log_burst_limit': 25,
+            'keepalived_healthcheck_interval': 30,
         }
         self.maxDiff = None
         self.assertEqual(expect, napi_ctxt())
