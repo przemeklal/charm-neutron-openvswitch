@@ -15,9 +15,9 @@ gate_bundles:
   - bionic-train-dvr-snat
   - bionic-ussuri-dvr-snat
   - focal-ussuri-dvr-snat
+  - focal-victoria-dvr-snat
 
 dev_bundles:
-  - focal-victoria-dvr-snat
   - groovy-victoria-dvr-snat
 
 configure:
