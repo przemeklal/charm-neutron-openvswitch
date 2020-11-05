@@ -21,8 +21,6 @@ gate_bundles:
   - bionic-ussuri-dvr-snat
   - migrate-ovn: focal-ussuri-dvr-snat
   - migrate-ovn: focal-victoria-dvr-snat
-
-dev_bundles:
   - migrate-ovn: groovy-victoria-dvr-snat
 
 configure:
