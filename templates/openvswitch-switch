@@ -9,3 +9,6 @@
 {% if dpdk_enabled -%}
 DPDK_OPTS='--dpdk -c {{ cpu_mask }} -n 4 --socket-mem {{ socket_memory }} {{ device_whitelist }} --vhost-owner libvirt-qemu:kvm --vhost-perm 0660'
 {% endif -%}
+{% if disable_mlockall -%}
+OVS_CTL_OPTS='--no-mlockall'
+{% endif -%}

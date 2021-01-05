@@ -458,6 +458,7 @@ class TestNeutronOVSUtils(CharmTestCase):
         _regconfs = nutils.register_configs()
         confs = ['/etc/neutron/neutron.conf',
                  '/etc/neutron/plugins/ml2/openvswitch_agent.ini',
+                 '/etc/default/openvswitch-switch',
                  '/etc/init/os-charm-phy-nic-mtu.conf']
         self.assertEqual(_regconfs.configs, confs)
 
@@ -582,11 +583,12 @@ class TestNeutronOVSUtils(CharmTestCase):
         expect = OrderedDict([
             (nutils.NEUTRON_CONF, ['neutron-openvswitch-agent']),
             (ML2CONF, ['neutron-openvswitch-agent']),
+            (nutils.OVS_DEFAULT, ['openvswitch-switch']),
         ])
         for item in _restart_map:
             self.assertTrue(item in _restart_map)
             self.assertTrue(expect[item] == _restart_map[item])
-        self.assertEqual(len(_restart_map.keys()), 2)
+        self.assertEqual(len(_restart_map.keys()), 3)
 
     @patch('charmhelpers.contrib.openstack.context.list_nics',
            return_value=['eth0'])
@@ -869,7 +871,7 @@ class TestNeutronOVSUtils(CharmTestCase):
             callee = MagicMock()
             asf.return_value = callee
             nutils.assess_status('test-config')
-            asf.assert_called_once_with('test-config')
+            asf.assert_called_once_with('test-config', ['openvswitch-switch'])
             callee.assert_called_once_with()
             self.os_application_version_set.assert_called_with(
                 nutils.VERSION_PACKAGE
@@ -902,10 +904,12 @@ class TestNeutronOVSUtils(CharmTestCase):
     def test_pause_unit_helper(self):
         with patch.object(nutils, '_pause_resume_helper') as prh:
             nutils.pause_unit_helper('random-config')
-            prh.assert_called_once_with(nutils.pause_unit, 'random-config')
+            prh.assert_called_once_with(nutils.pause_unit,
+                                        'random-config', [])
         with patch.object(nutils, '_pause_resume_helper') as prh:
             nutils.resume_unit_helper('random-config')
-            prh.assert_called_once_with(nutils.resume_unit, 'random-config')
+            prh.assert_called_once_with(nutils.resume_unit,
+                                        'random-config', [])
 
     @patch.object(nutils, 'services')
     @patch.object(nutils, 'determine_ports')
@@ -916,7 +920,7 @@ class TestNeutronOVSUtils(CharmTestCase):
         with patch.object(nutils, 'assess_status_func') as asf:
             asf.return_value = 'assessor'
             nutils._pause_resume_helper(f, 'some-config')
-            asf.assert_called_once_with('some-config')
+            asf.assert_called_once_with('some-config', [])
             # ports=None whilst port checks are disabled.
             f.assert_called_once_with('assessor', services='s1', ports=None)
 

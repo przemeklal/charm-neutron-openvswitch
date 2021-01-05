@@ -19,6 +19,10 @@ cleanup:
     required:
       - i-really-mean-it
 pause:
-    description: Pause the neutron-openvswitch unit.  This action will stop neutron-openvswitch services.
+    description: |
+        Pause the neutron-openvswitch unit.  This action will stop neutron-openvswitch services.
+        .
+        NOTE: Pausing neutron-openvswitch does not stop the openvswitch-switch service.
 resume:
-    descrpition: Resume the neutron-openvswitch unit.  This action will start neutron-openvswitch services.
+    descrpition: |
+        Resume the neutron-openvswitch unit.  This action will start neutron-openvswitch services.

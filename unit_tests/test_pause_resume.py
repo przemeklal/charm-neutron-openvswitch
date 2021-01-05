@@ -30,7 +30,8 @@ class PauseTestCase(CharmTestCase):
 
     def test_pauses_services(self):
         actions.pause([])
-        self.pause_unit_helper.assert_called_once_with('test-config')
+        self.pause_unit_helper.assert_called_once_with(
+            'test-config', exclude_services=['openvswitch-switch'])
 
 
 class ResumeTestCase(CharmTestCase):
@@ -41,7 +42,8 @@ class ResumeTestCase(CharmTestCase):
 
     def test_pauses_services(self):
         actions.resume([])
-        self.resume_unit_helper.assert_called_once_with('test-config')
+        self.resume_unit_helper.assert_called_once_with(
+            'test-config', exclude_services=['openvswitch-switch'])
 
 
 class MainTestCase(CharmTestCase):

@@ -135,7 +135,8 @@ class OVSPluginContextTest(CharmTestCase):
                   'security-group-log-rate-limit': None,
                   'security-group-log-burst-limit': 25,
                   'keepalived-healthcheck-interval': 0,
-                  'of-inactivity-probe': 10}
+                  'of-inactivity-probe': 10,
+                  'disable-mlockall': False}
 
         def mock_config(key=None):
             if key:
@@ -195,6 +196,7 @@ class OVSPluginContextTest(CharmTestCase):
             'nsg_log_burst_limit': 25,
             'keepalived_healthcheck_interval': 0,
             'of_inactivity_probe': 10,
+            'disable_mlockall': False,
         }
         self.assertEqual(expect, napi_ctxt())
 
@@ -277,9 +279,38 @@ class OVSPluginContextTest(CharmTestCase):
             'nsg_log_burst_limit': 25,
             'keepalived_healthcheck_interval': 30,
             'of_inactivity_probe': 10,
+            'disable_mlockall': False,
         }
         self.maxDiff = None
         self.assertEqual(expect, napi_ctxt())
+
+    @patch.object(context, 'is_container')
+    @patch.object(context, 'os_release')
+    def test_disable_mlockall(self, _os_release, _is_container):
+        _os_release.return_value = 'victoria'
+
+        _is_container.return_value = True
+        ovsp_ctxt = context.OVSPluginContext()
+        self.assertTrue(ovsp_ctxt.disable_mlockall())
+
+        _is_container.return_value = False
+        ovsp_ctxt = context.OVSPluginContext()
+        self.assertFalse(ovsp_ctxt.disable_mlockall())
+
+        _os_release.return_value = 'liberty'
+        ovsp_ctxt = context.OVSPluginContext()
+        self.test_config.set('disable-mlockall', True)
+        self.assertFalse(ovsp_ctxt.disable_mlockall())
+
+        _os_release.return_value = 'mitaka'
+        ovsp_ctxt = context.OVSPluginContext()
+        self.test_config.set('disable-mlockall', True)
+        self.assertTrue(ovsp_ctxt.disable_mlockall())
+
+        _os_release.return_value = 'victoria'
+        ovsp_ctxt = context.OVSPluginContext()
+        self.test_config.set('disable-mlockall', False)
+        self.assertFalse(ovsp_ctxt.disable_mlockall())
 
 
 class ZoneContextTest(CharmTestCase):

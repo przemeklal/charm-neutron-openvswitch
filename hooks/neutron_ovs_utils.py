@@ -196,6 +196,7 @@ BASE_RESOURCE_MAP = OrderedDict([
     (OVS_DEFAULT, {
         'services': ['openvswitch-switch'],
         'contexts': [neutron_ovs_context.OVSDPDKDeviceContext(),
+                     neutron_ovs_context.OVSPluginContext(),
                      neutron_ovs_context.RemoteRestartContext(
                          ['neutron-plugin', 'neutron-control'])],
     }),
@@ -423,9 +424,6 @@ def resource_map():
         )
         if not use_dpdk():
             drop_config.append(DPDK_INTERFACES)
-            drop_config.append(OVS_DEFAULT)
-        elif ovs_has_late_dpdk_init():
-            drop_config.append(OVS_DEFAULT)
     else:
         drop_config.extend([OVS_CONF, DPDK_INTERFACES])
 
@@ -464,15 +462,18 @@ def restart_map():
     return {k: v['services'] for k, v in resource_map().items()}
 
 
-def services():
+def services(exclude_services=None):
     """Returns a list of (unique) services associate with this charm
     Note that we drop the os-charm-phy-nic-mtu service as it's not an actual
     running service that we can check for.
 
     @returns [strings] - list of service names suitable for (re)start_service()
     """
+    if exclude_services is None:
+        exclude_services = []
     s_set = set(chain(*restart_map().values()))
     s_set.discard('os-charm-phy-nic-mtu')
+    s_set = {s for s in s_set if s not in exclude_services}
     return list(s_set)
 
 
@@ -1024,11 +1025,14 @@ def assess_status(configs):
     @param configs: a templating.OSConfigRenderer() object
     @returns None - this function is executed for its side-effect
     """
-    assess_status_func(configs)()
+    exclude_services = []
+    if is_unit_paused_set():
+        exclude_services = ['openvswitch-switch']
+    assess_status_func(configs, exclude_services)()
     os_application_version_set(VERSION_PACKAGE)
 
 
-def assess_status_func(configs):
+def assess_status_func(configs, exclude_services=None):
     """Helper function to create the function that will assess_status() for
     the unit.
     Uses charmhelpers.contrib.openstack.utils.make_assess_status_func() to
@@ -1045,36 +1049,42 @@ def assess_status_func(configs):
     @param configs: a templating.OSConfigRenderer() object
     @return f() -> None : a function that assesses the unit's workload status
     """
+    if exclude_services is None:
+        exclude_services = []
     required_interfaces = REQUIRED_INTERFACES.copy()
     if enable_nova_metadata():
         required_interfaces['neutron-plugin-api'] = ['neutron-plugin-api']
     return make_assess_status_func(
         configs, required_interfaces,
         charm_func=validate_ovs_use_veth,
-        services=services(), ports=None)
+        services=services(exclude_services), ports=None)
 
 
-def pause_unit_helper(configs):
+def pause_unit_helper(configs, exclude_services=None):
     """Helper function to pause a unit, and then call assess_status(...) in
     effect, so that the status is correctly updated.
     Uses charmhelpers.contrib.openstack.utils.pause_unit() to do the work.
     @param configs: a templating.OSConfigRenderer() object
     @returns None - this function is executed for its side-effect
     """
-    _pause_resume_helper(pause_unit, configs)
+    if exclude_services is None:
+        exclude_services = []
+    _pause_resume_helper(pause_unit, configs, exclude_services)
 
 
-def resume_unit_helper(configs):
+def resume_unit_helper(configs, exclude_services=None):
     """Helper function to resume a unit, and then call assess_status(...) in
     effect, so that the status is correctly updated.
     Uses charmhelpers.contrib.openstack.utils.resume_unit() to do the work.
     @param configs: a templating.OSConfigRenderer() object
     @returns None - this function is executed for its side-effect
     """
-    _pause_resume_helper(resume_unit, configs)
+    if exclude_services is None:
+        exclude_services = []
+    _pause_resume_helper(resume_unit, configs, exclude_services)
 
 
-def _pause_resume_helper(f, configs):
+def _pause_resume_helper(f, configs, exclude_services=None):
     """Helper function that uses the make_assess_status_func(...) from
     charmhelpers.contrib.openstack.utils to create an assess_status(...)
     function that can be used with the pause/resume of the unit
@@ -1083,8 +1093,10 @@ def _pause_resume_helper(f, configs):
     """
     # TODO(ajkavanagh) - ports= has been left off because of the race hazard
     # that exists due to service_start()
-    f(assess_status_func(configs),
-      services=services(),
+    if exclude_services is None:
+        exclude_services = []
+    f(assess_status_func(configs, exclude_services),
+      services=services(exclude_services),
       ports=None)
 
 

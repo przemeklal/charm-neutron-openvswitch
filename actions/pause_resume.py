@@ -28,16 +28,18 @@ from neutron_ovs_utils import (
 
 
 def pause(args):
-    """Pause the Ceilometer services.
+    """Pause the neutron-openvswitch services.
     @raises Exception should the service fail to stop.
     """
-    pause_unit_helper(register_configs())
+    pause_unit_helper(register_configs(),
+                      exclude_services=['openvswitch-switch'])
 
 
 def resume(args):
-    """Resume the Ceilometer services.
+    """Resume the neutron-openvswitch services.
     @raises Exception should the service fail to start."""
-    resume_unit_helper(register_configs())
+    resume_unit_helper(register_configs(),
+                       exclude_services=['openvswitch-switch'])
 
 
 # A dictionary of all the defined actions to callables (which take

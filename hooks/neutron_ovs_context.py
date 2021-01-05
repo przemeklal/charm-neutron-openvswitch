@@ -28,6 +28,7 @@ from charmhelpers.core.hookenv import (
 )
 from charmhelpers.core.host import (
     CompareHostReleases,
+    is_container,
     lsb_release,
     write_file,
 )
@@ -157,6 +158,23 @@ class OVSPluginContext(context.NeutronContext):
         neutron_api_settings = NeutronAPIContext()()
         return neutron_api_settings['neutron_security_groups']
 
+    def disable_mlockall(self):
+        '''
+        Determine if Open vSwitch use of mlockall() should be disabled
+
+        If the disable-mlockall config option is unset, mlockall will be
+        disabled if running in a container and will default to enabled if
+        not running in a container.
+        '''
+        disable_mlockall = config('disable-mlockall')
+        if disable_mlockall is None:
+            disable_mlockall = False
+            if is_container():
+                disable_mlockall = True
+        cmp_release = CompareOpenStackReleases(
+            os_release('neutron-common', base='icehouse'))
+        return (cmp_release >= 'mitaka' and disable_mlockall)
+
     def ovs_ctxt(self):
         # In addition to generating config context, ensure the OVS service
         # is running and the OVS bridge exists. Also need to ensure
@@ -203,6 +221,7 @@ class OVSPluginContext(context.NeutronContext):
         ovs_ctxt['enable_dpdk'] = conf['enable-dpdk']
         ovs_ctxt['keepalived_healthcheck_interval'] = \
             conf['keepalived-healthcheck-interval']
+        ovs_ctxt['disable_mlockall'] = self.disable_mlockall()
 
         net_dev_mtu = neutron_api_settings.get('network_device_mtu')
         if net_dev_mtu:
