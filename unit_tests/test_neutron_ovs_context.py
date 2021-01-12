@@ -106,7 +106,7 @@ class OVSPluginContextTest(CharmTestCase):
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_ids')
     @patch.object(charmhelpers.contrib.openstack.context, 'related_units')
     @patch.object(charmhelpers.contrib.openstack.context, 'config')
-    @patch.object(charmhelpers.contrib.openstack.context, 'unit_get')
+    @patch.object(charmhelpers.contrib.openstack.context, 'local_address')
     @patch.object(charmhelpers.contrib.openstack.context, 'is_clustered')
     @patch.object(charmhelpers.contrib.openstack.context, 'https')
     @patch.object(context.OVSPluginContext, '_ensure_packages')
@@ -114,7 +114,8 @@ class OVSPluginContextTest(CharmTestCase):
                   'neutron_plugin_attribute')
     @patch.object(charmhelpers.contrib.openstack.context, 'unit_private_ip')
     def test_neutroncc_context_api_rel(self, _unit_priv_ip, _npa, _ens_pkgs,
-                                       _https, _is_clus, _unit_get,
+                                       _https, _is_clus,
+                                       _local_address,
                                        _config, _runits, _rids, _rget,
                                        _get_os_cdnm_pkg):
         def mock_npa(plugin, section, manager):
@@ -148,7 +149,7 @@ class OVSPluginContextTest(CharmTestCase):
         self.maxDiff = None
         self.config.side_effect = mock_config
         _npa.side_effect = mock_npa
-        _unit_get.return_value = '127.0.0.13'
+        _local_address.return_value = '127.0.0.13'
         _unit_priv_ip.return_value = '127.0.0.14'
         _is_clus.return_value = False
         _runits.return_value = ['unit1']
@@ -206,7 +207,7 @@ class OVSPluginContextTest(CharmTestCase):
     @patch.object(charmhelpers.contrib.openstack.context, 'relation_ids')
     @patch.object(charmhelpers.contrib.openstack.context, 'related_units')
     @patch.object(charmhelpers.contrib.openstack.context, 'config')
-    @patch.object(charmhelpers.contrib.openstack.context, 'unit_get')
+    @patch.object(charmhelpers.contrib.openstack.context, 'local_address')
     @patch.object(charmhelpers.contrib.openstack.context, 'is_clustered')
     @patch.object(charmhelpers.contrib.openstack.context, 'https')
     @patch.object(context.OVSPluginContext, '_ensure_packages')
@@ -217,7 +218,7 @@ class OVSPluginContextTest(CharmTestCase):
                                                         _unit_priv_ip, _npa,
                                                         _ens_pkgs,
                                                         _https, _is_clus,
-                                                        _unit_get,
+                                                        _local_address,
                                                         _config, _runits,
                                                         _rids, _rget,
                                                         _get_os_cdnm_pkg):
@@ -230,7 +231,7 @@ class OVSPluginContextTest(CharmTestCase):
         _get_os_cdnm_pkg.return_value = 'ocata'
         _npa.side_effect = mock_npa
         _config.return_value = 'ovs'
-        _unit_get.return_value = '127.0.0.13'
+        _local_address.return_value = '127.0.0.13'
         _unit_priv_ip.return_value = '127.0.0.14'
         _is_clus.return_value = False
         self.test_config.set('disable-security-groups', True)
