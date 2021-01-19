@@ -118,7 +118,11 @@ def upgrade_charm():
 
 @hooks.hook('neutron-plugin-relation-changed')
 @hooks.hook('config-changed')
-@restart_on_change(restart_map())
+# NOTE(fnordahl): we need to act immediately to changes to OVS_DEFAULT in-line
+# so ignore it here to avoid restarting the services twice. LP: #1906280
+@restart_on_change({cfg: services
+                    for cfg, services in restart_map().items()
+                    if cfg != OVS_DEFAULT})
 def config_changed():
     # if we are paused, delay doing any config changed hooks.
     # It is forced on the resume.
@@ -142,8 +146,18 @@ def config_changed():
         create_sysctl(sysctl_settings,
                       '/etc/sysctl.d/50-openvswitch.conf')
 
+    # NOTE(fnordahl): It is important to write config to disk and perhaps
+    # restart the openvswitch-swith service prior to attempting to do run-time
+    # configuration of OVS as we may have to pass options to `ovs-ctl` for
+    # `ovs-vswitchd` to run at all. LP: #1906280
+    # TODO: make restart_on_change use contextlib.contextmanager
+    @restart_on_change({cfg: services
+                        for cfg, services in restart_map().items()
+                        if cfg == OVS_DEFAULT})
+    def _restart_before_runtime_config_when_required():
+        CONFIGS.write_all()
+    _restart_before_runtime_config_when_required()
     configure_ovs()
-    CONFIGS.write_all()
 
     # NOTE(fnordahl): configure_sriov must be run after CONFIGS.write_all()
     # to allow us to enable boot time execution of init script
@@ -156,7 +170,11 @@ def config_changed():
 
 
 @hooks.hook('neutron-plugin-api-relation-changed')
-@restart_on_change(restart_map())
+# NOTE(fnordahl): we need to act immediately to changes to OVS_DEFAULT in-line
+# so ignore it here to avoid restarting the services twice. LP: #1906280
+@restart_on_change({cfg: services
+                    for cfg, services in restart_map().items()
+                    if cfg != OVS_DEFAULT})
 def neutron_plugin_api_changed():
     packages_to_purge = []
     if use_dvr():
@@ -176,8 +194,18 @@ def neutron_plugin_api_changed():
     if packages_to_purge:
         purge_packages(packages_to_purge)
 
+    # NOTE(fnordahl): It is important to write config to disk and perhaps
+    # restart the openvswitch-swith service prior to attempting to do run-time
+    # configuration of OVS as we may have to pass options to `ovs-ctl` for
+    # `ovs-vswitchd` to run at all. LP: #1906280
+    # TODO: make restart_on_change use contextlib.contextmanager
+    @restart_on_change({cfg: service
+                        for cfg, service in restart_map().items()
+                        if cfg == OVS_DEFAULT})
+    def _restart_before_runtime_config_when_required():
+        CONFIGS.write_all()
+    _restart_before_runtime_config_when_required()
     configure_ovs()
-    CONFIGS.write_all()
     # If dvr setting has changed, need to pass that on
     for rid in relation_ids('neutron-plugin'):
         neutron_plugin_joined(relation_id=rid)
