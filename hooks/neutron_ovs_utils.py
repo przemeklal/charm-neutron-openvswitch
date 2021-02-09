@@ -144,21 +144,6 @@ OVS_DEFAULT = '/etc/default/openvswitch-switch'
 DPDK_INTERFACES = '/etc/dpdk/interfaces'
 NEUTRON_SRIOV_AGENT_CONF = os.path.join(NEUTRON_CONF_DIR,
                                         'plugins/ml2/sriov_agent.ini')
-NEUTRON_SRIOV_INIT_SCRIPT = os.path.join('/usr/local/bin',
-                                         'neutron-openvswitch-'
-                                         'networking-sriov.sh')
-NEUTRON_SRIOV_INIT_PY_SCRIPT = os.path.join('/usr/local/bin',
-                                            'neutron_openvswitch_'
-                                            'networking_sriov.py')
-NEUTRON_SRIOV_INIT_DEFAULT = os.path.join('/etc/default',
-                                          'neutron-openvswitch-'
-                                          'networking-sriov')
-NEUTRON_SRIOV_SYSTEMD_UNIT = os.path.join('/lib/systemd/system',
-                                          'neutron-openvswitch-'
-                                          'networking-sriov.service')
-NEUTRON_SRIOV_UPSTART_CONF = os.path.join('/etc/init',
-                                          'neutron-openvswitch-'
-                                          'networking-sriov.conf')
 USE_FQDN_KEY = 'neutron-ovs-charm-use-fqdn'
 
 
@@ -245,14 +230,6 @@ SRIOV_RESOURCE_MAP = OrderedDict([
     (NEUTRON_SRIOV_AGENT_CONF, {
         'services': ['neutron-sriov-agent'],
         'contexts': [neutron_ovs_context.OVSPluginContext()],
-    }),
-    (NEUTRON_SRIOV_INIT_DEFAULT, {
-        'services': [],
-        'contexts': [neutron_ovs_context.OVSPluginContext()],
-    }),
-    (NEUTRON_SRIOV_UPSTART_CONF, {
-        'services': [],
-        'contexts': [],
     }),
 ])
 
