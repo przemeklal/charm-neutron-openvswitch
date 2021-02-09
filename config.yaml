@@ -212,6 +212,10 @@ options:
       Open vSwitch networking options.
       .
       NOTE: This configuration option will be ignored on Trusty and older.
+      .
+      NOTE: Changing this value will have no effect on runtime configuration. A
+      manual restart of the `sriov-netplan-shim` service or reboot of the
+      system is required to apply configuration.
   sriov-device-mappings:
     type: string
     default:
@@ -259,6 +263,10 @@ options:
       supported by OVS or the Linux kernel).
       .
       This option must not be enabled with either enable-sriov or enable-dpdk.
+      .
+      NOTE: Changing this value will not perform hardware specific adaption. A
+      manual restart of the hardware specific adaption service or reboot of the
+      system is required to apply configuration.
   networking-tools-source:
     type: string
     default: ppa:openstack-charmers/networking-tools

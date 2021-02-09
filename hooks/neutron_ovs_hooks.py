@@ -55,7 +55,6 @@ from neutron_ovs_utils import (
     OVS_DEFAULT,
     USE_FQDN_KEY,
     configure_ovs,
-    configure_sriov,
     get_shared_secret,
     register_configs,
     restart_map,
@@ -71,6 +70,7 @@ from neutron_ovs_utils import (
     pause_unit_helper,
     resume_unit_helper,
     determine_purge_packages,
+    purge_sriov_systemd_files,
     use_fqdn_hint,
 )
 
@@ -95,6 +95,10 @@ def install():
 # for the implications of modifications to the /etc/default/openvswitch-switch.
 @hooks.hook('upgrade-charm')
 def upgrade_charm():
+    # Tidy up any prior installation of obsolete sriov startup
+    # scripts
+    purge_sriov_systemd_files()
+
     if OVS_DEFAULT in restart_map():
         # In the 16.10 release of the charms, the code changed from managing
         # the /etc/default/openvswitch-switch file only when dpdk was enabled
@@ -158,10 +162,6 @@ def config_changed():
         CONFIGS.write_all()
     _restart_before_runtime_config_when_required()
     configure_ovs()
-
-    # NOTE(fnordahl): configure_sriov must be run after CONFIGS.write_all()
-    # to allow us to enable boot time execution of init script
-    configure_sriov()
 
     for rid in relation_ids('neutron-plugin'):
         neutron_plugin_joined(

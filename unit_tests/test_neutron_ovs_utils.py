@@ -13,9 +13,7 @@
 # limitations under the License.
 
 import hashlib
-import io
 import subprocess
-import yaml
 
 from mock import MagicMock, patch, call
 from collections import OrderedDict
@@ -28,7 +26,6 @@ import neutron_ovs_context
 
 from test_utils import (
     CharmTestCase,
-    patch_open,
 )
 import charmhelpers
 import charmhelpers.core.hookenv as hookenv
@@ -63,8 +60,6 @@ TO_PATCH = [
     'status_set',
     'use_dpdk',
     'os_application_version_set',
-    'remote_restart',
-    'PCINetDevices',
     'enable_ipfix',
     'disable_ipfix',
     'ovs_has_late_dpdk_init',
@@ -473,9 +468,11 @@ class TestNeutronOVSUtils(CharmTestCase):
         [self.assertIn(q_conf, _map.keys()) for q_conf in confs]
         self.assertEqual(_map[nutils.NEUTRON_CONF]['services'], svcs)
 
+    @patch.object(nutils, 'SRIOVContext_adapter')
     @patch.object(nutils, 'enable_sriov')
     @patch.object(nutils, 'use_dvr')
-    def test_resource_map_kilo_sriov(self, _use_dvr, _enable_sriov):
+    def test_resource_map_kilo_sriov(self, _use_dvr, _enable_sriov,
+                                     _sriovcontext_adapter):
         _use_dvr.return_value = False
         _enable_sriov.return_value = True
         self.os_release.return_value = 'kilo'
@@ -500,9 +497,11 @@ class TestNeutronOVSUtils(CharmTestCase):
         [self.assertIn(q_conf, _map.keys()) for q_conf in confs]
         self.assertEqual(_map[nutils.NEUTRON_CONF]['services'], svcs)
 
+    @patch.object(nutils, 'SRIOVContext_adapter')
     @patch.object(nutils, 'enable_sriov')
     @patch.object(nutils, 'use_dvr')
-    def test_resource_map_mitaka_sriov(self, _use_dvr, _enable_sriov):
+    def test_resource_map_mitaka_sriov(self, _use_dvr, _enable_sriov,
+                                       _sriovcontext_adapter):
         _use_dvr.return_value = False
         _enable_sriov.return_value = True
         self.os_release.return_value = 'mitaka'
@@ -923,159 +922,6 @@ class TestNeutronOVSUtils(CharmTestCase):
             asf.assert_called_once_with('some-config', [])
             # ports=None whilst port checks are disabled.
             f.assert_called_once_with('assessor', services='s1', ports=None)
-
-    def _configure_sriov_base(self, config):
-        self.mock_config = MagicMock()
-        self.config.side_effect = None
-        self.config.return_value = self.mock_config
-        self.mock_config.get.side_effect = lambda x: config.get(x)
-
-        self.mock_eth_device = MagicMock()
-        self.mock_eth_device.sriov = False
-        self.mock_eth_device.interface_name = 'eth0'
-        self.mock_eth_device.sriov_totalvfs = 0
-
-        self.mock_sriov_device = MagicMock()
-        self.mock_sriov_device.sriov = True
-        self.mock_sriov_device.interface_name = 'ens0'
-        self.mock_sriov_device.sriov_totalvfs = 64
-
-        self.mock_sriov_device2 = MagicMock()
-        self.mock_sriov_device2.sriov = True
-        self.mock_sriov_device2.interface_name = 'ens49'
-        self.mock_sriov_device2.sriov_totalvfs = 64
-
-        self.pci_devices = {
-            'eth0': self.mock_eth_device,
-            'ens0': self.mock_sriov_device,
-            'ens49': self.mock_sriov_device2,
-        }
-
-        mock_pci_devices = MagicMock()
-        mock_pci_devices.pci_devices = [
-            self.mock_eth_device,
-            self.mock_sriov_device,
-            self.mock_sriov_device2
-        ]
-        self.PCINetDevices.return_value = mock_pci_devices
-
-        mock_pci_devices.get_device_from_interface_name.side_effect = \
-            lambda x: self.pci_devices.get(x)
-
-    @patch('shutil.copy')
-    @patch('os.chmod')
-    def test_configure_sriov_auto(self, _os_chmod, _sh_copy):
-        self.os_release.return_value = 'mitaka'
-        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'xenial'}
-        _config = {
-            'enable-sriov': True,
-            'sriov-numvfs': 'auto'
-        }
-        self._configure_sriov_base(_config)
-
-        with patch_open() as (_open, _file):
-            mock_stringio = io.StringIO()
-            _file.write.side_effect = mock_stringio.write
-            nutils.configure_sriov()
-            self.assertEqual(
-                yaml.load(mock_stringio.getvalue()),
-                {
-                    'interfaces': {
-                        'ens0': {'num_vfs': 64},
-                        'ens49': {'num_vfs': 64}
-                    }
-                }
-            )
-
-        self.mock_sriov_device.set_sriov_numvfs.assert_not_called()
-        self.mock_sriov_device2.set_sriov_numvfs.assert_not_called()
-        self.assertTrue(self.remote_restart.called)
-
-    @patch('shutil.copy')
-    @patch('os.chmod')
-    def test_configure_sriov_auto_mapping(self, _os_chmod, _sh_copy):
-        self.os_release.return_value = 'mitaka'
-        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'xenial'}
-        _config = {
-            'enable-sriov': True,
-            'sriov-numvfs': 'auto',
-            'sriov-device-mappings': 'net1:ens49'
-        }
-        self._configure_sriov_base(_config)
-
-        with patch_open() as (_open, _file):
-            mock_stringio = io.StringIO()
-            _file.write.side_effect = mock_stringio.write
-            nutils.configure_sriov()
-            self.assertEqual(
-                yaml.load(mock_stringio.getvalue()),
-                {
-                    'interfaces': {
-                        'ens49': {'num_vfs': 64}
-                    }
-                }
-            )
-
-        self.mock_sriov_device.set_sriov_numvfs.assert_not_called()
-        self.mock_sriov_device2.set_sriov_numvfs.assert_not_called()
-        self.assertTrue(self.remote_restart.called)
-
-    @patch('shutil.copy')
-    @patch('os.chmod')
-    def test_configure_sriov_numvfs(self, _os_chmod, _sh_copy):
-        self.os_release.return_value = 'mitaka'
-        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'xenial'}
-        _config = {
-            'enable-sriov': True,
-            'sriov-numvfs': '32',
-        }
-        self._configure_sriov_base(_config)
-
-        with patch_open() as (_open, _file):
-            mock_stringio = io.StringIO()
-            _file.write.side_effect = mock_stringio.write
-            nutils.configure_sriov()
-            self.assertEqual(
-                yaml.load(mock_stringio.getvalue()),
-                {
-                    'interfaces': {
-                        'ens0': {'num_vfs': 32},
-                        'ens49': {'num_vfs': 32}
-                    }
-                }
-            )
-
-        self.mock_sriov_device.set_sriov_numvfs.assert_not_called()
-        self.mock_sriov_device2.set_sriov_numvfs.assert_not_called()
-        self.assertTrue(self.remote_restart.called)
-
-    @patch('shutil.copy')
-    @patch('os.chmod')
-    def test_configure_sriov_numvfs_per_device(self, _os_chmod, _sh_copy):
-        self.os_release.return_value = 'mitaka'
-        self.lsb_release.return_value = {'DISTRIB_CODENAME': 'xenial'}
-        _config = {
-            'enable-sriov': True,
-            'sriov-numvfs': 'ens0:32 sriov23:64'
-        }
-        self._configure_sriov_base(_config)
-
-        with patch_open() as (_open, _file):
-            mock_stringio = io.StringIO()
-            _file.write.side_effect = mock_stringio.write
-            nutils.configure_sriov()
-            self.assertEqual(
-                yaml.load(mock_stringio.getvalue()),
-                {
-                    'interfaces': {
-                        'ens0': {'num_vfs': 32},
-                    }
-                }
-            )
-
-        self.mock_sriov_device.set_sriov_numvfs.assert_not_called()
-        self.mock_sriov_device2.set_sriov_numvfs.assert_not_called()
-        self.assertTrue(self.remote_restart.called)
 
     @patch.object(nutils, 'subprocess')
     @patch.object(nutils, 'shutil')

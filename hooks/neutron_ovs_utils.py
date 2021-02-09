@@ -18,7 +18,6 @@ import os
 from itertools import chain
 import shutil
 import subprocess
-import yaml
 
 from charmhelpers.contrib.openstack.neutron import neutron_plugin_attribute
 from copy import deepcopy
@@ -30,7 +29,6 @@ from charmhelpers.contrib.openstack.utils import (
     make_assess_status_func,
     is_unit_paused_set,
     os_application_version_set,
-    remote_restart,
     CompareOpenStackReleases,
     os_release,
 )
@@ -75,7 +73,6 @@ from charmhelpers.core.host import (
     group_exists,
     user_exists,
     is_container,
-    restart_on_change
 )
 from charmhelpers.core.kernel import (
     modprobe,
@@ -91,8 +88,6 @@ from charmhelpers.fetch import (
     get_upstream_version,
     add_source,
 )
-
-from pci import PCINetDevices
 
 
 # The interface is said to be satisfied if anyone of the interfaces in the
@@ -145,6 +140,7 @@ DPDK_INTERFACES = '/etc/dpdk/interfaces'
 NEUTRON_SRIOV_AGENT_CONF = os.path.join(NEUTRON_CONF_DIR,
                                         'plugins/ml2/sriov_agent.ini')
 USE_FQDN_KEY = 'neutron-ovs-charm-use-fqdn'
+SRIOV_NETPLAN_SHIM_CONF = '/etc/sriov-netplan-shim/interfaces.yaml'
 
 
 def use_fqdn_hint():
@@ -417,6 +413,30 @@ def resource_map():
         resource_map.update(sriov_resource_map)
         resource_map[NEUTRON_CONF]['services'].append(
             sriov_agent_name)
+    if enable_sriov() or use_hw_offload():
+        # We do late initialization of this as a call to
+        # ``context.SRIOVContext`` requires the ``sriov-netplan-shim`` package
+        # to already be installed on the system.
+        #
+        # Note that we also do not want the charm to manage the service, but
+        # only update the configuration for boot-time initialization.
+        # LP: #1908351
+        try:
+            resource_map.update(OrderedDict([
+                (SRIOV_NETPLAN_SHIM_CONF, {
+                    # We deliberately omit service here as we only want changes
+                    # to be applied at boot time.
+                    'services': [],
+                    'contexts': [SRIOVContext_adapter()],
+                }),
+            ]))
+        except NameError:
+            # The resource_map is built at module import time and as such this
+            # function is called multiple times prior to the charm actually
+            # being installed. As the SRIOVContext depends on a Python module
+            # provided by the ``sriov-netplan-shim`` package gracefully ignore
+            # this to allow the package to be installed.
+            pass
 
     # Use MAAS1.9 for MTU and external port config on xenial and above
     if CompareHostReleases(lsb_release()['DISTRIB_CODENAME']) >= 'xenial':
@@ -719,134 +739,6 @@ def _get_interfaces_from_mappings(sriov_mappings):
     return interfaces
 
 
-SRIOV_NETPLAN_SHIM_CONF = '/etc/sriov-netplan-shim/interfaces.yaml'
-
-
-# TODO(jamespage)
-# Drop all of this once MAAS and netplan can actually do SR-IOV
-# configuration natively.
-def configure_sriov():
-    '''Configure SR-IOV devices based on provided configuration options
-
-    This function writes out the configuration file for sriov-netplan-shim
-    which actually takes care of SR-IOV VF device configuration both
-    during configuration and post reboot.
-    '''
-    @restart_on_change({SRIOV_NETPLAN_SHIM_CONF: ['sriov-netplan-shim']})
-    def _write_interfaces_yaml():
-        charm_config = config()
-        devices = PCINetDevices()
-        sriov_numvfs = charm_config.get('sriov-numvfs')
-        section = 'interfaces'
-        interfaces_yaml = {
-            section: {}
-        }
-        numvfs_changed = False
-        # automatic configuration of all SR-IOV devices
-        if sriov_numvfs == 'auto':
-            interfaces = _get_interfaces_from_mappings(
-                charm_config.get('sriov-device-mappings'))
-            log('Configuring SR-IOV device VF functions in auto mode')
-            for device in devices.pci_devices:
-                if device and device.sriov:
-                    if interfaces and device.interface_name not in interfaces:
-                        log("Excluding configuration of SR-IOV"
-                            " device {}.".format(device.interface_name))
-                        continue
-                    log("Configuring SR-IOV device"
-                        " {} with {} VF's".format(device.interface_name,
-                                                  device.sriov_totalvfs))
-                    interfaces_yaml[section][device.interface_name] = {
-                        'num_vfs': int(device.sriov_totalvfs)
-                    }
-                    numvfs_changed = (
-                        (device.sriov_totalvfs != device.sriov_numvfs) or
-                        numvfs_changed
-                    )
-        else:
-            # Single int blanket configuration
-            try:
-                log('Configuring SR-IOV device VF functions'
-                    ' with blanket setting')
-                for device in devices.pci_devices:
-                    if device and device.sriov:
-                        numvfs = min(int(sriov_numvfs), device.sriov_totalvfs)
-                        if int(sriov_numvfs) > device.sriov_totalvfs:
-                            log('Requested value for sriov-numvfs ({}) too '
-                                'high for interface {}. Falling back to '
-                                'interface totalvfs '
-                                'value: {}'.format(sriov_numvfs,
-                                                   device.interface_name,
-                                                   device.sriov_totalvfs))
-                        log("Configuring SR-IOV device {} with {} "
-                            "VFs".format(device.interface_name, numvfs))
-                        interfaces_yaml[section][device.interface_name] = {
-                            'num_vfs': numvfs
-                        }
-                        numvfs_changed = (
-                            (numvfs != device.sriov_numvfs) or
-                            numvfs_changed
-                        )
-            except ValueError:
-                # <device>:<numvfs>[ <device>:numvfs] configuration
-                sriov_numvfs = sriov_numvfs.split()
-                for device_config in sriov_numvfs:
-                    log('Configuring SR-IOV device VF functions per interface')
-                    interface_name, numvfs = device_config.split(':')
-                    device = devices.get_device_from_interface_name(
-                        interface_name)
-                    if device and device.sriov:
-                        if int(numvfs) > device.sriov_totalvfs:
-                            log('Requested value for sriov-numfs ({}) too '
-                                'high for interface {}. Falling back to '
-                                'interface totalvfs '
-                                'value: {}'.format(numvfs,
-                                                   device.interface_name,
-                                                   device.sriov_totalvfs))
-                            numvfs = device.sriov_totalvfs
-                        log("Configuring SR-IOV device {} with {} "
-                            "VF's".format(device.interface_name, numvfs))
-                        interfaces_yaml[section][device.interface_name] = {
-                            'num_vfs': int(numvfs)
-                        }
-                        numvfs_changed = (
-                            (numvfs != device.sriov_numvfs) or
-                            numvfs_changed
-                        )
-        with open(SRIOV_NETPLAN_SHIM_CONF, 'w') as _conf:
-            yaml.dump(interfaces_yaml, _conf)
-        return numvfs_changed
-
-    # NOTE(jamespage)
-    # Hardware offload makes use of SR-IOV VF representor ports so
-    # makes use of the general SR-IOV configuration support in this
-    # charm
-    if not (enable_sriov() or use_hw_offload()):
-        return
-
-    # Tidy up any prior installation of obsolete sriov startup
-    # scripts
-    purge_sriov_systemd_files()
-
-    numvfs_changed = _write_interfaces_yaml()
-
-    # Trigger remote restart in parent application
-    remote_restart('neutron-plugin', 'nova-compute')
-
-    if not use_hw_offload() and numvfs_changed:
-        # Restart of SRIOV agent is required after changes to system runtime
-        # VF configuration
-        cmp_release = CompareOpenStackReleases(
-            os_release('neutron-common', base='icehouse'))
-        if cmp_release >= 'mitaka':
-            service_restart('neutron-sriov-agent')
-        else:
-            service_restart('neutron-plugin-sriov-agent')
-
-    if use_hw_offload() and numvfs_changed:
-        service_restart('mlnx-switchdev-mode')
-
-
 def get_shared_secret():
     ctxt = neutron_ovs_context.SharedSecretContext()()
     if 'shared_secret' in ctxt:
@@ -916,6 +808,21 @@ def enable_sriov():
     '''Determine whether SR-IOV is enabled and supported'''
     cmp_release = CompareHostReleases(lsb_release()['DISTRIB_CODENAME'])
     return (cmp_release >= 'xenial' and config('enable-sriov'))
+
+
+class SRIOVContext_adapter(object):
+    """Adapt the SRIOVContext for use in a classic charm.
+
+    :returns: Dictionary with entry point to context map.
+    :rtype: Dict[str,SRIOVContext]
+    """
+    interfaces = []
+
+    def __init__(self):
+        self._sriov_device = context.SRIOVContext()
+
+    def __call__(self):
+        return {'sriov_device': self._sriov_device}
 
 
 # TODO: update into charm-helpers to add port_type parameter

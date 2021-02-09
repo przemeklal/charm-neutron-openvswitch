@@ -41,7 +41,6 @@ TO_PATCH = [
     'relation_ids',
     'relation_set',
     'configure_ovs',
-    'configure_sriov',
     'use_dvr',
     'use_l3ha',
     'install_packages',
