@@ -9,13 +9,8 @@ smoke_bundles:
   - migrate-ovn: focal-ussuri-dvr-snat
 
 gate_bundles:
-  - trusty-mitaka
   - xenial-mitaka
-  - xenial-ocata
-  - xenial-pike
-  - xenial-queens-dvr-snat
   - bionic-queens-dvr-snat
-  - bionic-rocky-dvr-snat
   - bionic-stein-dvr-snat
   - bionic-train-dvr-snat
   - bionic-ussuri-dvr-snat
@@ -24,6 +19,11 @@ gate_bundles:
 
 dev_bundles:
   - migrate-ovn: groovy-victoria-dvr-snat
+  - trusty-mitaka
+  - xenial-ocata
+  - xenial-pike
+  - xenial-queens-dvr-snat
+  - bionic-rocky-dvr-snat
 
 configure:
   - zaza.openstack.charm_tests.glance.setup.add_lts_image
