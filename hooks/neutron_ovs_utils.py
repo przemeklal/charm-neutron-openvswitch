@@ -37,13 +37,14 @@ from collections import OrderedDict
 import neutron_ovs_context
 from charmhelpers.contrib.network.ovs import (
     add_bridge,
-    add_bridge_port,
     add_bridge_bond,
+    add_bridge_port,
     is_linuxbridge_interface,
     add_ovsbridge_linuxbridge,
     full_restart,
     enable_ipfix,
     disable_ipfix,
+    generate_external_ids,
 )
 from charmhelpers.core.hookenv import (
     config,
@@ -595,13 +596,15 @@ def configure_ovs():
     if not service_running('openvswitch-switch'):
         full_restart()
     datapath_type = determine_datapath_type()
-    add_bridge(INT_BRIDGE, datapath_type)
-    add_bridge(EXT_BRIDGE, datapath_type)
+    add_bridge(INT_BRIDGE, datapath_type, brdata=generate_external_ids())
+    add_bridge(EXT_BRIDGE, datapath_type, brdata=generate_external_ids())
     ext_port_ctx = None
     if use_dvr():
         ext_port_ctx = ExternalPortContext()()
     if ext_port_ctx and ext_port_ctx['ext_port']:
-        add_bridge_port(EXT_BRIDGE, ext_port_ctx['ext_port'])
+        add_bridge_port(EXT_BRIDGE, ext_port_ctx['ext_port'],
+                        ifdata=generate_external_ids(EXT_BRIDGE),
+                        portdata=generate_external_ids(EXT_BRIDGE))
 
     modern_ovs = ovs_has_late_dpdk_init()
 
@@ -615,16 +618,21 @@ def configure_ovs():
         portmaps = DataPortContext()()
         bridgemaps = parse_bridge_mappings(config('bridge-mappings'))
         for br in bridgemaps.values():
-            add_bridge(br, datapath_type)
+            add_bridge(br, datapath_type, brdata=generate_external_ids())
             if not portmaps:
                 continue
 
             for port, _br in portmaps.items():
                 if _br == br:
                     if not is_linuxbridge_interface(port):
-                        add_bridge_port(br, port, promisc=True)
+                        add_bridge_port(
+                            br, port, promisc=True,
+                            ifdata=generate_external_ids(br),
+                            portdata=generate_external_ids(br))
                     else:
-                        add_ovsbridge_linuxbridge(br, port)
+                        add_ovsbridge_linuxbridge(
+                            br, port, ifdata=generate_external_ids(br),
+                            portdata=generate_external_ids(br))
 
     # NOTE(jamespage):
     # hw-offload and dpdk are mutually exclusive so log and error
@@ -645,7 +653,7 @@ def configure_ovs():
         for pci_address, br in bridgemaps.items():
             log('Adding DPDK bridge: {}:{}'.format(br, datapath_type),
                 level=DEBUG)
-            add_bridge(br, datapath_type)
+            add_bridge(br, datapath_type, brdata=generate_external_ids())
             if modern_ovs:
                 portname = 'dpdk-{}'.format(
                     hashlib.sha1(pci_address.encode('UTF-8')).hexdigest()[:7]
@@ -655,9 +663,12 @@ def configure_ovs():
             log('Adding DPDK port: {}:{}:{}'.format(br, portname,
                                                     pci_address),
                 level=DEBUG)
+            ext_ids = generate_external_ids(br)
             add_bridge_port(br, portname, linkup=None, promisc=None,
+                            portdata=ext_ids,
                             ifdata=dpdk_port_ifdata(pci_address,
-                                                    global_mtu))
+                                                    global_mtu,
+                                                    ext_ids))
             # TODO(sahid): We should also take into account the
             # "physical-network-mtus" in case different MTUs are
             # configured based on physical networks.
@@ -675,7 +686,8 @@ def configure_ovs():
                     log('Adding DPDK bridge: {}:{}'.format(portmap[bond],
                                                            datapath_type),
                         level=DEBUG)
-                    add_bridge(portmap[bond], datapath_type)
+                    add_bridge(portmap[bond], datapath_type,
+                               brdata=generate_external_ids())
                     portname = 'dpdk-{}'.format(
                         hashlib.sha1(pci_address.encode('UTF-8'))
                         .hexdigest()[:7]
@@ -694,12 +706,15 @@ def configure_ovs():
                         bond,
                         bond_configs.get_bond_config(bond)),
                         level=DEBUG)
+                    ext_ids = generate_external_ids(br)
                     add_bridge_bond(br, bond, port_map.keys(),
                                     portdata=dpdk_bond_portdata(
-                                        bond_configs.get_bond_config(bond)),
+                                        bond_configs.get_bond_config(bond),
+                                        additional_portdata=ext_ids),
                                     ifdatamap=dpdk_bond_ifdatamap(
                                         port_map,
-                                        global_mtu))
+                                        global_mtu,
+                                        additional_ifdata=ext_ids))
 
     target = config('ipfix-target')
     bridges = [INT_BRIDGE, EXT_BRIDGE]
@@ -938,7 +953,8 @@ def assess_status_func(configs, exclude_services=None):
     return make_assess_status_func(
         configs, required_interfaces,
         charm_func=validate_ovs_use_veth,
-        services=services(exclude_services), ports=None)
+        services=services(exclude_services),
+        ports=None)
 
 
 def pause_unit_helper(configs, exclude_services=None):
@@ -1061,7 +1077,7 @@ class DPDKBondsConfig():
         Get the LACP configuration for a bond
 
         :param bond: the bond name
-        :return: a dictionary with the configuration of the
+        :return: a dictionary with the configuration of the bond
         '''
         if bond not in self.lacp_config:
             return self.lacp_config[self.ALL_BONDS]

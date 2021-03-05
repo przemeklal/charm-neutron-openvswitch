@@ -15,7 +15,7 @@
 import hashlib
 import subprocess
 
-from mock import MagicMock, patch, call
+from mock import MagicMock, patch, call, ANY
 from collections import OrderedDict
 import charmhelpers.contrib.openstack.templating as templating
 
@@ -588,9 +588,12 @@ class TestNeutronOVSUtils(CharmTestCase):
     @patch('charmhelpers.contrib.openstack.context.list_nics',
            return_value=['eth0'])
     @patch.object(nutils, 'use_dvr')
+    @patch('charmhelpers.contrib.network.ovs.charm_name')
     @patch('charmhelpers.contrib.openstack.context.config')
-    def test_configure_ovs_ovs_data_port(self, mock_config, _use_dvr, _nics):
+    def test_configure_ovs_ovs_data_port(
+            self, mock_config, _charm_name, _use_dvr, _nics):
         _use_dvr.return_value = False
+        _charm_name.return_value = "neutron-openvswitch"
         self.is_linuxbridge_interface.return_value = False
         mock_config.side_effect = self.test_config.get
         self.config.side_effect = self.test_config.get
@@ -600,34 +603,49 @@ class TestNeutronOVSUtils(CharmTestCase):
         # Test back-compatibility i.e. port but no bridge (so br-data is
         # assumed)
         self.test_config.set('data-port', 'eth0')
+        # Ensure that bridges are marked as managed
+        expected_brdata = {
+            'external-ids': {
+                'charm-neutron-openvswitch': 'managed'
+            }
+        }
+        expected_ifdata = {
+            'external-ids': {
+                'charm-neutron-openvswitch': 'br-data'
+            }
+        }
         nutils.configure_ovs()
         self.add_bridge.assert_has_calls([
-            call('br-int', 'system'),
-            call('br-ex', 'system'),
-            call('br-data', 'system')
+            call('br-int', 'system', brdata=expected_brdata),
+            call('br-ex', 'system', brdata=expected_brdata),
+            call('br-data', 'system', brdata=expected_brdata)
         ])
-        self.assertTrue(self.add_bridge_port.called)
-
+        self.add_bridge_port.assert_called_with('br-data', 'eth0',
+                                                ifdata=expected_ifdata,
+                                                portdata=expected_ifdata,
+                                                promisc=ANY)
         # Now test with bridge:port format
         self.test_config.set('data-port', 'br-foo:eth0')
         self.add_bridge.reset_mock()
         self.add_bridge_port.reset_mock()
         nutils.configure_ovs()
         self.add_bridge.assert_has_calls([
-            call('br-int', 'system'),
-            call('br-ex', 'system'),
-            call('br-data', 'system')
+            call('br-int', 'system', brdata=expected_brdata),
+            call('br-ex', 'system', brdata=expected_brdata),
+            call('br-data', 'system', brdata=expected_brdata)
         ])
         # Not called since we have a bogus bridge in data-ports
         self.assertFalse(self.add_bridge_port.called)
 
     @patch('charmhelpers.contrib.openstack.context.list_nics',
            return_value=['eth0', 'br-juju'])
+    @patch('charmhelpers.contrib.network.ovs.charm_name')
     @patch.object(nutils, 'use_dvr')
     @patch('charmhelpers.contrib.openstack.context.config')
     def test_configure_ovs_data_port_with_bridge(
-            self, mock_config, _use_dvr, _nics):
+            self, mock_config, _use_dvr, _charm_name, _nics):
         _use_dvr.return_value = False
+        _charm_name.return_value = "neutron-openvswitch"
         self.is_linuxbridge_interface.return_value = True
         mock_config.side_effect = self.test_config.get
         self.config.side_effect = self.test_config.get
@@ -644,10 +662,12 @@ class TestNeutronOVSUtils(CharmTestCase):
         self.assertTrue(self.add_ovsbridge_linuxbridge.called)
 
     @patch.object(nutils, 'use_dvr')
+    @patch('charmhelpers.contrib.network.ovs.charm_name')
     @patch('charmhelpers.contrib.openstack.context.config')
-    def test_configure_ovs_starts_service_if_required(self, mock_config,
-                                                      _use_dvr):
+    def test_configure_ovs_starts_service_if_required(
+            self, mock_config, _charm_name, _use_dvr):
         _use_dvr.return_value = False
+        _charm_name.return_value = "neutron-openvswitch"
         mock_config.side_effect = self.test_config.get
         self.config.return_value = 'ovs'
         self.service_running.return_value = False
@@ -655,9 +675,12 @@ class TestNeutronOVSUtils(CharmTestCase):
         self.assertTrue(self.full_restart.called)
 
     @patch.object(nutils, 'use_dvr')
+    @patch('charmhelpers.contrib.network.ovs.charm_name')
     @patch('charmhelpers.contrib.openstack.context.config')
-    def test_configure_ovs_doesnt_restart_service(self, mock_config, _use_dvr):
+    def test_configure_ovs_doesnt_restart_service(
+            self, mock_config, _charm_name, _use_dvr):
         _use_dvr.return_value = False
+        _charm_name.return_value = "neutron-openvswitch"
         mock_config.side_effect = self.test_config.get
         self.config.side_effect = self.test_config.get
         self.service_running.return_value = True
@@ -665,23 +688,39 @@ class TestNeutronOVSUtils(CharmTestCase):
         self.assertFalse(self.full_restart.called)
 
     @patch.object(nutils, 'use_dvr')
+    @patch('charmhelpers.contrib.network.ovs.charm_name')
     @patch('charmhelpers.contrib.openstack.context.config')
-    def test_configure_ovs_ovs_ext_port(self, mock_config, _use_dvr):
+    def test_configure_ovs_ovs_ext_port(
+            self, mock_config, _charm_name, _use_dvr):
         _use_dvr.return_value = True
+        _charm_name.return_value = "neutron-openvswitch"
         mock_config.side_effect = self.test_config.get
         self.config.side_effect = self.test_config.get
         self.test_config.set('ext-port', 'eth0')
         self.ExternalPortContext.return_value = \
             DummyContext(return_value={'ext_port': 'eth0'})
+        # Ensure that bridges are marked as managed
+        expected_brdata = {
+            'external-ids': {
+                'charm-neutron-openvswitch': 'managed'
+            }
+        }
+        expected_ifdata = {
+            'external-ids': {
+                'charm-neutron-openvswitch': 'br-ex'
+            }
+        }
         nutils.configure_ovs()
         self.add_bridge.assert_has_calls([
-            call('br-int', 'system'),
-            call('br-ex', 'system'),
-            call('br-data', 'system')
+            call('br-int', 'system', brdata=expected_brdata),
+            call('br-ex', 'system', brdata=expected_brdata),
+            call('br-data', 'system', brdata=expected_brdata)
         ])
-        self.add_bridge_port.assert_called_with('br-ex', 'eth0')
+        self.add_bridge_port.assert_called_with('br-ex', 'eth0',
+                                                ifdata=expected_ifdata,
+                                                portdata=expected_ifdata)
 
-    def _run_configure_ovs_dpdk(self, mock_config, _use_dvr,
+    def _run_configure_ovs_dpdk(self, mock_config, _charm_name, _use_dvr,
                                 _resolve_dpdk_bridges, _resolve_dpdk_bonds,
                                 _late_init, _test_bonds,
                                 _ovs_vhostuser_client=False):
@@ -712,6 +751,7 @@ class TestNeutronOVSUtils(CharmTestCase):
             ])
             _resolve_dpdk_bonds.return_value = OrderedDict()
         _use_dvr.return_value = True
+        _charm_name.return_value = "neutron-openvswitch"
         self.use_dpdk.return_value = True
         self.ovs_has_late_dpdk_init.return_value = _late_init
         self.ovs_vhostuser_client.return_value = _ovs_vhostuser_client
@@ -720,11 +760,11 @@ class TestNeutronOVSUtils(CharmTestCase):
         self.test_config.set('enable-dpdk', True)
         nutils.configure_ovs()
         self.add_bridge.assert_has_calls([
-            call('br-int', 'netdev'),
-            call('br-ex', 'netdev'),
-            call('br-phynet1', 'netdev'),
-            call('br-phynet2', 'netdev'),
-            call('br-phynet3', 'netdev')],
+            call('br-int', 'netdev', brdata=ANY),
+            call('br-ex', 'netdev', brdata=ANY),
+            call('br-phynet1', 'netdev', brdata=ANY),
+            call('br-phynet2', 'netdev', brdata=ANY),
+            call('br-phynet3', 'netdev', brdata=ANY)],
             any_order=True
         )
         if _test_bonds:
@@ -736,14 +776,20 @@ class TestNeutronOVSUtils(CharmTestCase):
                          portdata={
                              'bond-mode': 'balance-tcp',
                              'lacp': 'active',
-                             'other_config:lacp-time': 'fast'},
+                             'other_config:lacp-time': 'fast',
+                             'external-ids': {
+                                 'charm-neutron-openvswitch': 'br-phynet1'
+                             }},
                          ifdatamap={
                              _resolve_port_name('0000:001c.01',
                                                 0,
                                                 _late_init): {
                                  'type': 'dpdk',
                                  'mtu-request': 1500,
-                                 'options': {'dpdk-devargs': '0000:001c.01'}}}
+                                 'options': {'dpdk-devargs': '0000:001c.01'},
+                                 'external-ids': {
+                                     'charm-neutron-openvswitch': 'br-phynet1'
+                                 }}}
                          ),
                     call('br-phynet2', 'bond1',
                          {_resolve_port_name(
@@ -751,13 +797,19 @@ class TestNeutronOVSUtils(CharmTestCase):
                          portdata={
                              'bond-mode': 'balance-tcp',
                              'lacp': 'active',
-                             'other_config:lacp-time': 'fast'},
+                             'other_config:lacp-time': 'fast',
+                             'external-ids': {
+                                 'charm-neutron-openvswitch': 'br-phynet2'
+                             }},
                          ifdatamap={
                              _resolve_port_name('0000:001c.02', 1, _late_init):
                              {
                                  'type': 'dpdk',
                                  'mtu-request': 1500,
-                                 'options': {'dpdk-devargs': '0000:001c.02'}}}
+                                 'options': {'dpdk-devargs': '0000:001c.02'},
+                                 'external-ids': {
+                                     'charm-neutron-openvswitch': 'br-phynet2'
+                                 }}}
                          ),
                     call('br-phynet3', 'bond2',
                          {_resolve_port_name(
@@ -765,14 +817,20 @@ class TestNeutronOVSUtils(CharmTestCase):
                          portdata={
                              'bond-mode': 'balance-tcp',
                              'lacp': 'active',
-                             'other_config:lacp-time': 'fast'},
+                             'other_config:lacp-time': 'fast',
+                             'external-ids': {
+                                 'charm-neutron-openvswitch': 'br-phynet3'
+                             }},
                          ifdatamap={
                              _resolve_port_name('0000:001c.03',
                                                 2,
                                                 _late_init): {
                                  'type': 'dpdk',
                                  'mtu-request': 1500,
-                                 'options': {'dpdk-devargs': '0000:001c.03'}}}
+                                 'options': {'dpdk-devargs': '0000:001c.03'},
+                                 'external-ids': {
+                                     'charm-neutron-openvswitch': 'br-phynet3'
+                                 }}}
                          )
                 ], any_order=True)
         else:
@@ -780,40 +838,58 @@ class TestNeutronOVSUtils(CharmTestCase):
                 self.add_bridge_port.assert_has_calls([
                     call('br-phynet1',
                          _resolve_port_name('0000:001c.01', 0, _late_init),
-                         linkup=None, promisc=None,
+                         portdata=ANY, linkup=None, promisc=None,
                          ifdata={'type': 'dpdk',
                                  'mtu-request': 1500,
-                                 'options': {'dpdk-devargs': '0000:001c.01'}}),
+                                 'options': {'dpdk-devargs': '0000:001c.01'},
+                                 'external-ids': {
+                                     'charm-neutron-openvswitch': 'br-phynet1'
+                                 }}),
                     call('br-phynet2',
                          _resolve_port_name('0000:001c.02', 1, _late_init),
-                         linkup=None, promisc=None,
+                         portdata=ANY, linkup=None, promisc=None,
                          ifdata={'type': 'dpdk',
                                  'mtu-request': 1500,
-                                 'options': {'dpdk-devargs': '0000:001c.02'}}),
+                                 'options': {'dpdk-devargs': '0000:001c.02'},
+                                 'external-ids': {
+                                     'charm-neutron-openvswitch': 'br-phynet2'
+                                 }}),
                     call('br-phynet3',
                          _resolve_port_name('0000:001c.03', 2, _late_init),
-                         linkup=None, promisc=None,
+                         portdata=ANY, linkup=None, promisc=None,
                          ifdata={'type': 'dpdk',
                                  'mtu-request': 1500,
-                                 'options': {'dpdk-devargs': '0000:001c.03'}})
+                                 'options': {'dpdk-devargs': '0000:001c.03'},
+                                 'external-ids': {
+                                     'charm-neutron-openvswitch': 'br-phynet3'
+                                 }})
                 ], any_order=True)
             else:
                 self.add_bridge_port.assert_has_calls([
                     call('br-phynet1',
                          _resolve_port_name('0000:001c.01', 0, _late_init),
-                         linkup=None, promisc=None,
+                         portdata=ANY, linkup=None, promisc=None,
                          ifdata={'type': 'dpdk',
-                                 'mtu-request': 1500}),
+                                 'mtu-request': 1500,
+                                 'external-ids': {
+                                     'charm-neutron-openvswitch': 'br-phynet1'
+                                 }}),
                     call('br-phynet2',
                          _resolve_port_name('0000:001c.02', 1, _late_init),
-                         linkup=None, promisc=None,
+                         portdata=ANY, linkup=None, promisc=None,
                          ifdata={'type': 'dpdk',
-                                 'mtu-request': 1500}),
+                                 'mtu-request': 1500,
+                                 'external-ids': {
+                                     'charm-neutron-openvswitch': 'br-phynet2'
+                                 }}),
                     call('br-phynet3',
                          _resolve_port_name('0000:001c.03', 2, _late_init),
-                         linkup=None, promisc=None,
+                         portdata=ANY, linkup=None, promisc=None,
                          ifdata={'type': 'dpdk',
-                                 'mtu-request': 1500})
+                                 'mtu-request': 1500,
+                                 'external-ids': {
+                                     'charm-neutron-openvswitch': 'br-phynet3'
+                                 }})
                 ], any_order=True)
 
     @patch.object(nutils, 'use_hw_offload', return_value=False)
@@ -821,15 +897,16 @@ class TestNeutronOVSUtils(CharmTestCase):
     @patch.object(neutron_ovs_context, 'resolve_dpdk_bonds')
     @patch.object(neutron_ovs_context, 'resolve_dpdk_bridges')
     @patch.object(nutils, 'use_dvr')
+    @patch('charmhelpers.contrib.network.ovs.charm_name')
     @patch('charmhelpers.contrib.openstack.context.config')
-    def test_configure_ovs_dpdk(self, mock_config, _use_dvr,
+    def test_configure_ovs_dpdk(self, mock_config, _charm_name, _use_dvr,
                                 _resolve_dpdk_bridges,
                                 _resolve_dpdk_bonds,
                                 _NeutronAPIContext,
                                 _use_hw_offload):
         _NeutronAPIContext.return_value = DummyContext(
             return_value={'global_physnet_mtu': 1500})
-        return self._run_configure_ovs_dpdk(mock_config, _use_dvr,
+        return self._run_configure_ovs_dpdk(mock_config, _charm_name, _use_dvr,
                                             _resolve_dpdk_bridges,
                                             _resolve_dpdk_bonds,
                                             _late_init=False,
@@ -840,15 +917,14 @@ class TestNeutronOVSUtils(CharmTestCase):
     @patch.object(neutron_ovs_context, 'resolve_dpdk_bonds')
     @patch.object(neutron_ovs_context, 'resolve_dpdk_bridges')
     @patch.object(nutils, 'use_dvr')
+    @patch('charmhelpers.contrib.network.ovs.charm_name')
     @patch('charmhelpers.contrib.openstack.context.config')
-    def test_configure_ovs_dpdk_late_init(self, mock_config, _use_dvr,
-                                          _resolve_dpdk_bridges,
-                                          _resolve_dpdk_bonds,
-                                          _NeutronAPIContext,
-                                          _use_hw_offload):
+    def test_configure_ovs_dpdk_late_init(
+            self, mock_config, _charm_name, _use_dvr, _resolve_dpdk_bridges,
+            _resolve_dpdk_bonds, _NeutronAPIContext, _use_hw_offload):
         _NeutronAPIContext.return_value = DummyContext(
             return_value={'global_physnet_mtu': 1500})
-        return self._run_configure_ovs_dpdk(mock_config, _use_dvr,
+        return self._run_configure_ovs_dpdk(mock_config, _charm_name, _use_dvr,
                                             _resolve_dpdk_bridges,
                                             _resolve_dpdk_bonds,
                                             _late_init=True,
@@ -859,24 +935,26 @@ class TestNeutronOVSUtils(CharmTestCase):
     @patch.object(neutron_ovs_context, 'resolve_dpdk_bonds')
     @patch.object(neutron_ovs_context, 'resolve_dpdk_bridges')
     @patch.object(nutils, 'use_dvr')
+    @patch('charmhelpers.contrib.network.ovs.charm_name')
     @patch('charmhelpers.contrib.openstack.context.config')
-    def test_configure_ovs_dpdk_late_init_bonds(self, mock_config, _use_dvr,
-                                                _resolve_dpdk_bridges,
-                                                _resolve_dpdk_bonds,
-                                                _NeutronAPIContext,
-                                                _use_hw_offload):
+    def test_configure_ovs_dpdk_late_init_bonds(
+            self, mock_config, _charm_name, _use_dvr, _resolve_dpdk_bridges,
+            _resolve_dpdk_bonds, _NeutronAPIContext, _use_hw_offload):
         _NeutronAPIContext.return_value = DummyContext(
             return_value={'global_physnet_mtu': 1500})
-        return self._run_configure_ovs_dpdk(mock_config, _use_dvr,
+        return self._run_configure_ovs_dpdk(mock_config, _charm_name, _use_dvr,
                                             _resolve_dpdk_bridges,
                                             _resolve_dpdk_bonds,
                                             _late_init=True,
                                             _test_bonds=True)
 
     @patch.object(nutils, 'use_dvr')
+    @patch('charmhelpers.contrib.network.ovs.charm_name')
     @patch('charmhelpers.contrib.openstack.context.config')
-    def test_configure_ovs_enable_ipfix(self, mock_config, mock_use_dvr):
+    def test_configure_ovs_enable_ipfix(
+            self, mock_config, mock_charm_name, mock_use_dvr):
         mock_use_dvr.return_value = False
+        mock_charm_name.return_value = "neutron-openvswitch"
         mock_config.side_effect = self.test_config.get
         self.config.side_effect = self.test_config.get
         self.test_config.set('ipfix-target', '127.0.0.1:80')
@@ -885,6 +963,25 @@ class TestNeutronOVSUtils(CharmTestCase):
             call('br-int', '127.0.0.1:80'),
             call('br-ex', '127.0.0.1:80'),
         ])
+
+    @patch.object(nutils, 'use_dvr')
+    @patch('charmhelpers.contrib.network.ovs.charm_name')
+    @patch('charmhelpers.contrib.openstack.context.config')
+    def test_configure_ovs_ensure_ext_port_used(
+            self, mock_config, mock_charm_name, mock_use_dvr):
+        mock_use_dvr.return_value = True
+        mock_charm_name.return_value = "neutron-openvswitch"
+        mock_config.side_effect = self.test_config.get
+        self.config.side_effect = self.test_config.get
+        self.test_config.set('ext-port', 'p0')
+        self.ExternalPortContext.return_value = DummyContext(
+            return_value={'ext_port': 'p0'})
+        # leave data-port empty to simulate legacy config
+        self.test_config.set('data-port', '')
+        nutils.configure_ovs()
+        # assert that p0 was added to br-ex
+        self.assertIn(call('br-ex', 'p0', ifdata=ANY, portdata=ANY),
+                      self.add_bridge_port.call_args_list)
 
     @patch.object(neutron_ovs_context, 'SharedSecretContext')
     def test_get_shared_secret(self, _dvr_secret_ctxt):
