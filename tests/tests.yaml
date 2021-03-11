@@ -17,6 +17,8 @@ gate_bundles:
   - migrate-ovn: focal-ussuri-dvr-snat
   - migrate-ovn: focal-victoria-dvr-snat
   - migrate-ovn: groovy-victoria-dvr-snat
+
+dev_bundles:
   - trusty-mitaka
   - xenial-ocata
   - xenial-pike
