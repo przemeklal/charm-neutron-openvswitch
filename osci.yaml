@@ -1,0 +1,60 @@
+- project:
+    templates:
+      - charm-unit-jobs
+    check:
+      jobs:
+      - xenial-mitaka_ovs
+      - bionic-queens-dvr-snat
+      - bionic-stein-dvr-snat
+      - bionic-train-dvr-snat
+      - bionic-ussuri-dvr-snat
+      - migrate-ovn-focal-ussuri-dvr-snat
+      - migrate-ovn-focal-victoria-dvr-snat
+
+- job:
+    name: bionic-queens-dvr-snat
+    parent: func-target
+    dependencies: &smoke-jobs
+      - migrate-ovn-focal-ussuri-dvr-snat
+    vars:
+      tox_extra_args: bionic-queens-dvr-snat
+- job:
+    name: bionic-stein-dvr-snat
+    parent: func-target
+    dependencies: *smoke-jobs
+    vars:
+      tox_extra_args: bionic-stein-dvr-snat
+- job:
+    name: bionic-train-dvr-snat
+    parent: func-target
+    dependencies: *smoke-jobs
+    vars:
+      tox_extra_args: bionic-train-dvr-snat
+- job:
+    name: bionic-ussuri-dvr-snat
+    parent: func-target
+    dependencies: *smoke-jobs
+    vars:
+      tox_extra_args: bionic-ussuri-dvr-snat
+- job:
+    name: migrate-ovn-focal-ussuri-dvr-snat
+    parent: func-target
+    dependencies:
+      - osci-lint
+      - tox-py35
+      - tox-py36
+      - tox-py37
+      - tox-py38
+    vars:
+      tox_extra_args: migrate-ovn:focal-ussuri-dvr-snat
+- job:
+    name: migrate-ovn-focal-victoria-dvr-snat
+    parent: func-target
+    dependencies: *smoke-jobs
+    vars:
+      tox_extra_args: migrate-ovn:focal-victoria-dvr-snat
+# Redefining these here to override their dependencies
+- job:
+    name: xenial-mitaka_ovs
+    dependencies: *smoke-jobs
+    parent: xenial-mitaka
