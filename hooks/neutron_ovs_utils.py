@@ -38,6 +38,7 @@ import neutron_ovs_context
 from charmhelpers.contrib.network.ovs import (
     add_bridge,
     add_bridge_port,
+    add_bridge_bond,
     is_linuxbridge_interface,
     add_ovsbridge_linuxbridge,
     full_restart,
@@ -651,18 +652,16 @@ def configure_ovs():
                 )
             else:
                 portname = 'dpdk{}'.format(device_index)
-
             log('Adding DPDK port: {}:{}:{}'.format(br, portname,
                                                     pci_address),
                 level=DEBUG)
-            dpdk_add_bridge_port(br, portname,
-                                 pci_address)
+            add_bridge_port(br, portname, linkup=None, promisc=None,
+                            ifdata=dpdk_port_ifdata(pci_address,
+                                                    global_mtu))
             # TODO(sahid): We should also take into account the
             # "physical-network-mtus" in case different MTUs are
             # configured based on physical networks.
-            dpdk_set_mtu_request(portname, global_mtu)
             device_index += 1
-
         if modern_ovs:
             log('Configuring bridges with modern_ovs/DPDK',
                 level=DEBUG)
@@ -683,7 +682,6 @@ def configure_ovs():
                     )
                     bridge_bond_map.add_port(portmap[bond], bond,
                                              portname, pci_address)
-
             log('bridge_bond_map: {}'.format(bridge_bond_map),
                 level=DEBUG)
             bond_configs = DPDKBondsConfig()
@@ -692,18 +690,16 @@ def configure_ovs():
                     log('Adding DPDK bond: {}:{}:{}'.format(br, bond,
                                                             port_map),
                         level=DEBUG)
-                    dpdk_add_bridge_bond(br, bond, port_map)
-                    dpdk_set_interfaces_mtu(
-                        global_mtu,
-                        port_map.keys())
                     log('Configuring DPDK bond: {}:{}'.format(
                         bond,
                         bond_configs.get_bond_config(bond)),
                         level=DEBUG)
-                    dpdk_set_bond_config(
-                        bond,
-                        bond_configs.get_bond_config(bond)
-                    )
+                    add_bridge_bond(br, bond, port_map.keys(),
+                                    portdata=dpdk_bond_portdata(
+                                        bond_configs.get_bond_config(bond)),
+                                    ifdatamap=dpdk_bond_ifdatamap(
+                                        port_map,
+                                        global_mtu))
 
     target = config('ipfix-target')
     bridges = [INT_BRIDGE, EXT_BRIDGE]
@@ -825,70 +821,71 @@ class SRIOVContext_adapter(object):
         return {'sriov_device': self._sriov_device}
 
 
-# TODO: update into charm-helpers to add port_type parameter
-def dpdk_add_bridge_port(name, port, pci_address=None):
-    ''' Add a port to the named openvswitch bridge '''
-    # log('Adding port {} to bridge {}'.format(port, name))
-    if ovs_has_late_dpdk_init():
-        cmd = ["ovs-vsctl",
-               "add-port", name, port, "--",
-               "set", "Interface", port,
-               "type=dpdk",
-               "options:dpdk-devargs={}".format(pci_address)]
-    else:
-        cmd = ["ovs-vsctl", "--",
-               "--may-exist", "add-port", name, port,
-               "--", "set", "Interface", port, "type=dpdk"]
-    subprocess.check_call(cmd)
+def dpdk_port_ifdata(pci_address, mtu, additional_ifdata=None):
+    """Creates ifdata dict that can be used to set up a DPDK port.
 
-
-def dpdk_add_bridge_bond(bridge_name, bond_name, port_map):
-    ''' Add ports to a bond attached to the named openvswitch bridge '''
-    if not ovs_has_late_dpdk_init():
-        raise Exception("Bonds are not supported for OVS pre-2.6.0")
-
-    cmd = ["ovs-vsctl", "--may-exist",
-           "add-bond", bridge_name, bond_name]
-    for portname in port_map.keys():
-        cmd.append(portname)
-    for portname, pci_address in port_map.items():
-        cmd.extend(["--", "set", "Interface", portname,
-                    "type=dpdk",
-                    "options:dpdk-devargs={}".format(pci_address)])
-    subprocess.check_call(cmd)
-
-
-def dpdk_set_bond_config(bond_name, config):
-    if not ovs_has_late_dpdk_init():
-        raise Exception("Bonds are not supported for OVS pre-2.6.0")
-
-    cmd = ["ovs-vsctl",
-           "--", "set", "port", bond_name,
-           "bond_mode={}".format(config['mode']),
-           "--", "set", "port", bond_name,
-           "lacp={}".format(config['lacp']),
-           "--", "set", "port", bond_name,
-           "other_config:lacp-time=={}".format(config['lacp-time']),
-           ]
-    subprocess.check_call(cmd)
-
-
-def dpdk_set_mtu_request(port, mtu):
-    cmd = ["ovs-vsctl", "set", "Interface", port,
-           "mtu_request={}".format(mtu)]
-    subprocess.check_call(cmd)
-
-
-def dpdk_set_interfaces_mtu(mtu, ports):
-    """Set MTU on dpdk ports.
-
-    :param mtu: Name of unit to match
-    :type mtu: str
-    :param ports: List of ports
-    :type ports: []
+    :param pci_address: PCI address of the network device.
+    :type pci_address: str
+    :param mtu: MTU in bytes that will be requested for the port.
+    :type mtu: int
+    :param additional_ifdata: Additional data to attach to OVS interface.
+    :type additional_ifdata: Optional[Dict[str,Union[str,Dict[str,str]]]]
+    :returns: Interface configuration dict compatible with "ovs-vsctl set"
+              command.
+    :rtype: Dict[str,str]
     """
-    for port in ports:
-        dpdk_set_mtu_request(port, mtu)
+    ifdata = {
+        'type': 'dpdk',
+        'mtu-request': mtu,
+    }
+    if ovs_has_late_dpdk_init():
+        ifdata['options'] = {
+            'dpdk-devargs': pci_address
+        }
+    if additional_ifdata:
+        ifdata.update(additional_ifdata)
+    return ifdata
+
+
+def dpdk_bond_portdata(config, additional_portdata=None):
+    """Creates portdata dict that can be used to configure a DPDK bond.
+
+    :param config: Bond config as provided by DPDKBondsConfig.get_bond_config()
+    :type config: Dict[str,str]
+    :param additional_portdata: Additional data to attach to OVS port.
+    :type additional_portdata: Optional[Dict[str,Union[str,Dict[str,str]]]]
+    :returns: Bond port configuration dict compatible with "ovs-vsctl set"
+              command.
+    :rtype: Dict[str,str]
+    """
+    portdata = {
+        'bond-mode': config['mode'],
+        'lacp': config['lacp'],
+        'other_config:lacp-time': config['lacp-time']
+    }
+    if additional_portdata:
+        portdata.update(additional_portdata)
+    return portdata
+
+
+def dpdk_bond_ifdatamap(port_map, mtu, additional_ifdata=None):
+    """Creates map of interfaces that can be used to set up DPDK bond port.
+
+    :param port_map: Interface to PCI address mapping, values of the dict
+                     provided by DPDKBridgeBondMap().
+    :type port_map: Dict[str,str]
+    :param mtu: MTU in bytes that will be requested for the port.
+    :type mtu: int
+    :param additional_ifdata: Additional data to attach to each bonded OVS
+                              interface.
+    :type additional_portdata: Optional[Dict[str,Union[str,Dict[str,str]]]]
+    :returns: Bond port map in the format expected by
+              ``charmhelpers.contrib.network.ovs.add_bridge_bond``.
+    :rtype: Dict[str,str]
+    """
+    return {iface: dpdk_port_ifdata(pci, mtu,
+                                    additional_ifdata=additional_ifdata)
+            for (iface, pci) in port_map.items()}
 
 
 def enable_nova_metadata():

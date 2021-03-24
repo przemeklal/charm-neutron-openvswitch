@@ -34,13 +34,9 @@ import charmhelpers.core.hookenv as hookenv
 TO_PATCH = [
     'add_bridge',
     'add_bridge_port',
+    'add_bridge_bond',
     'add_ovsbridge_linuxbridge',
     'is_linuxbridge_interface',
-    'dpdk_add_bridge_port',
-    'dpdk_add_bridge_bond',
-    'dpdk_set_bond_config',
-    'dpdk_set_mtu_request',
-    'dpdk_set_interfaces_mtu',
     'add_source',
     'apt_install',
     'apt_update',
@@ -732,62 +728,93 @@ class TestNeutronOVSUtils(CharmTestCase):
             any_order=True
         )
         if _test_bonds:
-            self.dpdk_add_bridge_bond.assert_has_calls([
-                call('br-phynet1', 'bond0',
-                     {_resolve_port_name('0000:001c.01',
-                                         0, _late_init): '0000:001c.01'}),
-                call('br-phynet2', 'bond1',
-                     {_resolve_port_name('0000:001c.02',
-                                         1, _late_init): '0000:001c.02'}),
-                call('br-phynet3', 'bond2',
-                     {_resolve_port_name('0000:001c.03',
-                                         2, _late_init): '0000:001c.03'})],
-                any_order=True
-            )
-            self.dpdk_set_bond_config.assert_has_calls([
-                call('bond0',
-                     {'mode': 'balance-tcp',
-                      'lacp': 'active',
-                      'lacp-time': 'fast'}),
-                call('bond1',
-                     {'mode': 'balance-tcp',
-                      'lacp': 'active',
-                      'lacp-time': 'fast'}),
-                call('bond2',
-                     {'mode': 'balance-tcp',
-                      'lacp': 'active',
-                      'lacp-time': 'fast'})],
-                any_order=True
-            )
-            self.dpdk_set_interfaces_mtu.assert_has_calls([
-                call(1500, {'dpdk-ac48d24': None}.keys()),
-                call(1500, {'dpdk-82c1c9e': None}.keys()),
-                call(1500, {'dpdk-aebdb4d': None}.keys())],
-                any_order=True)
+            self.add_bridge_bond.assert_has_calls(
+                [
+                    call('br-phynet1', 'bond0',
+                         {_resolve_port_name(
+                             '0000:001c.01', 0, _late_init): ''}.keys(),
+                         portdata={
+                             'bond-mode': 'balance-tcp',
+                             'lacp': 'active',
+                             'other_config:lacp-time': 'fast'},
+                         ifdatamap={
+                             _resolve_port_name('0000:001c.01',
+                                                0,
+                                                _late_init): {
+                                 'type': 'dpdk',
+                                 'mtu-request': 1500,
+                                 'options': {'dpdk-devargs': '0000:001c.01'}}}
+                         ),
+                    call('br-phynet2', 'bond1',
+                         {_resolve_port_name(
+                             '0000:001c.02', 1, _late_init): ''}.keys(),
+                         portdata={
+                             'bond-mode': 'balance-tcp',
+                             'lacp': 'active',
+                             'other_config:lacp-time': 'fast'},
+                         ifdatamap={
+                             _resolve_port_name('0000:001c.02', 1, _late_init):
+                             {
+                                 'type': 'dpdk',
+                                 'mtu-request': 1500,
+                                 'options': {'dpdk-devargs': '0000:001c.02'}}}
+                         ),
+                    call('br-phynet3', 'bond2',
+                         {_resolve_port_name(
+                             '0000:001c.03', 2, _late_init): ''}.keys(),
+                         portdata={
+                             'bond-mode': 'balance-tcp',
+                             'lacp': 'active',
+                             'other_config:lacp-time': 'fast'},
+                         ifdatamap={
+                             _resolve_port_name('0000:001c.03',
+                                                2,
+                                                _late_init): {
+                                 'type': 'dpdk',
+                                 'mtu-request': 1500,
+                                 'options': {'dpdk-devargs': '0000:001c.03'}}}
+                         )
+                ], any_order=True)
         else:
-            self.dpdk_add_bridge_port.assert_has_calls([
-                call('br-phynet1',
-                     _resolve_port_name('0000:001c.01',
-                                        0, _late_init),
-                     '0000:001c.01'),
-                call('br-phynet2',
-                     _resolve_port_name('0000:001c.02',
-                                        1, _late_init),
-                     '0000:001c.02'),
-                call('br-phynet3',
-                     _resolve_port_name('0000:001c.03',
-                                        2, _late_init),
-                     '0000:001c.03')],
-                any_order=True
-            )
-            self.dpdk_set_mtu_request.assert_has_calls([
-                call(_resolve_port_name('0000:001c.01',
-                                        0, _late_init), 1500),
-                call(_resolve_port_name('0000:001c.02',
-                                        1, _late_init), 1500),
-                call(_resolve_port_name('0000:001c.03',
-                                        2, _late_init), 1500)],
-                any_order=True)
+            if _late_init:
+                self.add_bridge_port.assert_has_calls([
+                    call('br-phynet1',
+                         _resolve_port_name('0000:001c.01', 0, _late_init),
+                         linkup=None, promisc=None,
+                         ifdata={'type': 'dpdk',
+                                 'mtu-request': 1500,
+                                 'options': {'dpdk-devargs': '0000:001c.01'}}),
+                    call('br-phynet2',
+                         _resolve_port_name('0000:001c.02', 1, _late_init),
+                         linkup=None, promisc=None,
+                         ifdata={'type': 'dpdk',
+                                 'mtu-request': 1500,
+                                 'options': {'dpdk-devargs': '0000:001c.02'}}),
+                    call('br-phynet3',
+                         _resolve_port_name('0000:001c.03', 2, _late_init),
+                         linkup=None, promisc=None,
+                         ifdata={'type': 'dpdk',
+                                 'mtu-request': 1500,
+                                 'options': {'dpdk-devargs': '0000:001c.03'}})
+                ], any_order=True)
+            else:
+                self.add_bridge_port.assert_has_calls([
+                    call('br-phynet1',
+                         _resolve_port_name('0000:001c.01', 0, _late_init),
+                         linkup=None, promisc=None,
+                         ifdata={'type': 'dpdk',
+                                 'mtu-request': 1500}),
+                    call('br-phynet2',
+                         _resolve_port_name('0000:001c.02', 1, _late_init),
+                         linkup=None, promisc=None,
+                         ifdata={'type': 'dpdk',
+                                 'mtu-request': 1500}),
+                    call('br-phynet3',
+                         _resolve_port_name('0000:001c.03', 2, _late_init),
+                         linkup=None, promisc=None,
+                         ifdata={'type': 'dpdk',
+                                 'mtu-request': 1500})
+                ], any_order=True)
 
     @patch.object(nutils, 'use_hw_offload', return_value=False)
     @patch.object(neutron_ovs_context, 'NeutronAPIContext')
@@ -1154,23 +1181,3 @@ class TestDPDKBondsConfig(CharmTestCase):
                           'lacp': 'off',
                           'lacp-time': 'fast'
                           })
-
-
-class TestMTURequest(CharmTestCase):
-
-    def setUp(self):
-        super(TestMTURequest, self).setUp(nutils, [])
-
-    @patch.object(nutils, 'subprocess')
-    def test_dpdk_set_mtu_request(self, mock_subprocess):
-        nutils.dpdk_set_mtu_request("dpdk1", 9000)
-        mock_subprocess.check_call.assert_called_once_with(
-            ['ovs-vsctl', 'set', 'Interface', 'dpdk1', 'mtu_request=9000'])
-
-    @patch.object(nutils, 'dpdk_set_mtu_request')
-    def test_dpdk_set_interfaces_mtu(self, mock_dpdk_set_mtu_request):
-        nutils.dpdk_set_interfaces_mtu('1234', ['nic1', 'nic2'])
-        expected_calls = [
-            call('nic1', '1234'),
-            call('nic2', '1234')]
-        mock_dpdk_set_mtu_request.assert_has_calls(expected_calls)
